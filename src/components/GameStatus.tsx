@@ -1,0 +1,165 @@
+'use client';
+
+import React from 'react';
+import { RotateCcw, Undo2, HelpCircle, Bot, User } from 'lucide-react';
+import { GameState } from '@/types/game';
+
+interface GameStatusProps {
+  gameState: GameState;
+  onReset: () => void;
+  onUndo: () => void;
+  onToggleMode: () => void;
+  onOpenRules: () => void;
+}
+
+export const GameStatus: React.FC<GameStatusProps> = ({
+  gameState,
+  onReset,
+  onUndo,
+  onToggleMode,
+  onOpenRules,
+}) => {
+  const {
+    currentPlayer,
+    winner,
+    activeBoard,
+    gameMode,
+    isAiThinking,
+    history,
+  } = gameState;
+
+  // Sector labels (row, col)
+  const sectorNames = [
+    'top-left',
+    'top-center',
+    'top-right',
+    'mid-left',
+    'center',
+    'mid-right',
+    'bottom-left',
+    'bottom-center',
+    'bottom-right',
+  ];
+
+  const canUndo = history.length > 0 && !isAiThinking && winner === null;
+
+  return (
+    <div className="w-full max-w-[540px] mx-auto mb-4 md:mb-6">
+      {/* Top Bar: Title & Primary Controls */}
+      <div className="flex items-center justify-between pb-3 border-b border-[var(--line)]">
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl md:text-2xl font-light tracking-tight text-[var(--highlight-ink)] lowercase">
+            super tic-tac-toe
+          </h1>
+          <button
+            type="button"
+            onClick={onOpenRules}
+            aria-label="How to play"
+            className="p-1 text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+          >
+            <HelpCircle size={15} />
+          </button>
+        </div>
+
+        {/* Minimal Actions */}
+        <div className="flex items-center gap-2 text-xs">
+          <button
+            type="button"
+            onClick={onToggleMode}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase"
+            title="Toggle between single player AI and 2-player hotseat"
+          >
+            {gameMode === 'ai' ? (
+              <>
+                <Bot size={13} />
+                <span>vs ai</span>
+              </>
+            ) : (
+              <>
+                <User size={13} />
+                <span>2 players</span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={onUndo}
+            disabled={!canUndo}
+            className={`p-1.5 rounded-md border border-[var(--line)] transition-all ${
+              canUndo
+                ? 'hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] cursor-pointer'
+                : 'opacity-30 cursor-not-allowed'
+            }`}
+            title="Undo move"
+            aria-label="Undo move"
+          >
+            <Undo2 size={13} />
+          </button>
+
+          <button
+            type="button"
+            onClick={onReset}
+            className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer"
+            title="Restart game"
+            aria-label="Restart game"
+          >
+            <RotateCcw size={13} />
+          </button>
+        </div>
+      </div>
+
+      {/* Status Bar */}
+      <div className="flex items-center justify-between pt-3 text-sm">
+        {/* Game State Message */}
+        <div className="flex items-center gap-2">
+          {winner === null ? (
+            <div className="flex items-center gap-2">
+              <span className="text-[var(--ink-soft)] lowercase">turn:</span>
+              <span className="inline-flex items-center gap-1 font-medium text-[var(--highlight-ink)] lowercase">
+                {currentPlayer === 'X' ? '✕' : '○'}
+                {gameMode === 'ai' && currentPlayer !== gameState.humanPlayer && (
+                  <span className="text-xs text-[var(--ink-mute)] font-normal">
+                    {isAiThinking ? '(thinking…)' : '(ai)'}
+                  </span>
+                )}
+              </span>
+            </div>
+          ) : (
+            <div className="font-medium text-[var(--highlight-ink)] lowercase animate-fade-up">
+              {winner === 'TIE'
+                ? "it's a draw."
+                : `${winner === 'X' ? '✕' : '○'} won the match.`}
+            </div>
+          )}
+        </div>
+
+        {/* Sector Target Guidance with Mini-Grid Locator */}
+        {winner === null && (
+          <div className="flex items-center gap-2 text-xs text-[var(--ink-soft)] lowercase">
+            {activeBoard === null ? (
+              <span className="italic">free play (any sector)</span>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <span>target: {sectorNames[activeBoard]}</span>
+                {/* Visual 3x3 Mini Sector Locator */}
+                <div className="grid grid-cols-3 gap-0.5 w-3.5 h-3.5 border border-[var(--line-strong)] p-0.5 rounded-[2px]">
+                  {Array.from({ length: 9 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-full h-full rounded-[0.5px] ${
+                        i === activeBoard
+                          ? 'bg-[var(--highlight-ink)]'
+                          : 'bg-[var(--line)]'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
