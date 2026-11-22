@@ -29,11 +29,16 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
 
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
+  const connectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
   // Cleanup connection and peer
   const cleanup = useCallback(() => {
+    if (connectTimeoutRef.current) {
+      clearTimeout(connectTimeoutRef.current);
+      connectTimeoutRef.current = null;
+    }
     if (connRef.current) {
       try {
         connRef.current.close();
@@ -72,6 +77,10 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     connRef.current = conn;
 
     conn.on('open', () => {
+      if (connectTimeoutRef.current) {
+        clearTimeout(connectTimeoutRef.current);
+        connectTimeoutRef.current = null;
+      }
       setStatus('connected');
       optionsRef.current?.onConnected?.();
     });
@@ -198,6 +207,12 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
       setStatus('connecting');
       setRole('guest');
       setRoomId(cleanId);
+
+      // Timeout connection attempt if host is unreachable after 12s
+      if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
+      connectTimeoutRef.current = setTimeout(() => {
+        setStatus((curr) => (curr === 'connecting' ? 'error' : curr));
+      }, 12000);
 
       const { Peer } = await import('peerjs');
       const peer = new Peer(); // Guest gets random ID

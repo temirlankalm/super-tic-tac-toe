@@ -16,12 +16,12 @@
   --super-line: #4e545a;
 
   /* Active Sector Highlight */
-  --active-board-bg: rgba(78, 84, 90, 0.05);
-  --active-board-border: rgba(78, 84, 90, 0.55);
+  --active-board-bg: rgba(78, 84, 90, 0.09);
+  --active-board-border: rgba(46, 51, 56, 0.65);
 
   /* Cell states */
   --cell-hover: rgba(78, 84, 90, 0.07);
-  --cell-last-move: rgba(78, 84, 90, 0.14);
+  --cell-last-move: rgba(78, 84, 90, 0.16);
 
   --selection-bg: rgba(78, 84, 90, 0.2);
 }
@@ -42,12 +42,12 @@ html.dark {
   --super-line: #d2d6db;
 
   /* Active Sector Highlight */
-  --active-board-bg: rgba(255, 255, 255, 0.05);
-  --active-board-border: rgba(255, 255, 255, 0.5);
+  --active-board-bg: rgba(255, 255, 255, 0.08);
+  --active-board-border: rgba(245, 247, 249, 0.65);
 
   /* Cell states */
   --cell-hover: rgba(255, 255, 255, 0.08);
-  --cell-last-move: rgba(255, 255, 255, 0.16);
+  --cell-last-move: rgba(255, 255, 255, 0.18);
 
   --selection-bg: rgba(255, 255, 255, 0.2);
 }

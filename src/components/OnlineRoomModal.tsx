@@ -162,6 +162,8 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50" />
                 ) : status === 'waiting' || status === 'connecting' ? (
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                ) : status === 'error' ? (
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
                 ) : (
                   <span className="w-2.5 h-2.5 rounded-full bg-zinc-400" />
                 )}
@@ -174,6 +176,8 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
                     ? 'ожидание соперника…'
                     : status === 'connecting'
                     ? 'подключение к комнате…'
+                    : status === 'error'
+                    ? 'комната не найдена или соперник отключился'
                     : 'комната создана'}
                 </span>
                 <span className="text-[11px] text-[var(--ink-mute)] font-sans lowercase">

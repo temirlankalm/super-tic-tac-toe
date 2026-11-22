@@ -45,21 +45,21 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
 
   const playerXLabel =
     gameMode === 'ai'
-      ? 'you'
+      ? 'вы (x)'
       : gameMode === 'online'
       ? onlineRole === 'host'
-        ? 'you (x)'
-        : 'opponent (x)'
-      : 'player 1';
+        ? 'вы (x)'
+        : 'соперник (x)'
+      : 'игрок 1 (x)';
 
   const playerOLabel =
     gameMode === 'ai'
-      ? `ai · ${difficulty}`
+      ? `ии (${difficulty === 'medium' ? 'средний' : difficulty === 'easy' ? 'легкий' : 'сложный'})`
       : gameMode === 'online'
       ? onlineRole === 'guest'
-        ? 'you (o)'
-        : 'opponent (o)'
-      : 'player 2';
+        ? 'вы (o)'
+        : 'соперник (o)'
+      : 'игрок 2 (o)';
 
   return (
     <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-3 animate-fade-up">
@@ -98,7 +98,7 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
             </span>
             {isXFlagged && (
               <span className="text-[10px] text-red-500 lowercase font-sans">
-                flagged
+                время
               </span>
             )}
           </div>
@@ -138,7 +138,7 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
             </span>
             {isOFlagged && (
               <span className="text-[10px] text-red-500 lowercase font-sans">
-                flagged
+                время
               </span>
             )}
           </div>

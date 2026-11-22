@@ -33,9 +33,9 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
 
   return (
     <div
-      className={`relative w-full h-full p-2 sm:p-2.5 transition-colors duration-200 flex flex-col justify-center items-center ${
+      className={`relative w-full h-full p-1 sm:p-2.5 transition-colors duration-200 flex flex-col justify-center items-center ${
         isActive && !isResolved
-          ? 'bg-[var(--active-board-bg)] ring-1 ring-[var(--line-strong)]/40'
+          ? 'bg-[var(--active-board-bg)] ring-1.5 ring-[var(--active-board-border)] shadow-xs'
           : 'bg-transparent'
       } ${
         isGlobalWinningBoard

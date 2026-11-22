@@ -23,13 +23,13 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
         {/* Header */}
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-[var(--line)]">
           <h2 className="text-lg md:text-xl font-normal lowercase tracking-tight">
-            how to play super tic-tac-toe
+            правила super tic-tac-toe
           </h2>
           <button
             type="button"
             onClick={onClose}
             className="p-1 rounded-md text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
-            aria-label="Close rules"
+            aria-label="Закрыть правила"
           >
             <X size={18} />
           </button>
@@ -39,46 +39,46 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
         <div className="space-y-4 text-sm leading-relaxed text-[var(--ink)]">
           <div>
             <h3 className="font-medium text-[var(--highlight-ink)] lowercase mb-1">
-              1. the golden rule (sending)
+              1. золотое правило направления хода
             </h3>
-            <p className="text-[var(--ink-soft)]">
-              Whichever square you pick inside a mini-board dictates which mini-board your opponent must play in next. For example, click the top-right square of any sector, and your opponent must play somewhere in the top-right sector.
+            <p className="text-[var(--ink-soft)] font-light">
+              Клетка, которую вы выбираете внутри малого сектора 3×3, определяет, в каком секторе глобального поля соперник обязан сделать следующий ход. Например, ход в правый верхний угол отправляет оппонента в правый верхний сектор.
             </p>
           </div>
 
           <div>
             <h3 className="font-medium text-[var(--highlight-ink)] lowercase mb-1">
-              2. winning a sector
+              2. победа в секторе
             </h3>
-            <p className="text-[var(--ink-soft)]">
-              Get three of your marks in a row inside any mini-board to win that sector. It will be marked with a large symbol.
+            <p className="text-[var(--ink-soft)] font-light">
+              Соберите три своих знака в ряд внутри любого малого квадрата, чтобы захватить этот сектор. На нём появится крупный символ X или O.
             </p>
           </div>
 
           <div>
             <h3 className="font-medium text-[var(--highlight-ink)] lowercase mb-1">
-              3. the free play rule
+              3. свободный ход (free play)
             </h3>
-            <p className="text-[var(--ink-soft)]">
-              If an opponent sends you to a sector that has already been won or is full, you are freed — you may play in <span className="text-[var(--highlight-ink)] font-medium">any open square</span> across the entire global board.
+            <p className="text-[var(--ink-soft)] font-light">
+              Если соперник направляет вас в сектор, который уже выигран или полностью заполнен, вы получаете свободу выбора — можете сделать ход в <span className="text-[var(--highlight-ink)] font-medium">любую открытую клетку</span> на всей доске.
             </p>
           </div>
 
           <div>
             <h3 className="font-medium text-[var(--highlight-ink)] lowercase mb-1">
-              4. winning the game
+              4. победа в матче
             </h3>
-            <p className="text-[var(--ink-soft)]">
-              Win three mini-board sectors in a row on the global 3×3 grid to claim overall victory.
+            <p className="text-[var(--ink-soft)] font-light">
+              Выиграйте три сектора в ряд по горизонтали, вертикали или диагонали глобального поля 3×3, чтобы одержать итоговую победу.
             </p>
           </div>
 
           <div>
             <h3 className="font-medium text-[var(--highlight-ink)] lowercase mb-1">
-              5. chess clock mode
+              5. режим шахматных часов
             </h3>
-            <p className="text-[var(--ink-soft)]">
-              Select 1m (bullet), 2m, 3m, or 5m to enable a real-time chess clock. Your timer ticks down during your turn and switches when you move. If a player&apos;s clock reaches zero, their opponent wins immediately on time.
+            <p className="text-[var(--ink-soft)] font-light">
+              Выберите 1 мин (пуля), 2 мин, 3 мин (блиц) или 5 мин (рапид). Таймер начинает обратный отсчет только после первого хода и переключается при передаче хода. Если время истекает, сопернику присуждается победа.
             </p>
           </div>
         </div>
@@ -88,9 +88,9 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg text-xs tracking-wider uppercase bg-[var(--line)] hover:bg-[var(--line-strong)] text-[var(--highlight-ink)] transition-colors cursor-pointer font-medium"
+            className="px-4 py-1.5 rounded-lg text-xs tracking-wider lowercase bg-[var(--line)] hover:bg-[var(--line-strong)] text-[var(--highlight-ink)] transition-colors cursor-pointer font-medium"
           >
-            got it
+            понятно
           </button>
         </div>
       </div>

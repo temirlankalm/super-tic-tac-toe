@@ -14,7 +14,7 @@ const BOARD_WEIGHTS = [1.1, 0.85, 1.1, 0.85, 1.6, 0.85, 1.1, 0.85, 1.1];
  * Static evaluation function of a game state for the AI player.
  * Positive = favorable for AI, Negative = favorable for opponent.
  */
-function evaluateStaticState(state: GameState, aiPlayer: Player): number {
+export function evaluateStaticState(state: GameState, aiPlayer: Player): number {
   const opponent: Player = aiPlayer === 'X' ? 'O' : 'X';
 
   // Terminal conditions

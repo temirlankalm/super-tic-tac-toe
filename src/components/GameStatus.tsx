@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { RotateCcw, Undo2, HelpCircle, Bot, User, Sun, Moon, Clock, Volume2, VolumeX, Globe, Flag, Handshake } from 'lucide-react';
+import { HelpCircle, Bot, User, Sun, Moon, Clock, Volume2, VolumeX, Globe } from 'lucide-react';
 import { AiDifficulty, ConnectionStatus, GameState, OnlineRole, TimeControl } from '@/types/game';
 import { HandDrawnLogo } from './hand-drawn/HandDrawnLogo';
-import { HandDrawnWin } from './hand-drawn/HandDrawnWin';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
 
 interface GameStatusProps {
@@ -15,13 +14,9 @@ interface GameStatusProps {
   onlineRole?: OnlineRole;
   connectionStatus?: ConnectionStatus;
   roomId?: string | null;
-  rematchRequestedByOpponent?: boolean;
-  myRematchSent?: boolean;
   drawOfferedByOpponent?: boolean;
   myDrawOffered?: boolean;
   drawDeclinedNotice?: boolean;
-  onReset: () => void;
-  onUndo: () => void;
   onToggleMode: () => void;
   onSetDifficulty: (difficulty: AiDifficulty) => void;
   onSetTimeControl: (tc: TimeControl) => void;
@@ -29,10 +24,6 @@ interface GameStatusProps {
   onToggleSound: () => void;
   onOpenRules: () => void;
   onOpenOnlineModal?: () => void;
-  onRequestRematch?: () => void;
-  onAcceptRematch?: () => void;
-  onResign?: () => void;
-  onOfferDraw?: () => void;
   onAcceptDraw?: () => void;
   onDeclineDraw?: () => void;
 }
@@ -45,6 +36,18 @@ const timeLabels: Record<TimeControl, string> = {
   300: '5m',
 };
 
+const sectorNames = [
+  'верх-лево',
+  'верх-центр',
+  'верх-право',
+  'центр-лево',
+  'центр',
+  'центр-право',
+  'низ-лево',
+  'низ-центр',
+  'низ-право',
+];
+
 export const GameStatus: React.FC<GameStatusProps> = ({
   gameState,
   theme,
@@ -53,13 +56,9 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   onlineRole,
   connectionStatus,
   roomId,
-  rematchRequestedByOpponent,
-  myRematchSent,
   drawOfferedByOpponent,
   myDrawOffered,
   drawDeclinedNotice,
-  onReset,
-  onUndo,
   onToggleMode,
   onSetDifficulty,
   onSetTimeControl,
@@ -67,26 +66,19 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   onToggleSound,
   onOpenRules,
   onOpenOnlineModal,
-  onRequestRematch,
-  onAcceptRematch,
-  onResign,
-  onOfferDraw,
   onAcceptDraw,
   onDeclineDraw,
 }) => {
   const {
     currentPlayer,
     winner,
-    winReason,
     activeBoard,
     gameMode,
     difficulty,
     isAiThinking,
-    history,
   } = gameState;
 
   const [isTimeMenuOpen, setIsTimeMenuOpen] = useState(false);
-  const [isResignConfirmOpen, setIsResignConfirmOpen] = useState(false);
   const timeMenuRef = useRef<HTMLDivElement>(null);
 
   // Close time menu on outside click
@@ -104,56 +96,42 @@ export const GameStatus: React.FC<GameStatusProps> = ({
     };
   }, [isTimeMenuOpen]);
 
-  // Sector labels (row, col)
-  const sectorNames = [
-    'top-left',
-    'top-center',
-    'top-right',
-    'mid-left',
-    'center',
-    'mid-right',
-    'bottom-left',
-    'bottom-center',
-    'bottom-right',
-  ];
-
-  const canUndo = history.length > 0 && !isAiThinking && winner === null && gameMode !== 'online';
-
   return (
-    <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-3 md:mb-5">
-      {/* Top Bar: Title & Primary Controls */}
-      <div className="flex items-center justify-between pb-3 border-b border-[var(--line)] gap-2 flex-wrap">
-        <div className="flex items-center gap-3">
-          {/* Hand-Drawn TTT Logo */}
-          <div className="flex items-center gap-2">
+    <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-3">
+      {/* Top Bar: Brand & Game Configurations */}
+      <div className="flex items-center justify-between pb-2.5 border-b border-[var(--line)] gap-2">
+        {/* Brand & Rules */}
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5">
             <HandDrawnLogo className="h-6 w-auto text-[var(--highlight-ink)]" />
-            <span className="text-xs text-[var(--ink-mute)] font-light tracking-widest lowercase">
+            <span className="text-[11px] text-[var(--ink-mute)] font-light tracking-widest lowercase">
               · super
             </span>
           </div>
           <button
             type="button"
             onClick={onOpenRules}
-            aria-label="How to play"
+            aria-label="Правила игры"
             className="p-1 text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+            title="правила игры"
           >
             <HelpCircle size={15} />
           </button>
         </div>
 
-        {/* Actions Bar */}
-        <div className="flex items-center gap-1.5 sm:gap-2 text-xs flex-wrap justify-end">
+        {/* Configurations Bar */}
+        <div className="flex items-center gap-1.5 text-xs">
           {/* Mode toggle */}
           <button
             type="button"
             onClick={onToggleMode}
             className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase"
-            title="Переключить режим (vs ai / 2p / online)"
+            title="Переключить режим (против ии / вдвоем / онлайн)"
           >
             {gameMode === 'ai' ? (
               <>
                 <Bot size={13} />
-                <span>vs ai</span>
+                <span>ии</span>
               </>
             ) : gameMode === 'pvp' ? (
               <>
@@ -163,7 +141,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             ) : (
               <>
                 <Globe size={13} />
-                <span>online</span>
+                <span>онлайн</span>
               </>
             )}
           </button>
@@ -182,7 +160,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                     ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50'
                     : connectionStatus === 'waiting' || connectionStatus === 'connecting'
                     ? 'bg-amber-500 animate-pulse'
-                    : connectionStatus === 'disconnected'
+                    : connectionStatus === 'disconnected' || connectionStatus === 'error'
                     ? 'bg-rose-500'
                     : 'bg-zinc-400'
                 }`}
@@ -204,7 +182,13 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           {/* Difficulty selector (when in vs ai mode) */}
           {gameMode === 'ai' && (
             <div className="flex items-center rounded-md border border-[var(--line)] p-0.5 text-[11px] font-sans lowercase">
-              {(['easy', 'medium', 'hard'] as const).map((lvl) => (
+              {(
+                [
+                  { lvl: 'easy', label: 'легк' },
+                  { lvl: 'medium', label: 'сред' },
+                  { lvl: 'hard', label: 'слож' },
+                ] as const
+              ).map(({ lvl, label }) => (
                 <button
                   key={lvl}
                   type="button"
@@ -215,7 +199,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                       : 'text-[var(--ink-mute)] hover:text-[var(--ink-soft)]'
                   }`}
                 >
-                  {lvl === 'medium' ? 'med' : lvl}
+                  {label}
                 </button>
               ))}
             </div>
@@ -231,25 +215,25 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                   ? 'border-[var(--line-strong)] text-[var(--highlight-ink)] bg-[var(--active-board-bg)] font-medium'
                   : 'border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
               }`}
-              title="chess clock timer (off, 1m, 2m, 3m, 5m)"
-              aria-label="Select chess clock timer"
+              title="шахматные часы"
+              aria-label="Выбрать контроль времени"
             >
               <Clock size={13} />
               <span>{timeLabels[timeControl]}</span>
             </button>
 
             {isTimeMenuOpen && (
-              <div className="absolute right-0 top-full mt-1.5 z-40 py-1 px-1 min-w-[135px] rounded-lg bg-[var(--bg)] border border-[var(--line-strong)] shadow-lg animate-fade-up text-xs font-sans">
+              <div className="absolute right-0 top-full mt-1.5 z-40 py-1 px-1 min-w-[145px] rounded-lg bg-[var(--bg)] border border-[var(--line-strong)] shadow-lg animate-fade-up text-xs font-sans">
                 <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--ink-mute)] font-medium border-b border-[var(--line)] mb-1">
-                  chess clock
+                  контроль времени
                 </div>
                 {(
                   [
-                    { value: 'off', label: 'off (unlimited)' },
-                    { value: 60, label: '1m (bullet)' },
-                    { value: 120, label: '2m (blitz)' },
-                    { value: 180, label: '3m (blitz)' },
-                    { value: 300, label: '5m (rapid)' },
+                    { value: 'off', label: 'без таймера' },
+                    { value: 60, label: '1 мин (пуля)' },
+                    { value: 120, label: '2 мин (блиц)' },
+                    { value: 180, label: '3 мин (блиц)' },
+                    { value: 300, label: '5 мин (рапид)' },
                   ] as const
                 ).map((opt) => (
                   <button
@@ -273,147 +257,33 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             )}
           </div>
 
+          {/* Sound toggle (Paper ASMR) */}
           <button
             type="button"
-            onClick={onUndo}
-            disabled={!canUndo}
-            className={`p-1.5 rounded-md border border-[var(--line)] transition-all ${
-              canUndo
-                ? 'hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] cursor-pointer'
-                : 'opacity-30 cursor-not-allowed'
-            }`}
-            title="Undo move"
-            aria-label="Undo move"
-          >
-            <Undo2 size={13} />
-          </button>
-
-          <button
-            type="button"
-            onClick={onReset}
+            onClick={onToggleSound}
             className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer"
-            title="Restart game"
-            aria-label="Restart game"
+            title={isSoundEnabled ? 'выключить звук (paper asmr)' : 'включить звук'}
+            aria-label={isSoundEnabled ? 'выключить звук' : 'включить звук'}
           >
-            <RotateCcw size={13} />
+            {isSoundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
           </button>
-
-          {/* Resign Button with Safety Confirmation */}
-          {winner === null && history.length > 0 && (
-            isResignConfirmOpen ? (
-              <div className="flex items-center gap-1 bg-rose-500/10 border border-rose-500/30 px-1.5 py-0.5 rounded-md text-[11px] animate-fade-up">
-                <span className="text-rose-500 lowercase">сдаться?</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsResignConfirmOpen(false);
-                    onResign?.();
-                  }}
-                  className="text-rose-600 dark:text-rose-400 font-medium hover:underline px-0.5 cursor-pointer lowercase"
-                >
-                  да
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsResignConfirmOpen(false)}
-                  className="text-[var(--ink-mute)] hover:text-[var(--ink-soft)] px-0.5 cursor-pointer lowercase"
-                >
-                  нет
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsResignConfirmOpen(true)}
-                className="p-1.5 rounded-md border border-[var(--line)] hover:border-rose-500/40 hover:text-rose-500 text-[var(--ink-soft)] transition-all cursor-pointer"
-                title="сдаться"
-                aria-label="сдаться"
-              >
-                <Flag size={13} />
-              </button>
-            )
-          )}
-
-          {/* Offer Draw Button */}
-          {winner === null && history.length > 0 && (
-            <button
-              type="button"
-              onClick={onOfferDraw}
-              disabled={myDrawOffered}
-              className={`p-1.5 rounded-md border border-[var(--line)] transition-all ${
-                myDrawOffered
-                  ? 'opacity-40 cursor-not-allowed text-[var(--ink-soft)]'
-                  : 'hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] cursor-pointer'
-              }`}
-              title={myDrawOffered ? 'предложение ничьей отправлено' : 'предложить ничью'}
-              aria-label="предложить ничью"
-            >
-              <Handshake size={13} />
-            </button>
-          )}
 
           {/* Theme toggle (Light / Dark) */}
           <button
             type="button"
             onClick={onToggleTheme}
             className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer"
-            title={theme === 'dark' ? 'switch to light theme' : 'switch to dark theme'}
-            aria-label={theme === 'dark' ? 'switch to light theme' : 'switch to dark theme'}
+            title={theme === 'dark' ? 'светлая тема' : 'тёмная тема'}
+            aria-label={theme === 'dark' ? 'светлая тема' : 'тёмная тема'}
           >
             {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
-          </button>
-
-          {/* Sound toggle (Paper ASMR) */}
-          <button
-            type="button"
-            onClick={onToggleSound}
-            className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer"
-            title={isSoundEnabled ? 'mute sound (paper asmr)' : 'unmute sound'}
-            aria-label={isSoundEnabled ? 'mute sound' : 'unmute sound'}
-          >
-            {isSoundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
           </button>
         </div>
       </div>
 
-      {/* Online Rematch Negotiation Banner */}
-      {gameMode === 'online' && winner !== null && (
-        <div className="pt-2.5 pb-1">
-          {rematchRequestedByOpponent ? (
-            <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--line)]/30 border border-[var(--line-strong)] text-xs animate-fade-up">
-              <span className="text-[var(--highlight-ink)] lowercase">
-                соперник предлагает сыграть снова
-              </span>
-              <button
-                type="button"
-                onClick={onAcceptRematch}
-                className="px-2.5 py-1 rounded bg-[var(--highlight-ink)] text-[var(--bg)] font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer"
-              >
-                принять
-              </button>
-            </div>
-          ) : myRematchSent ? (
-            <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--line)]/20 border border-[var(--line)] text-xs text-[var(--ink-soft)] lowercase animate-fade-up">
-              <span>запрос на реванш отправлен…</span>
-            </div>
-          ) : connectionStatus === 'connected' ? (
-            <div className="flex items-center justify-end">
-              <button
-                type="button"
-                onClick={onRequestRematch}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[var(--line-strong)] text-[var(--highlight-ink)] hover:bg-[var(--line)]/40 transition-colors cursor-pointer text-xs font-sans lowercase"
-              >
-                <RotateCcw size={12} />
-                <span>предложить реванш</span>
-              </button>
-            </div>
-          ) : null}
-        </div>
-      )}
-
       {/* Online Draw Offer Negotiation Banner */}
       {gameMode === 'online' && winner === null && (
-        <div className="pt-2.5 pb-1">
+        <div className="pt-2">
           {drawOfferedByOpponent ? (
             <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--line)]/30 border border-[var(--line-strong)] text-xs animate-fade-up">
               <span className="text-[var(--highlight-ink)] lowercase">
@@ -448,8 +318,8 @@ export const GameStatus: React.FC<GameStatusProps> = ({
         </div>
       )}
 
-      {/* Status Bar */}
-      <div className="flex items-center justify-between pt-3 text-sm min-h-[32px]">
+      {/* Live Status Bar (Turn Indicator & Target Sector Guidance) */}
+      <div className="flex items-center justify-between pt-2.5 text-xs min-h-[30px]">
         {/* Game State Message */}
         <div className="flex items-center gap-2">
           {winner === null ? (
@@ -476,33 +346,24 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                 )}
                 {connectionStatus === 'error' && (
                   <span className="text-xs text-rose-500 lowercase">
-                    ошибка подключения
+                    ошибка подключения (комната не найдена)
                   </span>
-                )}
-                {connectionStatus === 'idle' && (
-                  <button
-                    type="button"
-                    onClick={onOpenOnlineModal}
-                    className="text-xs text-[var(--ink-mute)] hover:text-[var(--highlight-ink)] lowercase cursor-pointer"
-                  >
-                    создать комнату
-                  </button>
                 )}
               </div>
             ) : (
               <div className="flex items-center gap-2">
                 <span className="text-[var(--ink-soft)] lowercase">
-                  {gameMode === 'online' ? 'ход:' : 'turn:'}
+                  ход:
                 </span>
                 <span className="inline-flex items-center gap-1.5 font-medium text-[var(--highlight-ink)]">
                   {currentPlayer === 'X' ? (
-                    <HandDrawnX variant={0} className="w-4 h-4 text-[var(--highlight-ink)]" />
+                    <HandDrawnX variant={0} className="w-3.5 h-3.5 text-[var(--highlight-ink)]" />
                   ) : (
-                    <HandDrawnO variant={0} className="w-4 h-4 text-[var(--highlight-ink)]" />
+                    <HandDrawnO variant={0} className="w-3.5 h-3.5 text-[var(--highlight-ink)]" />
                   )}
                   {gameMode === 'ai' && currentPlayer !== gameState.humanPlayer && (
                     <span className="text-xs text-[var(--ink-mute)] font-normal">
-                      {isAiThinking ? '(thinking…)' : `(ai · ${difficulty})`}
+                      {isAiThinking ? '(думает…)' : `(ии)`}
                     </span>
                   )}
                   {gameMode === 'online' && (
@@ -517,82 +378,22 @@ export const GameStatus: React.FC<GameStatusProps> = ({
               </div>
             )
           ) : (
-            <div className="flex items-center gap-2 animate-fade-up">
-              {winner === 'TIE' ? (
-                <span className="font-medium text-[var(--highlight-ink)] lowercase">
-                  {winReason === 'agreement' ? 'ничья по соглашению.' : 'ничья.'}
-                </span>
-              ) : winReason === 'resignation' ? (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-[var(--highlight-ink)]">
-                    {winner === 'X' ? (
-                      <HandDrawnX variant={0} className="w-4 h-4 inline-block mr-1 text-[var(--highlight-ink)]" />
-                    ) : (
-                      <HandDrawnO variant={0} className="w-4 h-4 inline-block mr-1 text-[var(--highlight-ink)]" />
-                    )}
-                  </span>
-                  <span className="font-medium text-[var(--highlight-ink)] lowercase">
-                    {gameMode === 'online'
-                      ? (((onlineRole === 'host' && winner === 'X') || (onlineRole === 'guest' && winner === 'O'))
-                          ? 'соперник сдался · победа!'
-                          : 'вы сдались · поражение')
-                      : gameMode === 'ai'
-                      ? (winner === 'X' ? 'соперник сдался' : 'вы сдались')
-                      : `${winner === 'X' ? 'O' : 'X'} сдался · ${winner} победил`}
-                  </span>
-                </div>
-              ) : winReason === 'timeout' ? (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-[var(--highlight-ink)]">
-                    {winner === 'X' ? (
-                      <HandDrawnX variant={0} className="w-4 h-4 inline-block mr-1 text-[var(--highlight-ink)]" />
-                    ) : (
-                      <HandDrawnO variant={0} className="w-4 h-4 inline-block mr-1 text-[var(--highlight-ink)]" />
-                    )}
-                  </span>
-                  <span className="font-medium text-[var(--highlight-ink)] lowercase">
-                    {gameMode === 'online'
-                      ? (((onlineRole === 'host' && winner === 'X') || (onlineRole === 'guest' && winner === 'O'))
-                          ? 'победа по времени'
-                          : 'поражение по времени')
-                      : 'wins on time'}
-                  </span>
-                  <span className="text-xs text-[var(--ink-mute)] font-normal lowercase">
-                    ({winner === 'X' ? 'O' : 'X'} {gameMode === 'online' ? 'время вышло' : 'flagged'})
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-[var(--highlight-ink)]">
-                    {winner === 'X' ? (
-                      <HandDrawnX variant={0} className="w-4 h-4 inline-block mr-1 text-[var(--highlight-ink)]" />
-                    ) : (
-                      <HandDrawnO variant={0} className="w-4 h-4 inline-block mr-1 text-[var(--highlight-ink)]" />
-                    )}
-                  </span>
-                  {gameMode === 'online' ? (
-                    <span className="font-medium text-[var(--highlight-ink)] lowercase">
-                      {((onlineRole === 'host' && winner === 'X') || (onlineRole === 'guest' && winner === 'O'))
-                        ? 'вы победили!'
-                        : 'соперник победил.'}
-                    </span>
-                  ) : (
-                    <HandDrawnWin className="h-5 w-auto" />
-                  )}
-                </div>
-              )}
-            </div>
+            <span className="text-xs text-[var(--ink-mute)] lowercase">
+              партия завершена
+            </span>
           )}
         </div>
 
-        {/* Sector Target Guidance with Mini-Grid Locator */}
+        {/* Sector Target Guidance with Mini-Grid Locator & Free Play badge */}
         {winner === null && (
           <div className="flex items-center gap-2 text-xs text-[var(--ink-soft)] lowercase">
             {activeBoard === null ? (
-              <span className="italic">free play (any sector)</span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--line)] text-[var(--highlight-ink)] font-medium text-[11px] animate-pulse lowercase">
+                ✦ свободный ход
+              </span>
             ) : (
               <div className="flex items-center gap-1.5">
-                <span>target: {sectorNames[activeBoard]}</span>
+                <span>цель: {sectorNames[activeBoard]}</span>
                 {/* Visual 3x3 Mini Sector Locator */}
                 <div className="grid grid-cols-3 gap-0.5 w-3.5 h-3.5 border border-[var(--line-strong)] p-0.5 rounded-[2px]">
                   {Array.from({ length: 9 }).map((_, i) => (

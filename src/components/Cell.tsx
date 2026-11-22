@@ -59,9 +59,12 @@ export const Cell: React.FC<CellProps> = ({
         </div>
       )}
 
-      {/* Subtle indicator dot for last move */}
+      {/* Enhanced subtle indicator for last move */}
       {isLastMove && (
-        <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--ink-soft)] opacity-80 pointer-events-none" />
+        <>
+          <span className="absolute inset-0.5 rounded-sm bg-[var(--cell-last-move)] pointer-events-none opacity-80" />
+          <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-[var(--highlight-ink)] shadow-xs pointer-events-none" />
+        </>
       )}
     </button>
   );

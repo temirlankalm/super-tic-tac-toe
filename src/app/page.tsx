@@ -9,13 +9,16 @@ import { usePeerOnline } from '@/hooks/usePeerOnline';
 import { SuperBoard } from '@/components/SuperBoard';
 import { GameStatus } from '@/components/GameStatus';
 import { ChessClockBar } from '@/components/ChessClockBar';
+import { GameActionsBar } from '@/components/GameActionsBar';
 import { RulesModal } from '@/components/RulesModal';
 import { OnlineRoomModal } from '@/components/OnlineRoomModal';
+import { evaluateStaticState } from '@/lib/ai';
 import { Player } from '@/types/game';
 
 export default function Home() {
   const [isRulesOpen, setIsRulesOpen] = useState(false);
   const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
+  const [aiDrawNotice, setAiDrawNotice] = useState<string | null>(null);
 
   const { theme, toggleTheme } = useTheme();
 
@@ -161,7 +164,9 @@ export default function Home() {
     [rawHandleTimeout, playClock, playGameVictory, haptic]
   );
 
+  const hasGameStarted = gameState.history.length > 0;
   const isClockPaused =
+    !hasGameStarted ||
     isRulesOpen ||
     (gameState.gameMode === 'online' && peerOnline.status !== 'connected');
 
@@ -197,7 +202,7 @@ export default function Home() {
 
   const handleReset = () => {
     if (gameState.gameMode === 'online') {
-      if (gameState.winner !== null) {
+      if (gameState.history.length > 0 || gameState.winner !== null) {
         peerOnline.requestRematch();
       } else {
         resetGame();
@@ -295,6 +300,17 @@ export default function Home() {
     if (gameState.gameMode === 'online') {
       peerOnline.offerDrawOnline();
       haptic('tap');
+    } else if (gameState.gameMode === 'ai') {
+      const score = evaluateStaticState(gameState, 'O');
+      if (score > 250) {
+        setAiDrawNotice('ии считает свою позицию выгоднее и отклонил ничью');
+        setTimeout(() => setAiDrawNotice(null), 3000);
+        haptic('tap');
+      } else {
+        rawHandleDraw();
+        playGameVictory(true);
+        haptic('sector');
+      }
     } else {
       rawHandleDraw();
       playGameVictory(true);
@@ -321,7 +337,7 @@ export default function Home() {
 
   return (
     <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 max-w-xl mx-auto w-full">
-      {/* Status Bar & Minimalist Controls */}
+      {/* Top Status & Game Setup Bar */}
       <GameStatus
         gameState={gameState}
         theme={theme}
@@ -330,13 +346,9 @@ export default function Home() {
         onlineRole={peerOnline.role}
         connectionStatus={peerOnline.status}
         roomId={peerOnline.roomId}
-        rematchRequestedByOpponent={peerOnline.rematchRequestedByOpponent}
-        myRematchSent={peerOnline.myRematchSent}
         drawOfferedByOpponent={peerOnline.drawOfferedByOpponent}
         myDrawOffered={peerOnline.myDrawOffered}
         drawDeclinedNotice={peerOnline.drawDeclinedNotice}
-        onReset={handleReset}
-        onUndo={handleUndo}
         onToggleMode={handleToggleMode}
         onSetDifficulty={setDifficulty}
         onSetTimeControl={setTimeControl}
@@ -344,10 +356,6 @@ export default function Home() {
         onToggleSound={toggleSound}
         onOpenRules={() => setIsRulesOpen(true)}
         onOpenOnlineModal={handleOpenOnlineModal}
-        onRequestRematch={handleRequestRematch}
-        onAcceptRematch={handleAcceptRematch}
-        onResign={handleResign}
-        onOfferDraw={handleOfferDraw}
         onAcceptDraw={handleAcceptDraw}
         onDeclineDraw={handleDeclineDraw}
       />
@@ -372,16 +380,37 @@ export default function Home() {
         onCellClick={handleCellClick}
       />
 
+      {/* Ergonomic In-Game Actions & Game Over Bar */}
+      <GameActionsBar
+        gameMode={gameState.gameMode}
+        winner={gameState.winner}
+        winReason={gameState.winReason}
+        onlineRole={peerOnline.role}
+        historyLength={gameState.history.length}
+        isAiThinking={gameState.isAiThinking}
+        canUndo={gameState.history.length > 0 && !gameState.isAiThinking && gameState.winner === null && gameState.gameMode !== 'online'}
+        myDrawOffered={peerOnline.myDrawOffered}
+        rematchRequestedByOpponent={peerOnline.rematchRequestedByOpponent}
+        myRematchSent={peerOnline.myRematchSent}
+        aiDrawNotice={aiDrawNotice}
+        onUndo={handleUndo}
+        onReset={handleReset}
+        onResign={handleResign}
+        onOfferDraw={handleOfferDraw}
+        onRequestRematch={handleRequestRematch}
+        onAcceptRematch={handleAcceptRematch}
+      />
+
       {/* Subtle Minimalist Footer */}
-      <footer className="mt-6 md:mt-8 text-center text-xs text-[var(--ink-mute)] font-light tracking-wide lowercase">
-        <span>ultimate tic-tac-toe</span>
+      <footer className="mt-5 md:mt-6 text-center text-xs text-[var(--ink-mute)] font-light tracking-wide lowercase">
+        <span>super tic-tac-toe</span>
         <span className="mx-2 opacity-40">·</span>
         <button
           type="button"
           onClick={() => setIsRulesOpen(true)}
           className="hover:text-[var(--highlight-ink)] hairline-link cursor-pointer"
         >
-          rules
+          правила игры
         </button>
       </footer>
 
