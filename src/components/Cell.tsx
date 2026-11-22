@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CellState } from '@/types/game';
+import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
 
 interface CellProps {
   value: CellState;
@@ -22,29 +23,32 @@ export const Cell: React.FC<CellProps> = ({
   boardIdx,
   cellIdx,
 }) => {
+  // Deterministic variation (0, 1, or 2) based on cell coordinates
+  const variant = (boardIdx * 7 + cellIdx * 3) % 3;
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={!isPlayable}
       aria-label={`Sector ${boardIdx + 1}, cell ${cellIdx + 1}: ${value || 'empty'}`}
-      className={`w-full h-full min-w-0 min-h-0 relative flex items-center justify-center rounded-xs text-base sm:text-lg md:text-xl font-medium transition-all duration-150 select-none ${
+      className={`w-full h-full min-w-0 min-h-0 relative flex items-center justify-center p-1.5 sm:p-2 rounded-xs transition-all duration-150 select-none ${
         isPlayable
           ? 'cursor-pointer hover:bg-[var(--cell-hover)] active:scale-95'
           : 'cursor-default'
       } ${isLastMove ? 'bg-[var(--cell-last-move)]' : ''} ${
-        isWinningCell ? 'text-[var(--highlight-ink)] font-semibold' : ''
+        isWinningCell ? 'text-[var(--highlight-ink)]' : 'text-[var(--ink)]'
       }`}
     >
       {value === 'X' && (
-        <span className="animate-fade-up lowercase text-[var(--ink)] leading-none">
-          ✕
-        </span>
+        <div className="w-full h-full flex items-center justify-center animate-fade-up">
+          <HandDrawnX variant={variant} className="w-[85%] h-[85%]" />
+        </div>
       )}
       {value === 'O' && (
-        <span className="animate-fade-up lowercase text-[var(--ink)] leading-none text-xl md:text-2xl">
-          ○
-        </span>
+        <div className="w-full h-full flex items-center justify-center animate-fade-up">
+          <HandDrawnO variant={variant} className="w-[85%] h-[85%]" />
+        </div>
       )}
 
       {/* Tiny subtle dot indicator for last move */}

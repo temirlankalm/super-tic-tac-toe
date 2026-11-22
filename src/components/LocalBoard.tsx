@@ -3,6 +3,7 @@
 import React from 'react';
 import { BoardWinner, CellState, Move } from '@/types/game';
 import { Cell } from './Cell';
+import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
 
 interface LocalBoardProps {
   boardIdx: number;
@@ -31,13 +32,13 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
 
   return (
     <div
-      className={`relative w-full h-full p-1 sm:p-1.5 md:p-2 rounded-lg transition-all duration-300 flex flex-col ${
+      className={`relative w-full h-full p-1 sm:p-1.5 rounded-xl transition-all duration-300 flex flex-col ${
         isActive && !isResolved
           ? 'bg-[var(--active-board-bg)] active-board-indicator'
           : 'bg-transparent'
       } ${
         isGlobalWinningBoard
-          ? 'ring-2 ring-[var(--highlight-ink)] bg-[var(--active-board-bg)]'
+          ? 'ring-1.5 ring-[var(--highlight-ink)] bg-[var(--active-board-bg)]'
           : ''
       }`}
     >
@@ -58,16 +59,10 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
           const isWinCell =
             winningLine !== null && winningLine.includes(cellIdx);
 
-          // Grid borders inside the local 3x3
-          const borderClasses = [
-            cellIdx % 3 !== 2 ? 'border-r border-[var(--line)]' : '',
-            cellIdx < 6 ? 'border-b border-[var(--line)]' : '',
-          ].join(' ');
-
           return (
             <div
               key={cellIdx}
-              className={`w-full h-full min-w-0 min-h-0 flex items-stretch justify-stretch ${borderClasses}`}
+              className="w-full h-full min-w-0 min-h-0 flex items-stretch justify-stretch"
             >
               <Cell
                 value={cellValue}
@@ -85,19 +80,21 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
 
       {/* Resolved Overlay (when a player won this mini-board or tied) */}
       {isResolved && (
-        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[var(--bg)]/85 backdrop-blur-[1px] animate-fade-up select-none pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-[var(--bg)]/90 backdrop-blur-[1px] animate-fade-up select-none pointer-events-none p-3 sm:p-5">
           {winner === 'X' && (
-            <span className="text-4xl sm:text-5xl md:text-6xl font-light text-[var(--highlight-ink)] leading-none">
-              ✕
-            </span>
+            <HandDrawnX
+              variant={boardIdx % 3}
+              className="w-full h-full max-w-[90px] max-h-[90px] text-[var(--highlight-ink)]"
+            />
           )}
           {winner === 'O' && (
-            <span className="text-4xl sm:text-5xl md:text-6xl font-light text-[var(--highlight-ink)] leading-none">
-              ○
-            </span>
+            <HandDrawnO
+              variant={boardIdx % 3}
+              className="w-full h-full max-w-[90px] max-h-[90px] text-[var(--highlight-ink)]"
+            />
           )}
           {winner === 'TIE' && (
-            <span className="text-2xl sm:text-3xl font-light text-[var(--ink-mute)] tracking-widest">
+            <span className="text-3xl font-light text-[var(--ink-mute)] tracking-widest">
               —
             </span>
           )}

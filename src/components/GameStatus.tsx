@@ -3,6 +3,9 @@
 import React from 'react';
 import { RotateCcw, Undo2, HelpCircle, Bot, User } from 'lucide-react';
 import { GameState } from '@/types/game';
+import { HandDrawnLogo } from './hand-drawn/HandDrawnLogo';
+import { HandDrawnWin } from './hand-drawn/HandDrawnWin';
+import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
 
 interface GameStatusProps {
   gameState: GameState;
@@ -47,10 +50,14 @@ export const GameStatus: React.FC<GameStatusProps> = ({
     <div className="w-full max-w-[540px] mx-auto mb-4 md:mb-6">
       {/* Top Bar: Title & Primary Controls */}
       <div className="flex items-center justify-between pb-3 border-b border-[var(--line)]">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl md:text-2xl font-light tracking-tight text-[var(--highlight-ink)] lowercase">
-            super tic-tac-toe
-          </h1>
+        <div className="flex items-center gap-3">
+          {/* Hand-Drawn TTT Logo */}
+          <div className="flex items-center gap-2">
+            <HandDrawnLogo className="h-6 w-auto text-[var(--highlight-ink)]" />
+            <span className="text-xs text-[var(--ink-mute)] font-light tracking-widest lowercase">
+              · super
+            </span>
+          </div>
           <button
             type="button"
             onClick={onOpenRules}
@@ -110,14 +117,18 @@ export const GameStatus: React.FC<GameStatusProps> = ({
       </div>
 
       {/* Status Bar */}
-      <div className="flex items-center justify-between pt-3 text-sm">
+      <div className="flex items-center justify-between pt-3 text-sm min-h-[32px]">
         {/* Game State Message */}
         <div className="flex items-center gap-2">
           {winner === null ? (
             <div className="flex items-center gap-2">
               <span className="text-[var(--ink-soft)] lowercase">turn:</span>
-              <span className="inline-flex items-center gap-1 font-medium text-[var(--highlight-ink)] lowercase">
-                {currentPlayer === 'X' ? '✕' : '○'}
+              <span className="inline-flex items-center gap-1.5 font-medium text-[var(--highlight-ink)]">
+                {currentPlayer === 'X' ? (
+                  <HandDrawnX variant={0} className="w-4 h-4 text-[var(--highlight-ink)]" />
+                ) : (
+                  <HandDrawnO variant={0} className="w-4 h-4 text-[var(--highlight-ink)]" />
+                )}
                 {gameMode === 'ai' && currentPlayer !== gameState.humanPlayer && (
                   <span className="text-xs text-[var(--ink-mute)] font-normal">
                     {isAiThinking ? '(thinking…)' : '(ai)'}
@@ -126,10 +137,23 @@ export const GameStatus: React.FC<GameStatusProps> = ({
               </span>
             </div>
           ) : (
-            <div className="font-medium text-[var(--highlight-ink)] lowercase animate-fade-up">
-              {winner === 'TIE'
-                ? "it's a draw."
-                : `${winner === 'X' ? '✕' : '○'} won the match.`}
+            <div className="flex items-center gap-2 animate-fade-up">
+              {winner === 'TIE' ? (
+                <span className="font-medium text-[var(--highlight-ink)] lowercase">
+                  it&apos;s a draw.
+                </span>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-[var(--highlight-ink)]">
+                    {winner === 'X' ? (
+                      <HandDrawnX variant={0} className="w-4 h-4 inline-block mr-1 text-[var(--highlight-ink)]" />
+                    ) : (
+                      <HandDrawnO variant={0} className="w-4 h-4 inline-block mr-1 text-[var(--highlight-ink)]" />
+                    )}
+                  </span>
+                  <HandDrawnWin className="h-5 w-auto" />
+                </div>
+              )}
             </div>
           )}
         </div>
