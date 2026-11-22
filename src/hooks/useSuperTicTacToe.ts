@@ -148,6 +148,19 @@ export function useSuperTicTacToe() {
     setGameState((prev) => ({ ...prev, difficulty }));
   }, []);
 
+  const handleTimeout = useCallback((timedOutPlayer: Player) => {
+    const winnerPlayer: Player = timedOutPlayer === 'X' ? 'O' : 'X';
+    setGameState((prev) => {
+      if (prev.winner !== null) return prev;
+      return {
+        ...prev,
+        winner: winnerPlayer,
+        winReason: 'timeout',
+      };
+    });
+    triggerVictory(winnerPlayer);
+  }, [triggerVictory]);
+
   return {
     gameState,
     handleCellClick,
@@ -155,5 +168,6 @@ export function useSuperTicTacToe() {
     undoMove,
     toggleGameMode,
     setDifficulty,
+    handleTimeout,
   };
 }

@@ -4,6 +4,10 @@ export type CellState = Player | null;
 
 export type BoardWinner = Player | 'TIE' | null;
 
+export type WinReason = 'normal' | 'timeout';
+
+export type TimeControl = 'off' | 60 | 120 | 180 | 300;
+
 export interface Move {
   boardIdx: number;
   cellIdx: number;
@@ -27,6 +31,8 @@ export interface GameState {
   lastMove: Move | null;
   // Overall game winner ('X', 'O', 'TIE', or null if in progress)
   winner: BoardWinner;
+  // Reason for victory ('normal' 3-in-a-row or 'timeout' flag fall)
+  winReason?: WinReason;
   // Winning line on global board (e.g. [0, 1, 2])
   globalWinningLine: number[] | null;
   // Game history for undo

@@ -72,6 +72,15 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               Win three mini-board sectors in a row on the global 3×3 grid to claim overall victory.
             </p>
           </div>
+
+          <div>
+            <h3 className="font-medium text-[var(--highlight-ink)] lowercase mb-1">
+              5. chess clock mode
+            </h3>
+            <p className="text-[var(--ink-soft)]">
+              Select 1m (bullet), 2m, 3m, or 5m to enable a real-time chess clock. Your timer ticks down during your turn and switches when you move. If a player&apos;s clock reaches zero, their opponent wins immediately on time.
+            </p>
+          </div>
         </div>
 
         {/* Footer */}
