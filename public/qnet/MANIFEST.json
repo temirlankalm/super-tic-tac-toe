@@ -11,6 +11,6 @@
   "net.json": "dc010b9e34e11117373567ee0164be02c91a5b33c9f0c6950ee44cc20d9ef45a",
   "net.bin": "bb5a5257180b3424c38a6c304517b14b710bbc1817d12451f87e69af1f9a8256"
  },
- "kyunet_commit": "e2e54f72c33f523f3e166d2a60bb7ebb6ca626ff",
+ "qnet_commit": "a609f7e41bab334c00b0d204c915225e9802d972",
  "net": "g2_linear"
 }

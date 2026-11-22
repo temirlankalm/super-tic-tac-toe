@@ -187,7 +187,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                   { lvl: 'easy', label: 'легк' },
                   { lvl: 'medium', label: 'сред' },
                   { lvl: 'hard', label: 'слож' },
-                  { lvl: 'kyunet', label: 'kyunet' },
+                  { lvl: 'qnet', label: 'qnet' },
                 ] as const
               ).map(({ lvl, label }) => (
                 <button
