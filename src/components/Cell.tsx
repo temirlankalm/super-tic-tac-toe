@@ -23,7 +23,7 @@ export const Cell: React.FC<CellProps> = ({
   boardIdx,
   cellIdx,
 }) => {
-  // Deterministic variation (0, 1, or 2) based on cell coordinates
+  // Deterministic variation (0, 1, or 2)
   const variant = (boardIdx * 7 + cellIdx * 3) % 3;
 
   return (
@@ -32,28 +32,36 @@ export const Cell: React.FC<CellProps> = ({
       onClick={onClick}
       disabled={!isPlayable}
       aria-label={`Sector ${boardIdx + 1}, cell ${cellIdx + 1}: ${value || 'empty'}`}
-      className={`w-full h-full min-w-0 min-h-0 relative flex items-center justify-center p-1.5 sm:p-2 rounded-xs transition-all duration-150 select-none ${
+      className={`w-full h-full min-w-0 min-h-0 relative flex items-center justify-center p-1 sm:p-1.5 transition-all duration-150 select-none ${
         isPlayable
           ? 'cursor-pointer hover:bg-[var(--cell-hover)] active:scale-95'
           : 'cursor-default'
-      } ${isLastMove ? 'bg-[var(--cell-last-move)]' : ''} ${
-        isWinningCell ? 'text-[var(--highlight-ink)]' : 'text-[var(--ink)]'
       }`}
     >
       {value === 'X' && (
         <div className="w-full h-full flex items-center justify-center animate-fade-up">
-          <HandDrawnX variant={variant} className="w-[85%] h-[85%]" />
+          <HandDrawnX
+            variant={variant}
+            className={`w-[70%] h-[70%] ${
+              isWinningCell ? 'text-[var(--highlight-ink)]' : 'text-[var(--ink)]'
+            }`}
+          />
         </div>
       )}
       {value === 'O' && (
         <div className="w-full h-full flex items-center justify-center animate-fade-up">
-          <HandDrawnO variant={variant} className="w-[85%] h-[85%]" />
+          <HandDrawnO
+            variant={variant}
+            className={`w-[70%] h-[70%] ${
+              isWinningCell ? 'text-[var(--highlight-ink)]' : 'text-[var(--ink)]'
+            }`}
+          />
         </div>
       )}
 
-      {/* Tiny subtle dot indicator for last move */}
+      {/* Subtle indicator dot for last move */}
       {isLastMove && (
-        <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--ink-soft)] opacity-80" />
+        <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--ink-soft)] opacity-70 pointer-events-none" />
       )}
     </button>
   );

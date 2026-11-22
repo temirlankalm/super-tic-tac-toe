@@ -4,6 +4,7 @@ import React from 'react';
 import { BoardWinner, CellState, Move } from '@/types/game';
 import { Cell } from './Cell';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
+import { HandDrawnLocalGrid } from './hand-drawn/HandDrawnLocalGrid';
 
 interface LocalBoardProps {
   boardIdx: number;
@@ -32,18 +33,23 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
 
   return (
     <div
-      className={`relative w-full h-full p-1 sm:p-1.5 rounded-xl transition-all duration-300 flex flex-col ${
+      className={`relative w-full h-full aspect-square p-1 sm:p-1.5 rounded-xl transition-all duration-200 flex flex-col ${
         isActive && !isResolved
-          ? 'bg-[var(--active-board-bg)] active-board-indicator'
+          ? 'bg-[var(--active-board-bg)] ring-1.5 ring-[var(--line-strong)] shadow-xs'
           : 'bg-transparent'
       } ${
         isGlobalWinningBoard
-          ? 'ring-1.5 ring-[var(--highlight-ink)] bg-[var(--active-board-bg)]'
+          ? 'ring-2 ring-[var(--highlight-ink)] bg-[var(--active-board-bg)]'
           : ''
       }`}
     >
+      {/* Authentic Hand-Drawn 3x3 Grid Lines for this Sector */}
+      <div className="absolute inset-1 sm:inset-1.5 pointer-events-none text-[var(--ink)] opacity-80 z-0">
+        <HandDrawnLocalGrid sectorIdx={boardIdx} className="w-full h-full" />
+      </div>
+
       {/* 3x3 Internal Cell Grid */}
-      <div className="grid grid-cols-3 grid-rows-3 w-full h-full flex-1 gap-0">
+      <div className="relative z-10 grid grid-cols-3 grid-rows-3 w-full h-full gap-0">
         {cells.map((cellValue, cellIdx) => {
           const isPlayable =
             !disabled &&
@@ -80,17 +86,17 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
 
       {/* Resolved Overlay (when a player won this mini-board or tied) */}
       {isResolved && (
-        <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-[var(--bg)]/90 backdrop-blur-[1px] animate-fade-up select-none pointer-events-none p-3 sm:p-5">
+        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-[var(--bg)]/90 backdrop-blur-[1px] animate-fade-up select-none pointer-events-none p-3 sm:p-5">
           {winner === 'X' && (
             <HandDrawnX
               variant={boardIdx % 3}
-              className="w-full h-full max-w-[90px] max-h-[90px] text-[var(--highlight-ink)]"
+              className="w-full h-full max-w-[80px] max-h-[80px] text-[var(--highlight-ink)]"
             />
           )}
           {winner === 'O' && (
             <HandDrawnO
               variant={boardIdx % 3}
-              className="w-full h-full max-w-[90px] max-h-[90px] text-[var(--highlight-ink)]"
+              className="w-full h-full max-w-[80px] max-h-[80px] text-[var(--highlight-ink)]"
             />
           )}
           {winner === 'TIE' && (
