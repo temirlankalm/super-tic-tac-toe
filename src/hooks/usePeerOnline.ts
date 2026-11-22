@@ -160,7 +160,13 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
   const joinRoom = useCallback(
     async (targetRoomId: string) => {
       cleanup();
-      const cleanId = targetRoomId.trim().toLowerCase();
+      let cleanId = targetRoomId.trim().toLowerCase();
+      if (cleanId.includes('room=')) {
+        cleanId = cleanId.split('room=')[1].split('&')[0];
+      }
+      cleanId = cleanId.replace(/^sttt-/, '').replace(/[^a-z0-9]/g, '');
+      if (!cleanId) return;
+
       setStatus('connecting');
       setRole('guest');
       setRoomId(cleanId);

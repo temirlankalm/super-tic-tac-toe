@@ -239,6 +239,20 @@ export default function Home() {
     }
   };
 
+  const handleJoinByCode = (targetRoomId: string) => {
+    setGameMode('online');
+    peerOnline.joinRoom(targetRoomId);
+    if (typeof window !== 'undefined' && window.history.replaceState) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('room', targetRoomId);
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
+  const handleCreateRoom = () => {
+    peerOnline.createRoom();
+  };
+
   const handleRequestRematch = () => {
     peerOnline.requestRematch();
     haptic('tap');
@@ -330,6 +344,8 @@ export default function Home() {
         theme={theme}
         onClose={() => setIsOnlineModalOpen(false)}
         onLeaveRoom={handleLeaveRoom}
+        onCreateRoom={handleCreateRoom}
+        onJoinRoom={handleJoinByCode}
       />
     </main>
   );
