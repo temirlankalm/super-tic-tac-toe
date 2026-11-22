@@ -1,0 +1,31 @@
+{
+ "format": 1,
+ "spec": "kyunet-features-v1:local9x19686+global4^9+sent9x19686+1",
+ "num_features": 616493,
+ "hidden": 1,
+ "hidden2": 0,
+ "scale": 300.0,
+ "floats": 616494,
+ "sha256": "bb5a5257180b3424c38a6c304517b14b710bbc1817d12451f87e69af1f9a8256",
+ "git_commit": "42a8210dd37451108e9fc9784049d96a5103be1b",
+ "train_config": {
+  "data": [
+   "data/gen0",
+   "data/gen1"
+  ],
+  "out": "nets/g2_linear",
+  "hidden": 1,
+  "hidden2": 0,
+  "epochs": 4,
+  "batch": 8192,
+  "lr": 0.002,
+  "scale": 300.0,
+  "lam": 0.3,
+  "val_fraction": 0.02,
+  "seed": 1,
+  "device": "auto",
+  "init": null
+ },
+ "positions": 12917194,
+ "final_val_loss": 0.6442393660545349
+}

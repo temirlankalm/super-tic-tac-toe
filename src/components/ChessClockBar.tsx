@@ -54,7 +54,15 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
 
   const playerOLabel =
     gameMode === 'ai'
-      ? `ии (${difficulty === 'medium' ? 'средний' : difficulty === 'easy' ? 'легкий' : 'сложный'})`
+      ? `ии (${
+          difficulty === 'medium'
+            ? 'средний'
+            : difficulty === 'easy'
+            ? 'легкий'
+            : difficulty === 'kyunet'
+            ? 'kyunet'
+            : 'сложный'
+        })`
       : gameMode === 'online'
       ? onlineRole === 'guest'
         ? 'вы (o)'
