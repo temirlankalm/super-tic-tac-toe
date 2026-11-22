@@ -26,9 +26,9 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
   } = gameState;
 
   return (
-    <div className="w-full max-w-[540px] aspect-square mx-auto select-none">
+    <div className="w-full max-w-[540px] aspect-square mx-auto select-none flex flex-col">
       {/* 3x3 Grid of Local Boards */}
-      <div className="grid grid-cols-3 grid-rows-3 h-full w-full gap-2 md:gap-3 p-2 md:p-3 rounded-2xl border border-[var(--line)] bg-[var(--bg-subtle)]/50 shadow-sm">
+      <div className="grid grid-cols-3 grid-rows-3 w-full h-full gap-1.5 sm:gap-2 md:gap-3 p-1.5 sm:p-2 md:p-3 rounded-2xl border border-[var(--line)] bg-[var(--bg-subtle)]/50 shadow-xs">
         {boardWinners.map((boardWinner, boardIdx) => {
           // If activeBoard is null (free play), any unresolved, non-full board is active!
           const isActive =
@@ -43,7 +43,7 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
           return (
             <div
               key={boardIdx}
-              className="relative border border-[var(--line-strong)] rounded-xl overflow-hidden transition-all duration-200"
+              className="relative w-full h-full min-w-0 min-h-0 border border-[var(--line-strong)] rounded-xl overflow-hidden transition-all duration-200 flex items-stretch justify-stretch"
             >
               <LocalBoard
                 boardIdx={boardIdx}

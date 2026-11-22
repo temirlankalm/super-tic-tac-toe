@@ -28,7 +28,7 @@ export const Cell: React.FC<CellProps> = ({
       onClick={onClick}
       disabled={!isPlayable}
       aria-label={`Sector ${boardIdx + 1}, cell ${cellIdx + 1}: ${value || 'empty'}`}
-      className={`relative flex items-center justify-center aspect-square rounded-sm text-lg md:text-xl font-medium transition-all duration-150 select-none ${
+      className={`w-full h-full min-w-0 min-h-0 relative flex items-center justify-center rounded-xs text-base sm:text-lg md:text-xl font-medium transition-all duration-150 select-none ${
         isPlayable
           ? 'cursor-pointer hover:bg-[var(--cell-hover)] active:scale-95'
           : 'cursor-default'

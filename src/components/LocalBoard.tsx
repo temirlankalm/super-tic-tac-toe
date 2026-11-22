@@ -31,7 +31,7 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
 
   return (
     <div
-      className={`relative aspect-square p-1.5 md:p-2 rounded-lg transition-all duration-300 ${
+      className={`relative w-full h-full p-1 sm:p-1.5 md:p-2 rounded-lg transition-all duration-300 flex flex-col ${
         isActive && !isResolved
           ? 'bg-[var(--active-board-bg)] active-board-indicator'
           : 'bg-transparent'
@@ -42,7 +42,7 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
       }`}
     >
       {/* 3x3 Internal Cell Grid */}
-      <div className="grid grid-cols-3 grid-rows-3 h-full w-full gap-0">
+      <div className="grid grid-cols-3 grid-rows-3 w-full h-full flex-1 gap-0">
         {cells.map((cellValue, cellIdx) => {
           const isPlayable =
             !disabled &&
@@ -65,7 +65,10 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
           ].join(' ');
 
           return (
-            <div key={cellIdx} className={`h-full w-full ${borderClasses}`}>
+            <div
+              key={cellIdx}
+              className={`w-full h-full min-w-0 min-h-0 flex items-stretch justify-stretch ${borderClasses}`}
+            >
               <Cell
                 value={cellValue}
                 isPlayable={isPlayable}
@@ -84,17 +87,17 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
       {isResolved && (
         <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[var(--bg)]/85 backdrop-blur-[1px] animate-fade-up select-none pointer-events-none">
           {winner === 'X' && (
-            <span className="text-5xl md:text-6xl font-light text-[var(--highlight-ink)] leading-none">
+            <span className="text-4xl sm:text-5xl md:text-6xl font-light text-[var(--highlight-ink)] leading-none">
               ✕
             </span>
           )}
           {winner === 'O' && (
-            <span className="text-5xl md:text-6xl font-light text-[var(--highlight-ink)] leading-none">
+            <span className="text-4xl sm:text-5xl md:text-6xl font-light text-[var(--highlight-ink)] leading-none">
               ○
             </span>
           )}
           {winner === 'TIE' && (
-            <span className="text-3xl font-light text-[var(--ink-mute)] tracking-widest">
+            <span className="text-2xl sm:text-3xl font-light text-[var(--ink-mute)] tracking-widest">
               —
             </span>
           )}
