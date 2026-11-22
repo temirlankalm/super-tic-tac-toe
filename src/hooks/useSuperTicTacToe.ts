@@ -6,12 +6,25 @@ import { AiDifficulty, GameState, Player } from '@/types/game';
 import { applyMove, createInitialState, isMoveValid } from '@/lib/gameLogic';
 import { getBestAiMove } from '@/lib/ai';
 
-export function useSuperTicTacToe() {
+export interface MoveEvent {
+  player: Player;
+  isSectorWon: boolean;
+  isGameWon: boolean;
+  isTie: boolean;
+}
+
+export interface UseSuperTicTacToeOptions {
+  onMove?: (event: MoveEvent) => void;
+}
+
+export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
   const [gameState, setGameState] = useState<GameState>(() =>
     createInitialState('ai', 'X', 'hard')
   );
 
   const aiThinkingRef = useRef(false);
+  const onMoveRef = useRef(options?.onMove);
+  onMoveRef.current = options?.onMove;
 
   // Trigger win confetti
   const triggerVictory = useCallback((winner: Player) => {
@@ -42,10 +55,23 @@ export function useSuperTicTacToe() {
           return prev;
         }
 
+        const prevBoardWon = prev.boardWinners[boardIdx] !== null;
         const next = applyMove(prev, boardIdx, cellIdx);
+        const isSectorWon = !prevBoardWon && next.boardWinners[boardIdx] !== null;
+        const isGameWon = prev.winner === null && (next.winner === 'X' || next.winner === 'O');
+        const isTie = prev.winner === null && next.winner === 'TIE';
+
         if (next.winner === 'X' || next.winner === 'O') {
           triggerVictory(next.winner);
         }
+
+        onMoveRef.current?.({
+          player: prev.currentPlayer,
+          isSectorWon,
+          isGameWon,
+          isTie,
+        });
+
         return next;
       });
     },
@@ -85,10 +111,23 @@ export function useSuperTicTacToe() {
           return { ...prev, isAiThinking: false };
         }
 
+        const prevBoardWon = prev.boardWinners[bestMove.boardIdx] !== null;
         const next = applyMove(prev, bestMove.boardIdx, bestMove.cellIdx);
+        const isSectorWon = !prevBoardWon && next.boardWinners[bestMove.boardIdx] !== null;
+        const isGameWon = prev.winner === null && (next.winner === 'X' || next.winner === 'O');
+        const isTie = prev.winner === null && next.winner === 'TIE';
+
         if (next.winner === 'X' || next.winner === 'O') {
           triggerVictory(next.winner);
         }
+
+        onMoveRef.current?.({
+          player: aiPlayer,
+          isSectorWon,
+          isGameWon,
+          isTie,
+        });
+
         return { ...next, isAiThinking: false };
       });
     }, 420);

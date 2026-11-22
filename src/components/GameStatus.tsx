@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { RotateCcw, Undo2, HelpCircle, Bot, User, Sun, Moon, Clock } from 'lucide-react';
+import { RotateCcw, Undo2, HelpCircle, Bot, User, Sun, Moon, Clock, Volume2, VolumeX } from 'lucide-react';
 import { AiDifficulty, GameState, TimeControl } from '@/types/game';
 import { HandDrawnLogo } from './hand-drawn/HandDrawnLogo';
 import { HandDrawnWin } from './hand-drawn/HandDrawnWin';
@@ -11,12 +11,14 @@ interface GameStatusProps {
   gameState: GameState;
   theme: 'light' | 'dark';
   timeControl: TimeControl;
+  isSoundEnabled: boolean;
   onReset: () => void;
   onUndo: () => void;
   onToggleMode: () => void;
   onSetDifficulty: (difficulty: AiDifficulty) => void;
   onSetTimeControl: (tc: TimeControl) => void;
   onToggleTheme: () => void;
+  onToggleSound: () => void;
   onOpenRules: () => void;
 }
 
@@ -32,12 +34,14 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   gameState,
   theme,
   timeControl,
+  isSoundEnabled,
   onReset,
   onUndo,
   onToggleMode,
   onSetDifficulty,
   onSetTimeControl,
   onToggleTheme,
+  onToggleSound,
   onOpenRules,
 }) => {
   const {
@@ -234,6 +238,17 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             aria-label={theme === 'dark' ? 'switch to light theme' : 'switch to dark theme'}
           >
             {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+          </button>
+
+          {/* Sound toggle (Paper ASMR) */}
+          <button
+            type="button"
+            onClick={onToggleSound}
+            className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer"
+            title={isSoundEnabled ? 'mute sound (paper asmr)' : 'unmute sound'}
+            aria-label={isSoundEnabled ? 'mute sound' : 'unmute sound'}
+          >
+            {isSoundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
           </button>
         </div>
       </div>

@@ -1,16 +1,58 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useSuperTicTacToe } from '@/hooks/useSuperTicTacToe';
+import React, { useState, useCallback } from 'react';
+import { MoveEvent, useSuperTicTacToe } from '@/hooks/useSuperTicTacToe';
 import { useTheme } from '@/hooks/useTheme';
 import { useChessClock } from '@/hooks/useChessClock';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
 import { SuperBoard } from '@/components/SuperBoard';
 import { GameStatus } from '@/components/GameStatus';
 import { ChessClockBar } from '@/components/ChessClockBar';
 import { RulesModal } from '@/components/RulesModal';
+import { Player } from '@/types/game';
 
 export default function Home() {
   const [isRulesOpen, setIsRulesOpen] = useState(false);
+
+  const { theme, toggleTheme } = useTheme();
+
+  const {
+    isSoundEnabled,
+    toggleSound,
+    playScratch,
+    playClock,
+    playWinSector,
+    playGameVictory,
+    haptic,
+  } = useSoundEffects();
+
+  // Handle sound & haptic response for every move
+  const handleMoveEvent = useCallback(
+    ({ isSectorWon, isGameWon, isTie }: MoveEvent) => {
+      // 1. Paper ASMR pencil scratch
+      playScratch();
+
+      // 2. Sector win / victory / haptic feedback
+      if (isGameWon) {
+        haptic('win');
+        playGameVictory(false);
+      } else if (isTie) {
+        haptic('sector');
+        playGameVictory(true);
+      } else if (isSectorWon) {
+        haptic('sector');
+        playWinSector();
+      } else {
+        haptic('tap');
+      }
+
+      // 3. Analog clock click if timer is active
+      if (!isGameWon && !isTie) {
+        playClock();
+      }
+    },
+    [playScratch, playWinSector, playGameVictory, playClock, haptic]
+  );
 
   const {
     gameState,
@@ -19,10 +61,18 @@ export default function Home() {
     undoMove,
     toggleGameMode,
     setDifficulty,
-    handleTimeout,
-  } = useSuperTicTacToe();
+    handleTimeout: rawHandleTimeout,
+  } = useSuperTicTacToe({ onMove: handleMoveEvent });
 
-  const { theme, toggleTheme } = useTheme();
+  const handleTimeout = useCallback(
+    (timedOutPlayer: Player) => {
+      rawHandleTimeout(timedOutPlayer);
+      playClock();
+      playGameVictory(false);
+      haptic('win');
+    },
+    [rawHandleTimeout, playClock, playGameVictory, haptic]
+  );
 
   const {
     timeControl,
@@ -40,11 +90,18 @@ export default function Home() {
   const handleReset = () => {
     resetGame();
     resetClocks();
+    haptic('tap');
   };
 
   const handleToggleMode = () => {
     toggleGameMode();
     resetClocks();
+    haptic('tap');
+  };
+
+  const handleUndo = () => {
+    undoMove();
+    haptic('tap');
   };
 
   return (
@@ -54,12 +111,14 @@ export default function Home() {
         gameState={gameState}
         theme={theme}
         timeControl={timeControl}
+        isSoundEnabled={isSoundEnabled}
         onReset={handleReset}
-        onUndo={undoMove}
+        onUndo={handleUndo}
         onToggleMode={handleToggleMode}
         onSetDifficulty={setDifficulty}
         onSetTimeControl={setTimeControl}
         onToggleTheme={toggleTheme}
+        onToggleSound={toggleSound}
         onOpenRules={() => setIsRulesOpen(true)}
       />
 
