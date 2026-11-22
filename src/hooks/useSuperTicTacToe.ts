@@ -260,6 +260,30 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
     triggerVictory(winnerPlayer);
   }, [triggerVictory]);
 
+  const handleResign = useCallback((resigningPlayer: Player) => {
+    const winnerPlayer: Player = resigningPlayer === 'X' ? 'O' : 'X';
+    setGameState((prev) => {
+      if (prev.winner !== null) return prev;
+      return {
+        ...prev,
+        winner: winnerPlayer,
+        winReason: 'resignation',
+      };
+    });
+    triggerVictory(winnerPlayer);
+  }, [triggerVictory]);
+
+  const handleDraw = useCallback(() => {
+    setGameState((prev) => {
+      if (prev.winner !== null) return prev;
+      return {
+        ...prev,
+        winner: 'TIE',
+        winReason: 'agreement',
+      };
+    });
+  }, []);
+
   return {
     gameState,
     handleCellClick,
@@ -271,5 +295,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
     toggleGameMode,
     setDifficulty,
     handleTimeout,
+    handleResign,
+    handleDraw,
   };
 }

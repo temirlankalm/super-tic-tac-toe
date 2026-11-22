@@ -90,6 +90,16 @@ export default function Home() {
       resetClocks(tc);
       haptic('win');
     },
+    onRemoteResign: (remotePlayer) => {
+      rawHandleResign(remotePlayer);
+      playGameVictory(false);
+      haptic('win');
+    },
+    onDrawAccepted: () => {
+      rawHandleDraw();
+      playGameVictory(true);
+      haptic('sector');
+    },
     onConnected: () => {
       if (peerOnline.role === 'host') {
         peerOnline.sendMessage({
@@ -118,6 +128,8 @@ export default function Home() {
     toggleGameMode,
     setDifficulty,
     handleTimeout: rawHandleTimeout,
+    handleResign: rawHandleResign,
+    handleDraw: rawHandleDraw,
   } = useSuperTicTacToe({
     onMove: handleMoveEvent,
     onlineRole: peerOnline.role,
@@ -265,6 +277,43 @@ export default function Home() {
     haptic('win');
   };
 
+  const handleResign = () => {
+    if (gameState.gameMode === 'online') {
+      const myPlayer: Player = peerOnline.role === 'host' ? 'X' : 'O';
+      peerOnline.resignOnline();
+      rawHandleResign(myPlayer);
+    } else if (gameState.gameMode === 'ai') {
+      rawHandleResign('X');
+    } else {
+      rawHandleResign(gameState.currentPlayer);
+    }
+    playGameVictory(false);
+    haptic('win');
+  };
+
+  const handleOfferDraw = () => {
+    if (gameState.gameMode === 'online') {
+      peerOnline.offerDrawOnline();
+      haptic('tap');
+    } else {
+      rawHandleDraw();
+      playGameVictory(true);
+      haptic('sector');
+    }
+  };
+
+  const handleAcceptDraw = () => {
+    peerOnline.acceptDrawOnline();
+    rawHandleDraw();
+    playGameVictory(true);
+    haptic('sector');
+  };
+
+  const handleDeclineDraw = () => {
+    peerOnline.declineDrawOnline();
+    haptic('tap');
+  };
+
   const handleUndo = () => {
     undoMove();
     haptic('tap');
@@ -283,6 +332,9 @@ export default function Home() {
         roomId={peerOnline.roomId}
         rematchRequestedByOpponent={peerOnline.rematchRequestedByOpponent}
         myRematchSent={peerOnline.myRematchSent}
+        drawOfferedByOpponent={peerOnline.drawOfferedByOpponent}
+        myDrawOffered={peerOnline.myDrawOffered}
+        drawDeclinedNotice={peerOnline.drawDeclinedNotice}
         onReset={handleReset}
         onUndo={handleUndo}
         onToggleMode={handleToggleMode}
@@ -294,6 +346,10 @@ export default function Home() {
         onOpenOnlineModal={handleOpenOnlineModal}
         onRequestRematch={handleRequestRematch}
         onAcceptRematch={handleAcceptRematch}
+        onResign={handleResign}
+        onOfferDraw={handleOfferDraw}
+        onAcceptDraw={handleAcceptDraw}
+        onDeclineDraw={handleDeclineDraw}
       />
 
       {/* Chess Clock Bar (visible when timer is active) */}

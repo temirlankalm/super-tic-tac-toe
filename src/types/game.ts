@@ -4,7 +4,7 @@ export type CellState = Player | null;
 
 export type BoardWinner = Player | 'TIE' | null;
 
-export type WinReason = 'normal' | 'timeout';
+export type WinReason = 'normal' | 'timeout' | 'resignation' | 'agreement';
 
 export type TimeControl = 'off' | 60 | 120 | 180 | 300;
 
@@ -53,6 +53,20 @@ export type PeerMessage =
   | {
       type: 'REMATCH_ACCEPT';
       timeControl: TimeControl;
+    }
+  | {
+      type: 'RESIGN';
+      player: Player;
+    }
+  | {
+      type: 'DRAW_OFFER';
+      fromPlayer: Player;
+    }
+  | {
+      type: 'DRAW_ACCEPT';
+    }
+  | {
+      type: 'DRAW_DECLINE';
     }
   | {
       type: 'DISCONNECT';

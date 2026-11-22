@@ -10,6 +10,10 @@ interface UsePeerOnlineOptions {
   onTimeSync?: (timeX: number, timeO: number) => void;
   onRematchRequested?: (fromPlayer: Player) => void;
   onRematchAccepted?: (timeControl: TimeControl) => void;
+  onRemoteResign?: (player: Player) => void;
+  onDrawOffered?: (fromPlayer: Player) => void;
+  onDrawAccepted?: () => void;
+  onDrawDeclined?: () => void;
   onConnected?: () => void;
 }
 
@@ -19,6 +23,9 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [rematchRequestedByOpponent, setRematchRequestedByOpponent] = useState(false);
   const [myRematchSent, setMyRematchSent] = useState(false);
+  const [drawOfferedByOpponent, setDrawOfferedByOpponent] = useState(false);
+  const [myDrawOffered, setMyDrawOffered] = useState(false);
+  const [drawDeclinedNotice, setDrawDeclinedNotice] = useState(false);
 
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
@@ -44,6 +51,9 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     setRoomId(null);
     setRematchRequestedByOpponent(false);
     setMyRematchSent(false);
+    setDrawOfferedByOpponent(false);
+    setMyDrawOffered(false);
+    setDrawDeclinedNotice(false);
   }, []);
 
   // Send message over WebRTC DataChannel
@@ -94,6 +104,24 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
           setRematchRequestedByOpponent(false);
           setMyRematchSent(false);
           optionsRef.current?.onRematchAccepted?.(msg.timeControl);
+          break;
+        case 'RESIGN':
+          optionsRef.current?.onRemoteResign?.(msg.player);
+          break;
+        case 'DRAW_OFFER':
+          setDrawOfferedByOpponent(true);
+          optionsRef.current?.onDrawOffered?.(msg.fromPlayer);
+          break;
+        case 'DRAW_ACCEPT':
+          setMyDrawOffered(false);
+          setDrawOfferedByOpponent(false);
+          optionsRef.current?.onDrawAccepted?.();
+          break;
+        case 'DRAW_DECLINE':
+          setMyDrawOffered(false);
+          setDrawDeclinedNotice(true);
+          setTimeout(() => setDrawDeclinedNotice(false), 3000);
+          optionsRef.current?.onDrawDeclined?.();
           break;
         case 'DISCONNECT':
           setStatus('disconnected');
@@ -212,6 +240,31 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     [sendMessage]
   );
 
+  // Resign from game
+  const resignOnline = useCallback(() => {
+    const myPlayer: Player = role === 'host' ? 'X' : 'O';
+    sendMessage({ type: 'RESIGN', player: myPlayer });
+  }, [role, sendMessage]);
+
+  // Offer draw to opponent
+  const offerDrawOnline = useCallback(() => {
+    const myPlayer: Player = role === 'host' ? 'X' : 'O';
+    setMyDrawOffered(true);
+    sendMessage({ type: 'DRAW_OFFER', fromPlayer: myPlayer });
+  }, [role, sendMessage]);
+
+  // Accept draw offered by opponent
+  const acceptDrawOnline = useCallback(() => {
+    setDrawOfferedByOpponent(false);
+    sendMessage({ type: 'DRAW_ACCEPT' });
+  }, [sendMessage]);
+
+  // Decline draw offered by opponent
+  const declineDrawOnline = useCallback(() => {
+    setDrawOfferedByOpponent(false);
+    sendMessage({ type: 'DRAW_DECLINE' });
+  }, [sendMessage]);
+
   // Leave room and notify peer
   const leaveRoom = useCallback(() => {
     sendMessage({ type: 'DISCONNECT' });
@@ -231,11 +284,18 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     roomId,
     rematchRequestedByOpponent,
     myRematchSent,
+    drawOfferedByOpponent,
+    myDrawOffered,
+    drawDeclinedNotice,
     createRoom,
     joinRoom,
     leaveRoom,
     sendMessage,
     requestRematch,
     acceptRematch,
+    resignOnline,
+    offerDrawOnline,
+    acceptDrawOnline,
+    declineDrawOnline,
   };
 }

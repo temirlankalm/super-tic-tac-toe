@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { RotateCcw, Undo2, HelpCircle, Bot, User, Sun, Moon, Clock, Volume2, VolumeX, Globe } from 'lucide-react';
+import { RotateCcw, Undo2, HelpCircle, Bot, User, Sun, Moon, Clock, Volume2, VolumeX, Globe, Flag, Handshake } from 'lucide-react';
 import { AiDifficulty, ConnectionStatus, GameState, OnlineRole, TimeControl } from '@/types/game';
 import { HandDrawnLogo } from './hand-drawn/HandDrawnLogo';
 import { HandDrawnWin } from './hand-drawn/HandDrawnWin';
@@ -17,6 +17,9 @@ interface GameStatusProps {
   roomId?: string | null;
   rematchRequestedByOpponent?: boolean;
   myRematchSent?: boolean;
+  drawOfferedByOpponent?: boolean;
+  myDrawOffered?: boolean;
+  drawDeclinedNotice?: boolean;
   onReset: () => void;
   onUndo: () => void;
   onToggleMode: () => void;
@@ -28,6 +31,10 @@ interface GameStatusProps {
   onOpenOnlineModal?: () => void;
   onRequestRematch?: () => void;
   onAcceptRematch?: () => void;
+  onResign?: () => void;
+  onOfferDraw?: () => void;
+  onAcceptDraw?: () => void;
+  onDeclineDraw?: () => void;
 }
 
 const timeLabels: Record<TimeControl, string> = {
@@ -48,6 +55,9 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   roomId,
   rematchRequestedByOpponent,
   myRematchSent,
+  drawOfferedByOpponent,
+  myDrawOffered,
+  drawDeclinedNotice,
   onReset,
   onUndo,
   onToggleMode,
@@ -59,6 +69,10 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   onOpenOnlineModal,
   onRequestRematch,
   onAcceptRematch,
+  onResign,
+  onOfferDraw,
+  onAcceptDraw,
+  onDeclineDraw,
 }) => {
   const {
     currentPlayer,
@@ -72,6 +86,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   } = gameState;
 
   const [isTimeMenuOpen, setIsTimeMenuOpen] = useState(false);
+  const [isResignConfirmOpen, setIsResignConfirmOpen] = useState(false);
   const timeMenuRef = useRef<HTMLDivElement>(null);
 
   // Close time menu on outside click
@@ -283,6 +298,60 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             <RotateCcw size={13} />
           </button>
 
+          {/* Resign Button with Safety Confirmation */}
+          {winner === null && history.length > 0 && (
+            isResignConfirmOpen ? (
+              <div className="flex items-center gap-1 bg-rose-500/10 border border-rose-500/30 px-1.5 py-0.5 rounded-md text-[11px] animate-fade-up">
+                <span className="text-rose-500 lowercase">сдаться?</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsResignConfirmOpen(false);
+                    onResign?.();
+                  }}
+                  className="text-rose-600 dark:text-rose-400 font-medium hover:underline px-0.5 cursor-pointer lowercase"
+                >
+                  да
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsResignConfirmOpen(false)}
+                  className="text-[var(--ink-mute)] hover:text-[var(--ink-soft)] px-0.5 cursor-pointer lowercase"
+                >
+                  нет
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsResignConfirmOpen(true)}
+                className="p-1.5 rounded-md border border-[var(--line)] hover:border-rose-500/40 hover:text-rose-500 text-[var(--ink-soft)] transition-all cursor-pointer"
+                title="сдаться"
+                aria-label="сдаться"
+              >
+                <Flag size={13} />
+              </button>
+            )
+          )}
+
+          {/* Offer Draw Button */}
+          {winner === null && history.length > 0 && (
+            <button
+              type="button"
+              onClick={onOfferDraw}
+              disabled={myDrawOffered}
+              className={`p-1.5 rounded-md border border-[var(--line)] transition-all ${
+                myDrawOffered
+                  ? 'opacity-40 cursor-not-allowed text-[var(--ink-soft)]'
+                  : 'hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] cursor-pointer'
+              }`}
+              title={myDrawOffered ? 'предложение ничьей отправлено' : 'предложить ничью'}
+              aria-label="предложить ничью"
+            >
+              <Handshake size={13} />
+            </button>
+          )}
+
           {/* Theme toggle (Light / Dark) */}
           <button
             type="button"
@@ -337,6 +406,43 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                 <RotateCcw size={12} />
                 <span>предложить реванш</span>
               </button>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* Online Draw Offer Negotiation Banner */}
+      {gameMode === 'online' && winner === null && (
+        <div className="pt-2.5 pb-1">
+          {drawOfferedByOpponent ? (
+            <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--line)]/30 border border-[var(--line-strong)] text-xs animate-fade-up">
+              <span className="text-[var(--highlight-ink)] lowercase">
+                соперник предлагает ничью
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={onAcceptDraw}
+                  className="px-2.5 py-1 rounded bg-[var(--highlight-ink)] text-[var(--bg)] font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  согласиться
+                </button>
+                <button
+                  type="button"
+                  onClick={onDeclineDraw}
+                  className="px-2 py-1 rounded border border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] lowercase transition-colors cursor-pointer"
+                >
+                  отклонить
+                </button>
+              </div>
+            </div>
+          ) : myDrawOffered ? (
+            <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--line)]/20 border border-[var(--line)] text-xs text-[var(--ink-soft)] lowercase animate-fade-up">
+              <span>предложение ничьей отправлено сопернику…</span>
+            </div>
+          ) : drawDeclinedNotice ? (
+            <div className="flex items-center justify-between p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-500 lowercase animate-fade-up">
+              <span>соперник отклонил предложение ничьей.</span>
             </div>
           ) : null}
         </div>
@@ -414,8 +520,27 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             <div className="flex items-center gap-2 animate-fade-up">
               {winner === 'TIE' ? (
                 <span className="font-medium text-[var(--highlight-ink)] lowercase">
-                  ничья.
+                  {winReason === 'agreement' ? 'ничья по соглашению.' : 'ничья.'}
                 </span>
+              ) : winReason === 'resignation' ? (
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-[var(--highlight-ink)]">
+                    {winner === 'X' ? (
+                      <HandDrawnX variant={0} className="w-4 h-4 inline-block mr-1 text-[var(--highlight-ink)]" />
+                    ) : (
+                      <HandDrawnO variant={0} className="w-4 h-4 inline-block mr-1 text-[var(--highlight-ink)]" />
+                    )}
+                  </span>
+                  <span className="font-medium text-[var(--highlight-ink)] lowercase">
+                    {gameMode === 'online'
+                      ? (((onlineRole === 'host' && winner === 'X') || (onlineRole === 'guest' && winner === 'O'))
+                          ? 'соперник сдался · победа!'
+                          : 'вы сдались · поражение')
+                      : gameMode === 'ai'
+                      ? (winner === 'X' ? 'соперник сдался' : 'вы сдались')
+                      : `${winner === 'X' ? 'O' : 'X'} сдался · ${winner} победил`}
+                  </span>
+                </div>
               ) : winReason === 'timeout' ? (
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-[var(--highlight-ink)]">
