@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useSuperTicTacToe } from '@/hooks/useSuperTicTacToe';
+import { useTheme } from '@/hooks/useTheme';
 import { SuperBoard } from '@/components/SuperBoard';
 import { GameStatus } from '@/components/GameStatus';
 import { RulesModal } from '@/components/RulesModal';
@@ -16,6 +17,7 @@ export default function Home() {
     setDifficulty,
   } = useSuperTicTacToe();
 
+  const { theme, toggleTheme } = useTheme();
   const [isRulesOpen, setIsRulesOpen] = useState(false);
 
   return (
@@ -23,10 +25,12 @@ export default function Home() {
       {/* Status Bar & Minimalist Controls */}
       <GameStatus
         gameState={gameState}
+        theme={theme}
         onReset={resetGame}
         onUndo={undoMove}
         onToggleMode={toggleGameMode}
         onSetDifficulty={setDifficulty}
+        onToggleTheme={toggleTheme}
         onOpenRules={() => setIsRulesOpen(true)}
       />
 

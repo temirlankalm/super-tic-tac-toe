@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { RotateCcw, Undo2, HelpCircle, Bot, User } from 'lucide-react';
+import { RotateCcw, Undo2, HelpCircle, Bot, User, Sun, Moon } from 'lucide-react';
 import { AiDifficulty, GameState } from '@/types/game';
 import { HandDrawnLogo } from './hand-drawn/HandDrawnLogo';
 import { HandDrawnWin } from './hand-drawn/HandDrawnWin';
@@ -9,19 +9,23 @@ import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
 
 interface GameStatusProps {
   gameState: GameState;
+  theme: 'light' | 'dark';
   onReset: () => void;
   onUndo: () => void;
   onToggleMode: () => void;
   onSetDifficulty: (difficulty: AiDifficulty) => void;
+  onToggleTheme: () => void;
   onOpenRules: () => void;
 }
 
 export const GameStatus: React.FC<GameStatusProps> = ({
   gameState,
+  theme,
   onReset,
   onUndo,
   onToggleMode,
   onSetDifficulty,
+  onToggleTheme,
   onOpenRules,
 }) => {
   const {
@@ -136,6 +140,17 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             aria-label="Restart game"
           >
             <RotateCcw size={13} />
+          </button>
+
+          {/* Theme toggle (Light / Dark) */}
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer"
+            title={theme === 'dark' ? 'switch to light theme' : 'switch to dark theme'}
+            aria-label={theme === 'dark' ? 'switch to light theme' : 'switch to dark theme'}
+          >
+            {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
           </button>
         </div>
       </div>
