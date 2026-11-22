@@ -10,6 +10,8 @@ export interface Move {
   player: Player;
 }
 
+export type AiDifficulty = 'easy' | 'medium' | 'hard';
+
 export interface GameState {
   // 9 local boards, each with 9 cells (0..8)
   cells: CellState[][];
@@ -38,6 +40,7 @@ export interface GameState {
   }[];
   // Settings
   gameMode: 'pvp' | 'ai';
+  difficulty: AiDifficulty;
   humanPlayer: Player;
   isAiThinking: boolean;
 }

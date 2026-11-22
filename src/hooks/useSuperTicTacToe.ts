@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { GameState, Player } from '@/types/game';
+import { AiDifficulty, GameState, Player } from '@/types/game';
 import { applyMove, createInitialState, isMoveValid } from '@/lib/gameLogic';
 import { getBestAiMove } from '@/lib/ai';
 
 export function useSuperTicTacToe() {
   const [gameState, setGameState] = useState<GameState>(() =>
-    createInitialState('ai', 'X')
+    createInitialState('ai', 'X', 'hard')
   );
 
   const aiThinkingRef = useRef(false);
@@ -77,7 +77,7 @@ export function useSuperTicTacToe() {
         }
 
         const aiPlayer: Player = prev.humanPlayer === 'X' ? 'O' : 'X';
-        const bestMove = getBestAiMove(prev, aiPlayer);
+        const bestMove = getBestAiMove(prev, aiPlayer, prev.difficulty);
 
         aiThinkingRef.current = false;
 
@@ -104,7 +104,7 @@ export function useSuperTicTacToe() {
 
   const resetGame = useCallback(() => {
     aiThinkingRef.current = false;
-    setGameState((prev) => createInitialState(prev.gameMode, prev.humanPlayer));
+    setGameState((prev) => createInitialState(prev.gameMode, prev.humanPlayer, prev.difficulty));
   }, []);
 
   const undoMove = useCallback(() => {
@@ -140,8 +140,12 @@ export function useSuperTicTacToe() {
     aiThinkingRef.current = false;
     setGameState((prev) => {
       const nextMode = prev.gameMode === 'ai' ? 'pvp' : 'ai';
-      return createInitialState(nextMode, prev.humanPlayer);
+      return createInitialState(nextMode, prev.humanPlayer, prev.difficulty);
     });
+  }, []);
+
+  const setDifficulty = useCallback((difficulty: AiDifficulty) => {
+    setGameState((prev) => ({ ...prev, difficulty }));
   }, []);
 
   return {
@@ -150,5 +154,6 @@ export function useSuperTicTacToe() {
     resetGame,
     undoMove,
     toggleGameMode,
+    setDifficulty,
   };
 }

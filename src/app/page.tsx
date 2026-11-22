@@ -13,6 +13,7 @@ export default function Home() {
     resetGame,
     undoMove,
     toggleGameMode,
+    setDifficulty,
   } = useSuperTicTacToe();
 
   const [isRulesOpen, setIsRulesOpen] = useState(false);
@@ -25,6 +26,7 @@ export default function Home() {
         onReset={resetGame}
         onUndo={undoMove}
         onToggleMode={toggleGameMode}
+        onSetDifficulty={setDifficulty}
         onOpenRules={() => setIsRulesOpen(true)}
       />
 

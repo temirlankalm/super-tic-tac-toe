@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { RotateCcw, Undo2, HelpCircle, Bot, User } from 'lucide-react';
-import { GameState } from '@/types/game';
+import { AiDifficulty, GameState } from '@/types/game';
 import { HandDrawnLogo } from './hand-drawn/HandDrawnLogo';
 import { HandDrawnWin } from './hand-drawn/HandDrawnWin';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
@@ -12,6 +12,7 @@ interface GameStatusProps {
   onReset: () => void;
   onUndo: () => void;
   onToggleMode: () => void;
+  onSetDifficulty: (difficulty: AiDifficulty) => void;
   onOpenRules: () => void;
 }
 
@@ -20,6 +21,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   onReset,
   onUndo,
   onToggleMode,
+  onSetDifficulty,
   onOpenRules,
 }) => {
   const {
@@ -27,6 +29,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
     winner,
     activeBoard,
     gameMode,
+    difficulty,
     isAiThinking,
     history,
   } = gameState;
@@ -47,7 +50,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   const canUndo = history.length > 0 && !isAiThinking && winner === null;
 
   return (
-    <div className="w-full max-w-[540px] mx-auto mb-4 md:mb-6">
+    <div className="w-full max-w-[500px] mx-auto mb-4 md:mb-6">
       {/* Top Bar: Title & Primary Controls */}
       <div className="flex items-center justify-between pb-3 border-b border-[var(--line)]">
         <div className="flex items-center gap-3">
@@ -70,6 +73,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
 
         {/* Minimal Actions */}
         <div className="flex items-center gap-2 text-xs">
+          {/* Mode toggle */}
           <button
             type="button"
             onClick={onToggleMode}
@@ -88,6 +92,26 @@ export const GameStatus: React.FC<GameStatusProps> = ({
               </>
             )}
           </button>
+
+          {/* Difficulty selector (when in vs ai mode) */}
+          {gameMode === 'ai' && (
+            <div className="flex items-center rounded-md border border-[var(--line)] p-0.5 text-[11px] font-sans lowercase">
+              {(['easy', 'medium', 'hard'] as const).map((lvl) => (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => onSetDifficulty(lvl)}
+                  className={`px-1.5 py-0.5 rounded-[4px] transition-all cursor-pointer ${
+                    difficulty === lvl
+                      ? 'bg-[var(--line-strong)] text-[var(--highlight-ink)] font-medium'
+                      : 'text-[var(--ink-mute)] hover:text-[var(--ink-soft)]'
+                  }`}
+                >
+                  {lvl === 'medium' ? 'med' : lvl}
+                </button>
+              ))}
+            </div>
+          )}
 
           <button
             type="button"
@@ -131,7 +155,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                 )}
                 {gameMode === 'ai' && currentPlayer !== gameState.humanPlayer && (
                   <span className="text-xs text-[var(--ink-mute)] font-normal">
-                    {isAiThinking ? '(thinking…)' : '(ai)'}
+                    {isAiThinking ? '(thinking…)' : `(ai · ${difficulty})`}
                   </span>
                 )}
               </span>
