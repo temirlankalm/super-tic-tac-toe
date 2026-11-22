@@ -2,12 +2,12 @@ import { GameState, Move } from '@/types/game';
 import { isMoveValid } from './gameLogic';
 
 /**
- * Client for the kyunet engine: a Web Worker (public/kyunet/worker.js) that runs a bitboard
+ * Client for the qnet engine: a Web Worker (public/qnet/worker.js) that runs a bitboard
  * alpha-beta search with a learned evaluation, entirely in the browser. Nothing is sent to a
  * server. Every failure path resolves to `null` so the caller can fall back to the built-in AI.
  */
 
-const WORKER_URL = '/kyunet/worker.js';
+const WORKER_URL = '/qnet/worker.js';
 const FIRST_REQUEST_EXTRA_MS = 12000; // net download + start-up
 const REPLY_GRACE_MS = 3000;
 const MAX_FAILURES = 2;
@@ -68,7 +68,7 @@ function getWorker(): Worker | null {
       if (event.data.error) p.reject(new Error(event.data.error));
       else p.resolve(event.data);
     };
-    w.onerror = () => dropWorker('kyunet worker crashed');
+    w.onerror = () => dropWorker('qnet worker crashed');
     worker = w;
     return w;
   } catch {
@@ -79,21 +79,21 @@ function getWorker(): Worker | null {
 
 function request(message: Record<string, unknown>, timeoutMs: number): Promise<WorkerReply> {
   const w = getWorker();
-  if (!w) return Promise.reject(new Error('kyunet worker unavailable'));
+  if (!w) return Promise.reject(new Error('qnet worker unavailable'));
   return new Promise<WorkerReply>((resolve, reject) => {
     const id = nextId++;
     const timer = setTimeout(() => {
       pending.delete(id);
-      dropWorker('kyunet worker timed out');
-      reject(new Error('kyunet worker timed out'));
+      dropWorker('qnet worker timed out');
+      reject(new Error('qnet worker timed out'));
     }, timeoutMs);
     pending.set(id, { resolve, reject, timer });
     w.postMessage({ id, ...message });
   });
 }
 
-/** Start loading the engine and its net (call when the user picks the kyunet level). */
-export function warmUpKyunet(): void {
+/** Start loading the engine and its net (call when the user picks the qnet level). */
+export function warmUpQnet(): void {
   if (warmed) return;
   warmed = true;
   request({ type: 'warmup' }, FIRST_REQUEST_EXTRA_MS).catch(() => {
@@ -105,7 +105,7 @@ export function warmUpKyunet(): void {
  * Ask the engine for a move in `state`, thinking for about `timeMs`. Resolves to `null` when the
  * engine is unavailable, slow, or returns something the site's own rules reject.
  */
-export async function getKyunetMove(state: GameState, timeMs: number): Promise<Move | null> {
+export async function getQnetMove(state: GameState, timeMs: number): Promise<Move | null> {
   try {
     const extra = warmed ? 0 : FIRST_REQUEST_EXTRA_MS;
     const reply = await request({ type: 'move', state: toCompact(state), timeMs }, timeMs + REPLY_GRACE_MS + extra);

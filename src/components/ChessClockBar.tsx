@@ -59,8 +59,8 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
             ? 'средний'
             : difficulty === 'easy'
             ? 'легкий'
-            : difficulty === 'kyunet'
-            ? 'kyunet'
+            : difficulty === 'qnet'
+            ? 'qnet'
             : 'сложный'
         })`
       : gameMode === 'online'

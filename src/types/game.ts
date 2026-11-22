@@ -78,7 +78,7 @@ export interface Move {
   player: Player;
 }
 
-export type AiDifficulty = 'easy' | 'medium' | 'hard' | 'kyunet';
+export type AiDifficulty = 'easy' | 'medium' | 'hard' | 'qnet';
 
 export interface GameState {
   // 9 local boards, each with 9 cells (0..8)

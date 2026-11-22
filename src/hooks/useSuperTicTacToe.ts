@@ -5,10 +5,10 @@ import confetti from 'canvas-confetti';
 import { AiDifficulty, GameMode, GameState, Move, OnlineRole, Player } from '@/types/game';
 import { applyMove, createInitialState, isMoveValid } from '@/lib/gameLogic';
 import { getBestAiMove } from '@/lib/ai';
-import { getKyunetMove, warmUpKyunet } from '@/lib/kyunet';
+import { getQnetMove, warmUpQnet } from '@/lib/qnet';
 
-// Thinking time per move for the kyunet level (the engine searches until this budget is used).
-const KYUNET_THINK_MS = 1000;
+// Thinking time per move for the qnet level (the engine searches until this budget is used).
+const QNET_THINK_MS = 1000;
 
 export interface MoveEvent {
   player: Player;
@@ -152,8 +152,8 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
     aiThinkingRef.current = true;
     setGameState((prev) => ({ ...prev, isAiThinking: true }));
 
-    // Plays the AI's move on the latest state. `preferred` is the engine's answer for kyunet;
-    // without one (or if it is unusable) the built-in AI chooses, so a kyunet game never stalls.
+    // Plays the AI's move on the latest state. `preferred` is the engine's answer for qnet;
+    // without one (or if it is unusable) the built-in AI chooses, so a qnet game never stalls.
     const commitAiMove = (preferred: Move | null, expectedCells: GameState['cells'] | null) => {
       setGameState((prev) => {
         const stillAiTurn =
@@ -169,7 +169,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
 
         const aiPlayer: Player = prev.humanPlayer === 'X' ? 'O' : 'X';
         const bestMove =
-          preferred ?? getBestAiMove(prev, aiPlayer, prev.difficulty === 'kyunet' ? 'hard' : prev.difficulty);
+          preferred ?? getBestAiMove(prev, aiPlayer, prev.difficulty === 'qnet' ? 'hard' : prev.difficulty);
 
         aiThinkingRef.current = false;
 
@@ -200,9 +200,9 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
 
     const timer = setTimeout(() => {
       const snapshot = gameStateRef.current;
-      if (snapshot.difficulty === 'kyunet') {
+      if (snapshot.difficulty === 'qnet') {
         const requestId = ++aiRequestRef.current;
-        getKyunetMove(snapshot, KYUNET_THINK_MS).then((move) => {
+        getQnetMove(snapshot, QNET_THINK_MS).then((move) => {
           if (requestId !== aiRequestRef.current) return; // reset or mode change superseded it
           commitAiMove(move, snapshot.cells);
         });
@@ -273,7 +273,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
   }, []);
 
   const setDifficulty = useCallback((difficulty: AiDifficulty) => {
-    if (difficulty === 'kyunet') warmUpKyunet();
+    if (difficulty === 'qnet') warmUpQnet();
     setGameState((prev) => ({ ...prev, difficulty }));
   }, []);
 
