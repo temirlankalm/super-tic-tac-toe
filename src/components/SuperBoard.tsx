@@ -26,9 +26,9 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
   } = gameState;
 
   return (
-    <div className="relative w-full max-w-[500px] aspect-square mx-auto select-none flex flex-col p-2">
-      {/* 3x3 Grid of 9 Sectors */}
-      <div className="grid grid-cols-3 grid-rows-3 w-full h-full gap-2 sm:gap-3">
+    <div className="relative w-full max-w-[460px] sm:max-w-[480px] aspect-square mx-auto select-none p-1 sm:p-2">
+      {/* 3x3 Grid of 9 Sectors with gap-0 and continuous main divider lines */}
+      <div className="grid grid-cols-3 grid-rows-3 w-full h-full gap-0">
         {boardWinners.map((boardWinner, boardIdx) => {
           const isActive =
             winner === null &&
@@ -39,16 +39,18 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
           const isGlobalWin =
             globalWinningLine !== null && globalWinningLine.includes(boardIdx);
 
-          // Divider borders between the 3x3 global sectors
-          const borderClasses = [
-            boardIdx % 3 !== 2 ? 'border-r border-[var(--line-strong)]' : '',
-            boardIdx < 6 ? 'border-b border-[var(--line-strong)]' : '',
-          ].join(' ');
+          // Authentic main divider borders (thicker, continuous ink lines)
+          const isRightCol = boardIdx % 3 === 2;
+          const isBottomRow = boardIdx >= 6;
 
           return (
             <div
               key={boardIdx}
-              className={`relative w-full h-full min-w-0 min-h-0 flex items-stretch justify-stretch p-1 ${borderClasses}`}
+              className={`relative w-full h-full min-w-0 min-h-0 flex items-stretch justify-stretch ${
+                !isRightCol ? 'border-r-2 sm:border-r-[2.5px] border-[var(--super-line)]' : ''
+              } ${
+                !isBottomRow ? 'border-b-2 sm:border-b-[2.5px] border-[var(--super-line)]' : ''
+              }`}
             >
               <LocalBoard
                 boardIdx={boardIdx}

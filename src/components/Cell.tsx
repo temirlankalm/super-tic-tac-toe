@@ -32,7 +32,7 @@ export const Cell: React.FC<CellProps> = ({
       onClick={onClick}
       disabled={!isPlayable}
       aria-label={`Sector ${boardIdx + 1}, cell ${cellIdx + 1}: ${value || 'empty'}`}
-      className={`w-full h-full min-w-0 min-h-0 relative flex items-center justify-center p-1 sm:p-1.5 transition-all duration-150 select-none ${
+      className={`w-full h-full min-w-0 min-h-0 relative flex items-center justify-center p-0.5 sm:p-1 transition-colors duration-150 select-none ${
         isPlayable
           ? 'cursor-pointer hover:bg-[var(--cell-hover)] active:scale-95'
           : 'cursor-default'
@@ -42,7 +42,7 @@ export const Cell: React.FC<CellProps> = ({
         <div className="w-full h-full flex items-center justify-center animate-fade-up">
           <HandDrawnX
             variant={variant}
-            className={`w-[70%] h-[70%] ${
+            className={`w-[78%] h-[78%] ${
               isWinningCell ? 'text-[var(--highlight-ink)]' : 'text-[var(--ink)]'
             }`}
           />
@@ -52,7 +52,7 @@ export const Cell: React.FC<CellProps> = ({
         <div className="w-full h-full flex items-center justify-center animate-fade-up">
           <HandDrawnO
             variant={variant}
-            className={`w-[70%] h-[70%] ${
+            className={`w-[78%] h-[78%] ${
               isWinningCell ? 'text-[var(--highlight-ink)]' : 'text-[var(--ink)]'
             }`}
           />
@@ -61,7 +61,7 @@ export const Cell: React.FC<CellProps> = ({
 
       {/* Subtle indicator dot for last move */}
       {isLastMove && (
-        <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--ink-soft)] opacity-70 pointer-events-none" />
+        <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[var(--ink-soft)] opacity-80 pointer-events-none" />
       )}
     </button>
   );

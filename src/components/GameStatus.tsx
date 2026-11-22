@@ -50,7 +50,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   const canUndo = history.length > 0 && !isAiThinking && winner === null;
 
   return (
-    <div className="w-full max-w-[500px] mx-auto mb-4 md:mb-6">
+    <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-3 md:mb-5">
       {/* Top Bar: Title & Primary Controls */}
       <div className="flex items-center justify-between pb-3 border-b border-[var(--line)]">
         <div className="flex items-center gap-3">
