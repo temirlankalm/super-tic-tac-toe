@@ -1,18 +1,21 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { MoveEvent, useSuperTicTacToe } from '@/hooks/useSuperTicTacToe';
 import { useTheme } from '@/hooks/useTheme';
 import { useChessClock } from '@/hooks/useChessClock';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
+import { usePeerOnline } from '@/hooks/usePeerOnline';
 import { SuperBoard } from '@/components/SuperBoard';
 import { GameStatus } from '@/components/GameStatus';
 import { ChessClockBar } from '@/components/ChessClockBar';
 import { RulesModal } from '@/components/RulesModal';
+import { OnlineRoomModal } from '@/components/OnlineRoomModal';
 import { Player } from '@/types/game';
 
 export default function Home() {
   const [isRulesOpen, setIsRulesOpen] = useState(false);
+  const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
 
   const { theme, toggleTheme } = useTheme();
 
@@ -25,6 +28,12 @@ export default function Home() {
     playGameVictory,
     haptic,
   } = useSoundEffects();
+
+  // State refs for clean peer callbacks without stale closures
+  const gameStateRef = useRef<any>(null);
+  const timeControlRef = useRef<any>(null);
+  const timeXRef = useRef<number>(180);
+  const timeORef = useRef<number>(180);
 
   // Handle sound & haptic response for every move
   const handleMoveEvent = useCallback(
@@ -54,15 +63,81 @@ export default function Home() {
     [playScratch, playWinSector, playGameVictory, playClock, haptic]
   );
 
+  // Setup PeerJS online multiplayer hook
+  const peerOnline = usePeerOnline({
+    onRemoteMove: (boardIdx, cellIdx, _player, rTimeX, rTimeO) => {
+      applyRemoteMove(boardIdx, cellIdx);
+      if (rTimeX !== undefined && rTimeO !== undefined) {
+        syncClocks(rTimeX, rTimeO);
+      }
+    },
+    onInitSync: (msg) => {
+      setTimeControl(msg.timeControl);
+      syncClocks(msg.timeX, msg.timeO);
+      syncState({
+        cells: msg.cells,
+        boardWinners: msg.boardWinners,
+        boardWinningLines: msg.boardWinningLines,
+        currentPlayer: msg.currentPlayer,
+        activeBoard: msg.activeBoard,
+      });
+    },
+    onTimeSync: (newTimeX, newTimeO) => {
+      syncClocks(newTimeX, newTimeO);
+    },
+    onRematchAccepted: (tc) => {
+      resetGame();
+      resetClocks(tc);
+      haptic('win');
+    },
+    onConnected: () => {
+      if (peerOnline.role === 'host') {
+        peerOnline.sendMessage({
+          type: 'INIT',
+          timeControl: timeControlRef.current,
+          cells: gameStateRef.current.cells,
+          boardWinners: gameStateRef.current.boardWinners,
+          boardWinningLines: gameStateRef.current.boardWinningLines,
+          currentPlayer: gameStateRef.current.currentPlayer,
+          activeBoard: gameStateRef.current.activeBoard,
+          timeX: timeXRef.current,
+          timeO: timeORef.current,
+        });
+      }
+    },
+  });
+
   const {
     gameState,
     handleCellClick,
+    applyRemoteMove,
+    syncState,
     resetGame,
     undoMove,
+    setGameMode,
     toggleGameMode,
     setDifficulty,
     handleTimeout: rawHandleTimeout,
-  } = useSuperTicTacToe({ onMove: handleMoveEvent });
+  } = useSuperTicTacToe({
+    onMove: handleMoveEvent,
+    onlineRole: peerOnline.role,
+    isOnlineConnected: peerOnline.status === 'connected',
+    onLocalMove: (boardIdx, cellIdx, player) => {
+      if (gameStateRef.current?.gameMode === 'online') {
+        peerOnline.sendMessage({
+          type: 'MOVE',
+          boardIdx,
+          cellIdx,
+          player,
+          timeX: timeXRef.current,
+          timeO: timeORef.current,
+        });
+      }
+    },
+  });
+
+  // Keep refs updated for peer callbacks
+  gameStateRef.current = gameState;
 
   const handleTimeout = useCallback(
     (timedOutPlayer: Player) => {
@@ -74,29 +149,106 @@ export default function Home() {
     [rawHandleTimeout, playClock, playGameVictory, haptic]
   );
 
+  const isClockPaused =
+    isRulesOpen ||
+    (gameState.gameMode === 'online' && peerOnline.status !== 'connected');
+
   const {
     timeControl,
     setTimeControl,
     timeX,
     timeO,
     resetClocks,
+    syncClocks,
   } = useChessClock({
     currentPlayer: gameState.currentPlayer,
     winner: gameState.winner,
-    isPaused: isRulesOpen,
+    isPaused: isClockPaused,
     onTimeout: handleTimeout,
   });
 
+  timeControlRef.current = timeControl;
+  timeXRef.current = timeX;
+  timeORef.current = timeO;
+
+  // Detect ?room=xxxx query param on mount to join room
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const roomParam = params.get('room');
+    if (roomParam) {
+      setGameMode('online');
+      peerOnline.joinRoom(roomParam);
+      setIsOnlineModalOpen(false);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleReset = () => {
-    resetGame();
-    resetClocks();
+    if (gameState.gameMode === 'online') {
+      if (gameState.winner !== null) {
+        peerOnline.requestRematch();
+      } else {
+        resetGame();
+        resetClocks();
+      }
+    } else {
+      resetGame();
+      resetClocks();
+    }
     haptic('tap');
   };
 
   const handleToggleMode = () => {
-    toggleGameMode();
+    const nextMode =
+      gameState.gameMode === 'ai'
+        ? 'pvp'
+        : gameState.gameMode === 'pvp'
+        ? 'online'
+        : 'ai';
+
+    setGameMode(nextMode);
     resetClocks();
     haptic('tap');
+
+    if (nextMode === 'online') {
+      if (peerOnline.status === 'idle') {
+        peerOnline.createRoom();
+        setIsOnlineModalOpen(true);
+      }
+    } else {
+      peerOnline.leaveRoom();
+    }
+  };
+
+  const handleOpenOnlineModal = () => {
+    if (peerOnline.status === 'idle') {
+      peerOnline.createRoom();
+    }
+    setIsOnlineModalOpen(true);
+  };
+
+  const handleLeaveRoom = () => {
+    peerOnline.leaveRoom();
+    setGameMode('ai');
+    resetClocks();
+    setIsOnlineModalOpen(false);
+    if (typeof window !== 'undefined' && window.history.replaceState) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('room');
+      window.history.replaceState({}, '', url.pathname);
+    }
+  };
+
+  const handleRequestRematch = () => {
+    peerOnline.requestRematch();
+    haptic('tap');
+  };
+
+  const handleAcceptRematch = () => {
+    peerOnline.acceptRematch(timeControl);
+    resetGame();
+    resetClocks(timeControl);
+    haptic('win');
   };
 
   const handleUndo = () => {
@@ -112,6 +264,11 @@ export default function Home() {
         theme={theme}
         timeControl={timeControl}
         isSoundEnabled={isSoundEnabled}
+        onlineRole={peerOnline.role}
+        connectionStatus={peerOnline.status}
+        roomId={peerOnline.roomId}
+        rematchRequestedByOpponent={peerOnline.rematchRequestedByOpponent}
+        myRematchSent={peerOnline.myRematchSent}
         onReset={handleReset}
         onUndo={handleUndo}
         onToggleMode={handleToggleMode}
@@ -120,6 +277,9 @@ export default function Home() {
         onToggleTheme={toggleTheme}
         onToggleSound={toggleSound}
         onOpenRules={() => setIsRulesOpen(true)}
+        onOpenOnlineModal={handleOpenOnlineModal}
+        onRequestRematch={handleRequestRematch}
+        onAcceptRematch={handleAcceptRematch}
       />
 
       {/* Chess Clock Bar (visible when timer is active) */}
@@ -130,12 +290,15 @@ export default function Home() {
         currentPlayer={gameState.currentPlayer}
         winner={gameState.winner}
         gameMode={gameState.gameMode}
+        onlineRole={peerOnline.role}
         difficulty={gameState.difficulty}
       />
 
       {/* The 9x9 Super Board */}
       <SuperBoard
         gameState={gameState}
+        onlineRole={peerOnline.role}
+        connectionStatus={peerOnline.status}
         onCellClick={handleCellClick}
       />
 
@@ -156,6 +319,17 @@ export default function Home() {
       <RulesModal
         isOpen={isRulesOpen}
         onClose={() => setIsRulesOpen(false)}
+      />
+
+      {/* Online Room Modal */}
+      <OnlineRoomModal
+        isOpen={isOnlineModalOpen}
+        roomId={peerOnline.roomId}
+        role={peerOnline.role}
+        status={peerOnline.status}
+        theme={theme}
+        onClose={() => setIsOnlineModalOpen(false)}
+        onLeaveRoom={handleLeaveRoom}
       />
     </main>
   );

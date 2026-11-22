@@ -1,4 +1,4 @@
-import { AiDifficulty, BoardWinner, CellState, GameState, Move, Player } from '@/types/game';
+import { AiDifficulty, BoardWinner, CellState, GameMode, GameState, Move, Player } from '@/types/game';
 
 export const WINNING_COMBINATIONS = [
   [0, 1, 2], // rows
@@ -114,7 +114,7 @@ export function getValidMoves(state: GameState): { boardIdx: number; cellIdx: nu
 }
 
 export function createInitialState(
-  gameMode: 'pvp' | 'ai' = 'ai',
+  gameMode: GameMode = 'ai',
   humanPlayer: Player = 'X',
   difficulty: AiDifficulty = 'hard'
 ): GameState {

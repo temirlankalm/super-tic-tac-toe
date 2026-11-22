@@ -1,17 +1,21 @@
 'use client';
 
 import React from 'react';
-import { GameState } from '@/types/game';
+import { ConnectionStatus, GameState, OnlineRole } from '@/types/game';
 import { isBoardFull } from '@/lib/gameLogic';
 import { LocalBoard } from './LocalBoard';
 
 interface SuperBoardProps {
   gameState: GameState;
+  onlineRole?: OnlineRole;
+  connectionStatus?: ConnectionStatus;
   onCellClick: (boardIdx: number, cellIdx: number) => void;
 }
 
 export const SuperBoard: React.FC<SuperBoardProps> = ({
   gameState,
+  onlineRole,
+  connectionStatus,
   onCellClick,
 }) => {
   const {
@@ -23,7 +27,21 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
     lastMove,
     winner,
     isAiThinking,
+    gameMode,
+    currentPlayer,
   } = gameState;
+
+  const isMyTurnOnline =
+    gameMode === 'online'
+      ? connectionStatus === 'connected' &&
+        ((onlineRole === 'host' && currentPlayer === 'X') ||
+          (onlineRole === 'guest' && currentPlayer === 'O'))
+      : true;
+
+  const isBoardDisabled =
+    winner !== null ||
+    isAiThinking ||
+    (gameMode === 'online' && !isMyTurnOnline);
 
   return (
     <div className="relative w-full max-w-[460px] sm:max-w-[480px] aspect-square mx-auto select-none p-1 sm:p-2">
@@ -32,6 +50,7 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
         {boardWinners.map((boardWinner, boardIdx) => {
           const isActive =
             winner === null &&
+            (gameMode !== 'online' || connectionStatus === 'connected') &&
             (activeBoard === null
               ? boardWinner === null && !isBoardFull(cells[boardIdx])
               : activeBoard === boardIdx);
@@ -61,7 +80,7 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
                 isGlobalWinningBoard={isGlobalWin}
                 lastMove={lastMove}
                 onCellClick={onCellClick}
-                disabled={winner !== null || isAiThinking}
+                disabled={isBoardDisabled}
               />
             </div>
           );

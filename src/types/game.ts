@@ -8,6 +8,56 @@ export type WinReason = 'normal' | 'timeout';
 
 export type TimeControl = 'off' | 60 | 120 | 180 | 300;
 
+export type GameMode = 'ai' | 'pvp' | 'online';
+
+export type OnlineRole = 'host' | 'guest' | null;
+
+export type ConnectionStatus =
+  | 'idle'
+  | 'creating'
+  | 'waiting'
+  | 'connecting'
+  | 'connected'
+  | 'disconnected'
+  | 'error';
+
+export type PeerMessage =
+  | {
+      type: 'INIT';
+      timeControl: TimeControl;
+      cells: CellState[][];
+      boardWinners: BoardWinner[];
+      boardWinningLines: (number[] | null)[];
+      currentPlayer: Player;
+      activeBoard: number | null;
+      timeX: number;
+      timeO: number;
+    }
+  | {
+      type: 'MOVE';
+      boardIdx: number;
+      cellIdx: number;
+      player: Player;
+      timeX?: number;
+      timeO?: number;
+    }
+  | {
+      type: 'TIME_SYNC';
+      timeX: number;
+      timeO: number;
+    }
+  | {
+      type: 'REMATCH_REQUEST';
+      fromPlayer: Player;
+    }
+  | {
+      type: 'REMATCH_ACCEPT';
+      timeControl: TimeControl;
+    }
+  | {
+      type: 'DISCONNECT';
+    };
+
 export interface Move {
   boardIdx: number;
   cellIdx: number;
@@ -45,7 +95,7 @@ export interface GameState {
     lastMove: Move | null;
   }[];
   // Settings
-  gameMode: 'pvp' | 'ai';
+  gameMode: GameMode;
   difficulty: AiDifficulty;
   humanPlayer: Player;
   isAiThinking: boolean;

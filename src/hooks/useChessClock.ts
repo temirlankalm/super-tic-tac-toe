@@ -110,11 +110,18 @@ export function useChessClock({
     return () => clearInterval(interval);
   }, [timeControl, currentPlayer, winner, isPaused]);
 
+  const syncClocks = useCallback((newTimeX: number, newTimeO: number) => {
+    setTimeX(newTimeX);
+    setTimeO(newTimeO);
+    lastTickRef.current = Date.now();
+  }, []);
+
   return {
     timeControl,
     setTimeControl,
     timeX,
     timeO,
     resetClocks,
+    syncClocks,
   };
 }

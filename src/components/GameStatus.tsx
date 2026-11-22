@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { RotateCcw, Undo2, HelpCircle, Bot, User, Sun, Moon, Clock, Volume2, VolumeX } from 'lucide-react';
-import { AiDifficulty, GameState, TimeControl } from '@/types/game';
+import { RotateCcw, Undo2, HelpCircle, Bot, User, Sun, Moon, Clock, Volume2, VolumeX, Globe } from 'lucide-react';
+import { AiDifficulty, ConnectionStatus, GameState, OnlineRole, TimeControl } from '@/types/game';
 import { HandDrawnLogo } from './hand-drawn/HandDrawnLogo';
 import { HandDrawnWin } from './hand-drawn/HandDrawnWin';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
@@ -12,6 +12,11 @@ interface GameStatusProps {
   theme: 'light' | 'dark';
   timeControl: TimeControl;
   isSoundEnabled: boolean;
+  onlineRole?: OnlineRole;
+  connectionStatus?: ConnectionStatus;
+  roomId?: string | null;
+  rematchRequestedByOpponent?: boolean;
+  myRematchSent?: boolean;
   onReset: () => void;
   onUndo: () => void;
   onToggleMode: () => void;
@@ -20,6 +25,9 @@ interface GameStatusProps {
   onToggleTheme: () => void;
   onToggleSound: () => void;
   onOpenRules: () => void;
+  onOpenOnlineModal?: () => void;
+  onRequestRematch?: () => void;
+  onAcceptRematch?: () => void;
 }
 
 const timeLabels: Record<TimeControl, string> = {
@@ -35,6 +43,11 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   theme,
   timeControl,
   isSoundEnabled,
+  onlineRole,
+  connectionStatus,
+  roomId,
+  rematchRequestedByOpponent,
+  myRematchSent,
   onReset,
   onUndo,
   onToggleMode,
@@ -43,6 +56,9 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   onToggleTheme,
   onToggleSound,
   onOpenRules,
+  onOpenOnlineModal,
+  onRequestRematch,
+  onAcceptRematch,
 }) => {
   const {
     currentPlayer,
@@ -86,7 +102,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
     'bottom-right',
   ];
 
-  const canUndo = history.length > 0 && !isAiThinking && winner === null;
+  const canUndo = history.length > 0 && !isAiThinking && winner === null && gameMode !== 'online';
 
   return (
     <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-3 md:mb-5">
@@ -117,20 +133,58 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             type="button"
             onClick={onToggleMode}
             className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase"
-            title="Toggle between single player AI and 2-player hotseat"
+            title="Переключить режим (vs ai / 2p / online)"
           >
             {gameMode === 'ai' ? (
               <>
                 <Bot size={13} />
                 <span>vs ai</span>
               </>
-            ) : (
+            ) : gameMode === 'pvp' ? (
               <>
                 <User size={13} />
                 <span>2p</span>
               </>
+            ) : (
+              <>
+                <Globe size={13} />
+                <span>online</span>
+              </>
             )}
           </button>
+
+          {/* Online Room Trigger Button */}
+          {gameMode === 'online' && (
+            <button
+              type="button"
+              onClick={onOpenOnlineModal}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-xs"
+              title="открыть комнату / пригласить друга"
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  connectionStatus === 'connected'
+                    ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50'
+                    : connectionStatus === 'waiting' || connectionStatus === 'connecting'
+                    ? 'bg-amber-500 animate-pulse'
+                    : connectionStatus === 'disconnected'
+                    ? 'bg-rose-500'
+                    : 'bg-zinc-400'
+                }`}
+              />
+              <span>
+                {connectionStatus === 'connected'
+                  ? 'в сети'
+                  : connectionStatus === 'waiting'
+                  ? 'ожидание…'
+                  : connectionStatus === 'connecting'
+                  ? 'вход…'
+                  : roomId
+                  ? `#${roomId}`
+                  : 'комната'}
+              </span>
+            </button>
+          )}
 
           {/* Difficulty selector (when in vs ai mode) */}
           {gameMode === 'ai' && (
@@ -253,31 +307,114 @@ export const GameStatus: React.FC<GameStatusProps> = ({
         </div>
       </div>
 
+      {/* Online Rematch Negotiation Banner */}
+      {gameMode === 'online' && winner !== null && (
+        <div className="pt-2.5 pb-1">
+          {rematchRequestedByOpponent ? (
+            <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--line)]/30 border border-[var(--line-strong)] text-xs animate-fade-up">
+              <span className="text-[var(--highlight-ink)] lowercase">
+                соперник предлагает сыграть снова
+              </span>
+              <button
+                type="button"
+                onClick={onAcceptRematch}
+                className="px-2.5 py-1 rounded bg-[var(--highlight-ink)] text-[var(--bg)] font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer"
+              >
+                принять
+              </button>
+            </div>
+          ) : myRematchSent ? (
+            <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--line)]/20 border border-[var(--line)] text-xs text-[var(--ink-soft)] lowercase animate-fade-up">
+              <span>запрос на реванш отправлен…</span>
+            </div>
+          ) : connectionStatus === 'connected' ? (
+            <div className="flex items-center justify-end">
+              <button
+                type="button"
+                onClick={onRequestRematch}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[var(--line-strong)] text-[var(--highlight-ink)] hover:bg-[var(--line)]/40 transition-colors cursor-pointer text-xs font-sans lowercase"
+              >
+                <RotateCcw size={12} />
+                <span>предложить реванш</span>
+              </button>
+            </div>
+          ) : null}
+        </div>
+      )}
+
       {/* Status Bar */}
       <div className="flex items-center justify-between pt-3 text-sm min-h-[32px]">
         {/* Game State Message */}
         <div className="flex items-center gap-2">
           {winner === null ? (
-            <div className="flex items-center gap-2">
-              <span className="text-[var(--ink-soft)] lowercase">turn:</span>
-              <span className="inline-flex items-center gap-1.5 font-medium text-[var(--highlight-ink)]">
-                {currentPlayer === 'X' ? (
-                  <HandDrawnX variant={0} className="w-4 h-4 text-[var(--highlight-ink)]" />
-                ) : (
-                  <HandDrawnO variant={0} className="w-4 h-4 text-[var(--highlight-ink)]" />
+            gameMode === 'online' && connectionStatus !== 'connected' ? (
+              <div className="flex items-center gap-2 animate-fade-up">
+                {connectionStatus === 'waiting' && (
+                  <button
+                    type="button"
+                    onClick={onOpenOnlineModal}
+                    className="text-xs text-[var(--ink-mute)] hover:text-[var(--highlight-ink)] lowercase cursor-pointer underline-offset-2 underline decoration-[var(--underline)]"
+                  >
+                    ожидание соперника… (отправьте ссылку)
+                  </button>
                 )}
-                {gameMode === 'ai' && currentPlayer !== gameState.humanPlayer && (
-                  <span className="text-xs text-[var(--ink-mute)] font-normal">
-                    {isAiThinking ? '(thinking…)' : `(ai · ${difficulty})`}
+                {connectionStatus === 'connecting' && (
+                  <span className="text-xs text-[var(--ink-mute)] lowercase animate-pulse">
+                    подключение к комнате…
                   </span>
                 )}
-              </span>
-            </div>
+                {connectionStatus === 'disconnected' && (
+                  <span className="text-xs text-rose-500 lowercase">
+                    соперник отключился
+                  </span>
+                )}
+                {connectionStatus === 'error' && (
+                  <span className="text-xs text-rose-500 lowercase">
+                    ошибка подключения
+                  </span>
+                )}
+                {connectionStatus === 'idle' && (
+                  <button
+                    type="button"
+                    onClick={onOpenOnlineModal}
+                    className="text-xs text-[var(--ink-mute)] hover:text-[var(--highlight-ink)] lowercase cursor-pointer"
+                  >
+                    создать комнату
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-[var(--ink-soft)] lowercase">
+                  {gameMode === 'online' ? 'ход:' : 'turn:'}
+                </span>
+                <span className="inline-flex items-center gap-1.5 font-medium text-[var(--highlight-ink)]">
+                  {currentPlayer === 'X' ? (
+                    <HandDrawnX variant={0} className="w-4 h-4 text-[var(--highlight-ink)]" />
+                  ) : (
+                    <HandDrawnO variant={0} className="w-4 h-4 text-[var(--highlight-ink)]" />
+                  )}
+                  {gameMode === 'ai' && currentPlayer !== gameState.humanPlayer && (
+                    <span className="text-xs text-[var(--ink-mute)] font-normal">
+                      {isAiThinking ? '(thinking…)' : `(ai · ${difficulty})`}
+                    </span>
+                  )}
+                  {gameMode === 'online' && (
+                    <span className="text-xs text-[var(--ink-soft)] font-normal lowercase">
+                      {((onlineRole === 'host' && currentPlayer === 'X') ||
+                        (onlineRole === 'guest' && currentPlayer === 'O'))
+                        ? '· ваш ход'
+                        : '· ход соперника'}
+                    </span>
+                  )}
+                </span>
+              </div>
+            )
           ) : (
             <div className="flex items-center gap-2 animate-fade-up">
               {winner === 'TIE' ? (
                 <span className="font-medium text-[var(--highlight-ink)] lowercase">
-                  it&apos;s a draw.
+                  ничья.
                 </span>
               ) : winReason === 'timeout' ? (
                 <div className="flex items-center gap-2">
@@ -289,10 +426,14 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                     )}
                   </span>
                   <span className="font-medium text-[var(--highlight-ink)] lowercase">
-                    wins on time
+                    {gameMode === 'online'
+                      ? (((onlineRole === 'host' && winner === 'X') || (onlineRole === 'guest' && winner === 'O'))
+                          ? 'победа по времени'
+                          : 'поражение по времени')
+                      : 'wins on time'}
                   </span>
                   <span className="text-xs text-[var(--ink-mute)] font-normal lowercase">
-                    ({winner === 'X' ? 'O' : 'X'} flagged)
+                    ({winner === 'X' ? 'O' : 'X'} {gameMode === 'online' ? 'время вышло' : 'flagged'})
                   </span>
                 </div>
               ) : (
@@ -304,7 +445,15 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                       <HandDrawnO variant={0} className="w-4 h-4 inline-block mr-1 text-[var(--highlight-ink)]" />
                     )}
                   </span>
-                  <HandDrawnWin className="h-5 w-auto" />
+                  {gameMode === 'online' ? (
+                    <span className="font-medium text-[var(--highlight-ink)] lowercase">
+                      {((onlineRole === 'host' && winner === 'X') || (onlineRole === 'guest' && winner === 'O'))
+                        ? 'вы победили!'
+                        : 'соперник победил.'}
+                    </span>
+                  ) : (
+                    <HandDrawnWin className="h-5 w-auto" />
+                  )}
                 </div>
               )}
             </div>

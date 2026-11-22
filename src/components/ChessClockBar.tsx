@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Player, BoardWinner, TimeControl } from '@/types/game';
+import { Player, BoardWinner, TimeControl, GameMode, OnlineRole } from '@/types/game';
 import { HandDrawnX, HandDrawnO } from './hand-drawn/HandDrawnMarks';
 
 interface ChessClockBarProps {
@@ -10,7 +10,8 @@ interface ChessClockBarProps {
   timeO: number;
   currentPlayer: Player;
   winner: BoardWinner;
-  gameMode: 'pvp' | 'ai';
+  gameMode: GameMode;
+  onlineRole?: OnlineRole;
   difficulty?: string;
 }
 
@@ -28,6 +29,7 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
   currentPlayer,
   winner,
   gameMode,
+  onlineRole,
   difficulty,
 }) => {
   if (timeControl === 'off') return null;
@@ -40,6 +42,24 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
 
   const isXFlagged = timeX <= 0;
   const isOFlagged = timeO <= 0;
+
+  const playerXLabel =
+    gameMode === 'ai'
+      ? 'you'
+      : gameMode === 'online'
+      ? onlineRole === 'host'
+        ? 'you (x)'
+        : 'opponent (x)'
+      : 'player 1';
+
+  const playerOLabel =
+    gameMode === 'ai'
+      ? `ai · ${difficulty}`
+      : gameMode === 'online'
+      ? onlineRole === 'guest'
+        ? 'you (o)'
+        : 'opponent (o)'
+      : 'player 2';
 
   return (
     <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-3 animate-fade-up">
@@ -60,7 +80,7 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
               }`}
             />
             <span className="text-xs truncate lowercase text-[var(--ink-soft)]">
-              {gameMode === 'ai' ? 'you' : 'player 1'}
+              {playerXLabel}
             </span>
           </div>
 
@@ -100,7 +120,7 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
               }`}
             />
             <span className="text-xs truncate lowercase text-[var(--ink-soft)]">
-              {gameMode === 'ai' ? `ai · ${difficulty}` : 'player 2'}
+              {playerOLabel}
             </span>
           </div>
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { AiDifficulty, GameState, Player } from '@/types/game';
+import { AiDifficulty, GameMode, GameState, OnlineRole, Player } from '@/types/game';
 import { applyMove, createInitialState, isMoveValid } from '@/lib/gameLogic';
 import { getBestAiMove } from '@/lib/ai';
 
@@ -15,6 +15,9 @@ export interface MoveEvent {
 
 export interface UseSuperTicTacToeOptions {
   onMove?: (event: MoveEvent) => void;
+  onLocalMove?: (boardIdx: number, cellIdx: number, player: Player) => void;
+  onlineRole?: OnlineRole;
+  isOnlineConnected?: boolean;
 }
 
 export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
@@ -23,8 +26,8 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
   );
 
   const aiThinkingRef = useRef(false);
-  const onMoveRef = useRef(options?.onMove);
-  onMoveRef.current = options?.onMove;
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   // Trigger win confetti
   const triggerVictory = useCallback((winner: Player) => {
@@ -37,7 +40,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
     });
   }, []);
 
-  // Handle cell click by human player
+  // Handle cell click by local human player
   const handleCellClick = useCallback(
     (boardIdx: number, cellIdx: number) => {
       setGameState((prev) => {
@@ -49,6 +52,17 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
         // In AI mode, only allow moves on human turn
         if (prev.gameMode === 'ai' && prev.currentPlayer !== prev.humanPlayer) {
           return prev;
+        }
+
+        // In Online mode, check role and connectivity
+        if (prev.gameMode === 'online') {
+          if (!optionsRef.current?.isOnlineConnected) {
+            return prev;
+          }
+          const expectedPlayer = optionsRef.current?.onlineRole === 'host' ? 'X' : 'O';
+          if (prev.currentPlayer !== expectedPlayer) {
+            return prev;
+          }
         }
 
         if (!isMoveValid(prev, boardIdx, cellIdx)) {
@@ -65,7 +79,41 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
           triggerVictory(next.winner);
         }
 
-        onMoveRef.current?.({
+        optionsRef.current?.onMove?.({
+          player: prev.currentPlayer,
+          isSectorWon,
+          isGameWon,
+          isTie,
+        });
+
+        // Notify peer about local move in online mode
+        optionsRef.current?.onLocalMove?.(boardIdx, cellIdx, prev.currentPlayer);
+
+        return next;
+      });
+    },
+    [triggerVictory]
+  );
+
+  // Apply a remote move received over WebRTC
+  const applyRemoteMove = useCallback(
+    (boardIdx: number, cellIdx: number) => {
+      setGameState((prev) => {
+        if (!isMoveValid(prev, boardIdx, cellIdx)) {
+          return prev;
+        }
+
+        const prevBoardWon = prev.boardWinners[boardIdx] !== null;
+        const next = applyMove(prev, boardIdx, cellIdx);
+        const isSectorWon = !prevBoardWon && next.boardWinners[boardIdx] !== null;
+        const isGameWon = prev.winner === null && (next.winner === 'X' || next.winner === 'O');
+        const isTie = prev.winner === null && next.winner === 'TIE';
+
+        if (next.winner === 'X' || next.winner === 'O') {
+          triggerVictory(next.winner);
+        }
+
+        optionsRef.current?.onMove?.({
           player: prev.currentPlayer,
           isSectorWon,
           isGameWon,
@@ -77,6 +125,11 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
     },
     [triggerVictory]
   );
+
+  // Sync state received from host on init
+  const syncState = useCallback((partial: Partial<GameState>) => {
+    setGameState((prev) => ({ ...prev, ...partial }));
+  }, []);
 
   // Effect for AI turn
   useEffect(() => {
@@ -121,7 +174,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
           triggerVictory(next.winner);
         }
 
-        onMoveRef.current?.({
+        optionsRef.current?.onMove?.({
           player: aiPlayer,
           isSectorWon,
           isGameWon,
@@ -175,10 +228,17 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
     });
   }, []);
 
+  const setGameMode = useCallback((mode: GameMode) => {
+    aiThinkingRef.current = false;
+    setGameState((prev) => createInitialState(mode, prev.humanPlayer, prev.difficulty));
+  }, []);
+
   const toggleGameMode = useCallback(() => {
     aiThinkingRef.current = false;
     setGameState((prev) => {
-      const nextMode = prev.gameMode === 'ai' ? 'pvp' : 'ai';
+      const modes: GameMode[] = ['ai', 'pvp', 'online'];
+      const currentIndex = modes.indexOf(prev.gameMode);
+      const nextMode = modes[(currentIndex + 1) % modes.length];
       return createInitialState(nextMode, prev.humanPlayer, prev.difficulty);
     });
   }, []);
@@ -203,8 +263,11 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
   return {
     gameState,
     handleCellClick,
+    applyRemoteMove,
+    syncState,
     resetGame,
     undoMove,
+    setGameMode,
     toggleGameMode,
     setDifficulty,
     handleTimeout,
