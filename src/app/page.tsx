@@ -24,7 +24,7 @@ import {
   clearActiveDaily,
   getTodayDateString,
 } from '@/lib/daily';
-import { Player } from '@/types/game';
+import { GameMode, Player } from '@/types/game';
 
 export default function Home() {
   const [isRulesOpen, setIsRulesOpen] = useState(false);
@@ -331,7 +331,9 @@ export default function Home() {
     haptic('tap');
   };
 
-  const handleToggleMode = () => {
+  const handleSelectMode = (targetMode: GameMode) => {
+    if (gameState.gameMode === targetMode) return;
+
     if (
       gameState.gameMode === 'daily' &&
       gameState.history.length > 0 &&
@@ -352,25 +354,28 @@ export default function Home() {
       clearActiveDaily();
     }
 
+    setGameMode(targetMode);
+    resetClocks();
+    haptic('tap');
+
+    if (targetMode === 'online') {
+      if (peerOnline.status === 'idle') {
+        peerOnline.createRoom();
+      }
+      setIsOnlineModalOpen(true);
+    } else {
+      peerOnline.leaveRoom();
+    }
+  };
+
+  const handleToggleMode = () => {
     const nextMode =
       gameState.gameMode === 'ai'
         ? 'pvp'
         : gameState.gameMode === 'pvp'
         ? 'online'
         : 'ai';
-
-    setGameMode(nextMode);
-    resetClocks();
-    haptic('tap');
-
-    if (nextMode === 'online') {
-      if (peerOnline.status === 'idle') {
-        peerOnline.createRoom();
-        setIsOnlineModalOpen(true);
-      }
-    } else {
-      peerOnline.leaveRoom();
-    }
+    handleSelectMode(nextMode);
   };
 
   // Daily Challenge Start from Modal
@@ -513,6 +518,7 @@ export default function Home() {
         dailyStreak={dailyStats.currentStreak}
         activeModifiersCount={activeModifiersCount}
         disconnectGraceSeconds={peerOnline.disconnectGraceSeconds}
+        onSelectMode={handleSelectMode}
         onToggleMode={handleToggleMode}
         onSetDifficulty={setDifficulty}
         onSetTimeControl={setTimeControl}

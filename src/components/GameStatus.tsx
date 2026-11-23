@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { HelpCircle, Bot, User, Sun, Moon, Clock, Volume2, VolumeX, Globe, Flame, Sliders } from 'lucide-react';
-import { AiDifficulty, ConnectionStatus, GameState, OnlineRole, Player, TimeControl } from '@/types/game';
+import { HelpCircle, Bot, User, Users, Sun, Moon, Clock, Volume2, VolumeX, Globe, Flame, Sliders, ChevronDown } from 'lucide-react';
+import { AiDifficulty, ConnectionStatus, GameMode, GameState, OnlineRole, Player, TimeControl } from '@/types/game';
 import { HandDrawnLogo } from './hand-drawn/HandDrawnLogo';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
 
@@ -21,7 +21,8 @@ interface GameStatusProps {
   dailyStreak?: number;
   activeModifiersCount?: number;
   disconnectGraceSeconds?: number | null;
-  onToggleMode: () => void;
+  onSelectMode: (mode: GameMode) => void;
+  onToggleMode?: () => void;
   onSetDifficulty: (difficulty: AiDifficulty) => void;
   onSetTimeControl: (tc: TimeControl) => void;
   onToggleTheme: () => void;
@@ -69,6 +70,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   dailyStreak,
   activeModifiersCount,
   disconnectGraceSeconds,
+  onSelectMode,
   onToggleMode,
   onSetDifficulty,
   onSetTimeControl,
@@ -91,22 +93,27 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   } = gameState;
 
   const [isTimeMenuOpen, setIsTimeMenuOpen] = useState(false);
+  const [isModeMenuOpen, setIsModeMenuOpen] = useState(false);
   const timeMenuRef = useRef<HTMLDivElement>(null);
+  const modeMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close time menu on outside click
+  // Close menus on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (timeMenuRef.current && !timeMenuRef.current.contains(e.target as Node)) {
         setIsTimeMenuOpen(false);
       }
+      if (modeMenuRef.current && !modeMenuRef.current.contains(e.target as Node)) {
+        setIsModeMenuOpen(false);
+      }
     };
-    if (isTimeMenuOpen) {
+    if (isTimeMenuOpen || isModeMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isTimeMenuOpen]);
+  }, [isTimeMenuOpen, isModeMenuOpen]);
 
   return (
     <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-3">
@@ -245,39 +252,107 @@ export const GameStatus: React.FC<GameStatusProps> = ({
 
       {/* Row 2: Mode Navigation & Active Mode Controls */}
       <div className="flex items-center justify-between pt-2 pb-1 gap-2 text-xs">
-        {/* Mode Switcher */}
-        <button
-          type="button"
-          onClick={onToggleMode}
-          className={`flex items-center gap-1.5 px-2 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] transition-all cursor-pointer font-sans lowercase text-xs ${
-            gameMode === 'daily'
-              ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 font-medium'
-              : 'text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
-          }`}
-          title="Переключить режим (против ии / вдвоем / онлайн)"
-        >
-          {gameMode === 'ai' ? (
-            <>
-              <Bot size={13} />
-              <span>ии</span>
-            </>
-          ) : gameMode === 'pvp' ? (
-            <>
-              <User size={13} />
-              <span>2p</span>
-            </>
-          ) : gameMode === 'daily' ? (
-            <>
-              <Flame size={13} className="fill-amber-500 text-amber-500" />
-              <span>челлендж дня</span>
-            </>
-          ) : (
-            <>
-              <Globe size={13} />
-              <span>онлайн</span>
-            </>
+        {/* Mode Selector Dropdown */}
+        <div className="relative" ref={modeMenuRef}>
+          <button
+            type="button"
+            onClick={() => setIsModeMenuOpen((prev) => !prev)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-all cursor-pointer font-sans lowercase text-xs ${
+              isModeMenuOpen
+                ? 'border-[var(--line-strong)] text-[var(--highlight-ink)] bg-[var(--active-board-bg)] font-medium shadow-xs'
+                : gameMode === 'daily'
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 font-medium'
+                : 'border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
+            }`}
+            title="выбрать режим игры"
+            aria-label="Выбрать режим игры"
+          >
+            {gameMode === 'ai' ? (
+              <>
+                <Bot size={13} />
+                <span>против ии</span>
+              </>
+            ) : gameMode === 'pvp' ? (
+              <>
+                <Users size={13} />
+                <span>два игрока</span>
+              </>
+            ) : gameMode === 'daily' ? (
+              <>
+                <Flame size={13} className="fill-amber-500 text-amber-500" />
+                <span>челлендж дня</span>
+              </>
+            ) : (
+              <>
+                <Globe size={13} />
+                <span>по коду</span>
+              </>
+            )}
+            <ChevronDown
+              size={11}
+              className={`transition-transform duration-200 opacity-60 ${
+                isModeMenuOpen ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+
+          {isModeMenuOpen && (
+            <div className="absolute left-0 top-full mt-1.5 z-40 py-1 px-1 min-w-[210px] rounded-lg bg-[var(--bg)] border border-[var(--line-strong)] shadow-lg animate-fade-up text-xs font-sans">
+              <div className="px-2.5 py-1 text-[10px] uppercase tracking-wider text-[var(--ink-mute)] font-medium border-b border-[var(--line)] mb-1">
+                выберите режим
+              </div>
+              {[
+                {
+                  mode: 'ai' as const,
+                  label: 'против ии',
+                  desc: 'одиночная игра с ботом',
+                  icon: Bot,
+                },
+                {
+                  mode: 'pvp' as const,
+                  label: 'два игрока',
+                  desc: 'на одном устройстве',
+                  icon: Users,
+                },
+                {
+                  mode: 'online' as const,
+                  label: 'по коду (онлайн)',
+                  desc: 'с другом по ссылке или коду',
+                  icon: Globe,
+                },
+              ].map(({ mode, label, desc, icon: Icon }) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => {
+                    onSelectMode(mode);
+                    setIsModeMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-2.5 py-2 rounded text-left transition-colors cursor-pointer ${
+                    gameMode === mode
+                      ? 'bg-[var(--line)] text-[var(--highlight-ink)] font-medium'
+                      : 'text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] hover:bg-[var(--line)]/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon size={14} className="shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="lowercase font-medium">{label}</span>
+                      <span className="text-[10px] text-[var(--ink-mute)] font-normal leading-tight">
+                        {desc}
+                      </span>
+                    </div>
+                  </div>
+                  {gameMode === mode && (
+                    <span className="text-[11px] font-semibold text-[var(--highlight-ink)] ml-2">
+                      ✓
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           )}
-        </button>
+        </div>
 
         {/* Right side: Controls for current active mode */}
         <div className="flex items-center gap-1.5 text-xs">
