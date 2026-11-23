@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
-import { ConnectionStatus, GameState, OnlineRole } from '@/types/game';
+import { ConnectionStatus, GameState, OnlineRole, Player } from '@/types/game';
 import { isBoardFull } from '@/lib/gameLogic';
 import { LocalBoard } from './LocalBoard';
 
 interface SuperBoardProps {
   gameState: GameState;
   onlineRole?: OnlineRole;
+  onlinePlayer?: Player | null;
   connectionStatus?: ConnectionStatus;
   onCellClick: (boardIdx: number, cellIdx: number) => void;
 }
@@ -15,6 +16,7 @@ interface SuperBoardProps {
 export const SuperBoard: React.FC<SuperBoardProps> = ({
   gameState,
   onlineRole,
+  onlinePlayer,
   connectionStatus,
   onCellClick,
 }) => {
@@ -34,8 +36,10 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
   const isMyTurnOnline =
     gameMode === 'online'
       ? connectionStatus === 'connected' &&
-        ((onlineRole === 'host' && currentPlayer === 'X') ||
-          (onlineRole === 'guest' && currentPlayer === 'O'))
+        (onlinePlayer
+          ? currentPlayer === onlinePlayer
+          : (onlineRole === 'host' && currentPlayer === 'X') ||
+            (onlineRole === 'guest' && currentPlayer === 'O'))
       : true;
 
   const isBoardDisabled =

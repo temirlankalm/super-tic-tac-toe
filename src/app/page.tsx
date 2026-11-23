@@ -15,7 +15,15 @@ import { OnlineRoomModal } from '@/components/OnlineRoomModal';
 import { SettingsModal } from '@/components/SettingsModal';
 import { DailyChallengeModal } from '@/components/DailyChallengeModal';
 import { evaluateStaticState } from '@/lib/ai';
-import { DailyStats, getDailyStats, recordDailyResult } from '@/lib/daily';
+import {
+  DailyStats,
+  getDailyStats,
+  recordDailyResult,
+  getActiveDaily,
+  saveActiveDaily,
+  clearActiveDaily,
+  getTodayDateString,
+} from '@/lib/daily';
 import { Player } from '@/types/game';
 
 export default function Home() {
@@ -87,8 +95,8 @@ export default function Home() {
     isGameActive:
       Boolean(gameStateRef.current?.history?.length > 0) &&
       gameStateRef.current?.winner === null,
-    onRemoteMove: (boardIdx, cellIdx, _player, rTimeX, rTimeO) => {
-      applyRemoteMove(boardIdx, cellIdx);
+    onRemoteMove: (boardIdx, cellIdx, player, rTimeX, rTimeO) => {
+      applyRemoteMove(boardIdx, cellIdx, player);
       if (rTimeX !== undefined && rTimeO !== undefined) {
         syncClocks(rTimeX, rTimeO);
       }
@@ -131,7 +139,7 @@ export default function Home() {
     },
     onOpponentForfeit: () => {
       // 30s disconnect grace period expired: award technical victory to remaining player
-      const myPlayer: Player = peerOnline.role === 'host' ? 'X' : 'O';
+      const myPlayer: Player = peerOnline.myPlayer || (peerOnline.role === 'host' ? 'X' : 'O');
       const timedOutOpponent: Player = myPlayer === 'X' ? 'O' : 'X';
       rawHandleTimeout(timedOutOpponent);
       playGameVictory(false);
@@ -150,6 +158,7 @@ export default function Home() {
           timeX: timeXRef.current,
           timeO: timeORef.current,
           modifiers: gameStateRef.current.modifiers,
+          hostPlayer: peerOnline.myPlayer || 'X',
         });
       }
     },
@@ -174,6 +183,7 @@ export default function Home() {
   } = useSuperTicTacToe({
     onMove: handleMoveEvent,
     onlineRole: peerOnline.role,
+    onlinePlayer: peerOnline.myPlayer,
     isOnlineConnected: peerOnline.status === 'connected',
     // Remaining clock of `player` in ms, or null when there is no time control (qnet budgets by it).
     getClockMs: (player) =>
@@ -233,12 +243,13 @@ export default function Home() {
   timeXRef.current = timeX;
   timeORef.current = timeO;
 
-  // Track daily challenge completion and update stats
+  // Track daily challenge progress, persistence, and completion
   const dailyCompletedRef = useRef<boolean>(false);
   useEffect(() => {
     if (gameState.gameMode === 'daily') {
       if (gameState.winner !== null && !dailyCompletedRef.current) {
         dailyCompletedRef.current = true;
+        clearActiveDaily();
         const isWon = gameState.winner === 'X';
         const updated = recordDailyResult(
           isWon,
@@ -250,11 +261,30 @@ export default function Home() {
         setTimeout(() => {
           setIsDailyModalOpen(true);
         }, 1200);
+      } else if (gameState.winner === null && gameState.history.length > 0) {
+        saveActiveDaily({
+          date: getTodayDateString(),
+          cells: gameState.cells,
+          boardWinners: gameState.boardWinners,
+          boardWinningLines: gameState.boardWinningLines,
+          currentPlayer: gameState.currentPlayer,
+          activeBoard: gameState.activeBoard,
+          historyLength: gameState.history.length,
+        });
       }
     } else {
       dailyCompletedRef.current = false;
     }
-  }, [gameState.gameMode, gameState.winner, gameState.history.length, gameState.boardWinners]);
+  }, [
+    gameState.gameMode,
+    gameState.winner,
+    gameState.history.length,
+    gameState.boardWinners,
+    gameState.cells,
+    gameState.boardWinningLines,
+    gameState.currentPlayer,
+    gameState.activeBoard,
+  ]);
 
   // Detect ?room=xxxx query param on mount to join room
   useEffect(() => {
@@ -276,6 +306,24 @@ export default function Home() {
         resetGame();
         resetClocks();
       }
+    } else if (gameState.gameMode === 'daily') {
+      if (gameState.history.length > 0 && gameState.winner === null) {
+        if (
+          typeof window !== 'undefined' &&
+          !window.confirm('сдаться в игре дня? партия будет засчитана как поражение.')
+        ) {
+          return;
+        }
+        const updated = recordDailyResult(
+          false,
+          gameState.history.length,
+          gameState.boardWinners
+        );
+        setDailyStats(updated);
+        clearActiveDaily();
+      }
+      resetGame();
+      resetClocks('off');
     } else {
       resetGame();
       resetClocks();
@@ -289,9 +337,19 @@ export default function Home() {
       gameState.history.length > 0 &&
       gameState.winner === null
     ) {
-      if (typeof window !== 'undefined' && !window.confirm('выйти из игры дня? текущая партия будет прервана.')) {
+      if (
+        typeof window !== 'undefined' &&
+        !window.confirm('выйти из игры дня? партия будет засчитана как поражение.')
+      ) {
         return;
       }
+      const updated = recordDailyResult(
+        false,
+        gameState.history.length,
+        gameState.boardWinners
+      );
+      setDailyStats(updated);
+      clearActiveDaily();
     }
 
     const nextMode =
@@ -341,7 +399,18 @@ export default function Home() {
     setGameMode('daily');
     setDifficulty('medium');
     dailyCompletedRef.current = false;
-    resetGame();
+    const active = getActiveDaily();
+    if (active) {
+      syncState({
+        cells: active.cells,
+        boardWinners: active.boardWinners,
+        boardWinningLines: active.boardWinningLines,
+        currentPlayer: active.currentPlayer,
+        activeBoard: active.activeBoard,
+      });
+    } else {
+      resetGame();
+    }
     resetClocks('off');
     setIsDailyModalOpen(false);
     haptic('tap');
@@ -394,7 +463,7 @@ export default function Home() {
 
   const handleResign = () => {
     if (gameState.gameMode === 'online') {
-      const myPlayer: Player = peerOnline.role === 'host' ? 'X' : 'O';
+      const myPlayer: Player = peerOnline.myPlayer || (peerOnline.role === 'host' ? 'X' : 'O');
       peerOnline.resignOnline();
       rawHandleResign(myPlayer);
     } else if (gameState.gameMode === 'ai' || gameState.gameMode === 'daily') {
@@ -456,6 +525,7 @@ export default function Home() {
         timeControl={timeControl}
         isSoundEnabled={isSoundEnabled}
         onlineRole={peerOnline.role}
+        onlinePlayer={peerOnline.myPlayer}
         connectionStatus={peerOnline.status}
         roomId={peerOnline.roomId}
         drawOfferedByOpponent={peerOnline.drawOfferedByOpponent}
@@ -492,6 +562,7 @@ export default function Home() {
         winner={gameState.winner}
         gameMode={gameState.gameMode}
         onlineRole={peerOnline.role}
+        onlinePlayer={peerOnline.myPlayer}
         difficulty={gameState.difficulty}
       />
 
@@ -499,6 +570,7 @@ export default function Home() {
       <SuperBoard
         gameState={gameState}
         onlineRole={peerOnline.role}
+        onlinePlayer={peerOnline.myPlayer}
         connectionStatus={peerOnline.status}
         onCellClick={handleCellClick}
       />
@@ -510,6 +582,7 @@ export default function Home() {
         winReason={gameState.winReason}
         wonByLine={gameState.globalWinningLine !== null}
         onlineRole={peerOnline.role}
+        onlinePlayer={peerOnline.myPlayer}
         historyLength={gameState.history.length}
         isAiThinking={gameState.isAiThinking}
         canUndo={

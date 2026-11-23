@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { HelpCircle, Bot, User, Sun, Moon, Clock, Volume2, VolumeX, Globe, Flame, Sliders, Zap } from 'lucide-react';
-import { AiDifficulty, ConnectionStatus, GameState, OnlineRole, TimeControl } from '@/types/game';
+import { AiDifficulty, ConnectionStatus, GameState, OnlineRole, Player, TimeControl } from '@/types/game';
 import { HandDrawnLogo } from './hand-drawn/HandDrawnLogo';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
 
@@ -12,6 +12,7 @@ interface GameStatusProps {
   timeControl: TimeControl;
   isSoundEnabled: boolean;
   onlineRole?: OnlineRole;
+  onlinePlayer?: Player | null;
   connectionStatus?: ConnectionStatus;
   roomId?: string | null;
   drawOfferedByOpponent?: boolean;
@@ -65,6 +66,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   timeControl,
   isSoundEnabled,
   onlineRole,
+  onlinePlayer,
   connectionStatus,
   roomId,
   drawOfferedByOpponent,
@@ -516,8 +518,10 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                   )}
                   {gameMode === 'online' && (
                     <span className="text-xs text-[var(--ink-soft)] font-normal lowercase">
-                      {((onlineRole === 'host' && currentPlayer === 'X') ||
-                        (onlineRole === 'guest' && currentPlayer === 'O'))
+                      {(onlinePlayer
+                        ? currentPlayer === onlinePlayer
+                        : (onlineRole === 'host' && currentPlayer === 'X') ||
+                          (onlineRole === 'guest' && currentPlayer === 'O'))
                         ? '· ваш ход'
                         : '· ход соперника'}
                     </span>

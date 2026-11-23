@@ -46,6 +46,7 @@ export type PeerMessage =
       timeX: number;
       timeO: number;
       modifiers?: GameModifiers;
+      hostPlayer?: Player;
     }
   | {
       type: 'MOVE';
@@ -121,6 +122,10 @@ export interface GameState {
     currentPlayer: Player;
     activeBoard: number | null;
     lastMove: Move | null;
+    playerMoveHistory?: {
+      X: { boardIdx: number; cellIdx: number }[];
+      O: { boardIdx: number; cellIdx: number }[];
+    };
   }[];
   // Settings
   gameMode: GameMode;

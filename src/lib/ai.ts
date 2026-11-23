@@ -286,7 +286,7 @@ export function getBestAiMove(
   const depth = difficulty === 'medium' ? 2 : 4;
   let bestMove = validMoves[0];
   let highestScore = -Infinity;
-  const alpha = -Infinity;
+  let alpha = -Infinity;
   const beta = Infinity;
 
   for (const move of validMoves) {
@@ -310,6 +310,7 @@ export function getBestAiMove(
       highestScore = moveScore;
       bestMove = move;
     }
+    alpha = Math.max(alpha, highestScore);
   }
 
   return {

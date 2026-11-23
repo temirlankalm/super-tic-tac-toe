@@ -1,5 +1,5 @@
 // Service Worker for Super Tic-Tac-Toe (PWA Offline Support)
-const CACHE_NAME = 'sttt-pwa-v1';
+const CACHE_NAME = 'sttt-pwa-v2';
 
 const STATIC_ASSETS = [
   '/',
@@ -7,13 +7,30 @@ const STATIC_ASSETS = [
   '/icon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/icons/apple-touch-icon.png'
+  '/icons/apple-touch-icon.png',
+  '/qnet/worker.js',
+  '/qnet/index.js',
+  '/qnet/net.json',
+  '/qnet/eval.js',
+  '/qnet/features.js',
+  '/qnet/neteval.js',
+  '/qnet/position.js',
+  '/qnet/search.js',
+  '/qnet/tables.js',
+  '/qnet/time.js',
+  '/qnet/net.bin',
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const asset of STATIC_ASSETS) {
+        try {
+          await cache.add(asset);
+        } catch (err) {
+          console.warn(`[SW] Precache skipped for ${asset}:`, err);
+        }
+      }
     })
   );
   self.skipWaiting();
@@ -55,15 +72,15 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          return caches.match('/') || caches.match(request);
+          return caches.match(request).then((res) => res || caches.match('/'));
         })
     );
     return;
   }
 
-  // Static assets (Next static chunks, images, icons, sounds): Stale-While-Revalidate
+  // Static assets (Next static chunks, images, icons, sounds, QNet files): Stale-While-Revalidate with search param tolerance
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
+    caches.match(request, { ignoreSearch: true }).then((cachedResponse) => {
       const fetchPromise = fetch(request)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {

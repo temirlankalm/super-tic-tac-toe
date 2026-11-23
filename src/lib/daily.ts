@@ -1,4 +1,4 @@
-import { BoardWinner } from '@/types/game';
+import { BoardWinner, CellState, Player } from '@/types/game';
 
 export interface DailyResult {
   date: string;
@@ -16,8 +16,49 @@ export interface DailyStats {
   history: DailyResult[];
 }
 
+export interface ActiveDailyState {
+  date: string;
+  cells: CellState[][];
+  boardWinners: BoardWinner[];
+  boardWinningLines: (number[] | null)[];
+  currentPlayer: Player;
+  activeBoard: number | null;
+  historyLength: number;
+}
+
 const STORAGE_KEY = 'sttt_daily_stats';
+const ACTIVE_DAILY_KEY = 'sttt_daily_active_game';
 const EPOCH_DATE = new Date('2026-01-01T00:00:00Z');
+
+export function saveActiveDaily(state: ActiveDailyState): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(ACTIVE_DAILY_KEY, JSON.stringify(state));
+  } catch {}
+}
+
+export function getActiveDaily(): ActiveDailyState | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(ACTIVE_DAILY_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.date !== getTodayDateString()) {
+      localStorage.removeItem(ACTIVE_DAILY_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function clearActiveDaily(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(ACTIVE_DAILY_KEY);
+  } catch {}
+}
 
 /**
  * Returns today's date formatted as YYYY-MM-DD in the user's local timezone.

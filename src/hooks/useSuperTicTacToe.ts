@@ -27,6 +27,7 @@ export interface UseSuperTicTacToeOptions {
   onMove?: (event: MoveEvent) => void;
   onLocalMove?: (boardIdx: number, cellIdx: number, player: Player) => void;
   onlineRole?: OnlineRole;
+  onlinePlayer?: Player | null;
   isOnlineConnected?: boolean;
   /** Remaining clock of `player` in ms, or null without a time control. */
   getClockMs?: (player: Player) => number | null;
@@ -95,7 +96,9 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
           if (!optionsRef.current?.isOnlineConnected) {
             return prev;
           }
-          const expectedPlayer = optionsRef.current?.onlineRole === 'host' ? 'X' : 'O';
+          const expectedPlayer =
+            optionsRef.current?.onlinePlayer ||
+            (optionsRef.current?.onlineRole === 'host' ? 'X' : 'O');
           if (prev.currentPlayer !== expectedPlayer) {
             return prev;
           }
@@ -133,8 +136,16 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
 
   // Apply a remote move received over WebRTC
   const applyRemoteMove = useCallback(
-    (boardIdx: number, cellIdx: number) => {
+    (boardIdx: number, cellIdx: number, player?: Player) => {
       setGameState((prev) => {
+        // Guard against out-of-turn or mismatched remote packet
+        if (player && prev.currentPlayer !== player) {
+          console.warn(
+            `[WebRTC] Rejected out-of-turn move from ${player}, expected ${prev.currentPlayer}`
+          );
+          return prev;
+        }
+
         if (!isMoveValid(prev, boardIdx, cellIdx)) {
           return prev;
         }
@@ -340,6 +351,12 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
         globalWinningLine: null,
         history: newHistory,
         isAiThinking: false,
+        playerMoveHistory: targetState.playerMoveHistory
+          ? {
+              X: targetState.playerMoveHistory.X.map((m) => ({ ...m })),
+              O: targetState.playerMoveHistory.O.map((m) => ({ ...m })),
+            }
+          : { X: [], O: [] },
       };
     });
   }, []);

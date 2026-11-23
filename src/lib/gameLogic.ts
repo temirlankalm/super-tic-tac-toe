@@ -168,6 +168,12 @@ export function applyMove(
     currentPlayer: state.currentPlayer,
     activeBoard: state.activeBoard,
     lastMove: state.lastMove,
+    playerMoveHistory: state.playerMoveHistory
+      ? {
+          X: state.playerMoveHistory.X.map((m) => ({ ...m })),
+          O: state.playerMoveHistory.O.map((m) => ({ ...m })),
+        }
+      : undefined,
   };
 
   // Check if this local board is now won

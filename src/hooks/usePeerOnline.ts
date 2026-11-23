@@ -24,6 +24,7 @@ interface UsePeerOnlineOptions {
 export function usePeerOnline(options?: UsePeerOnlineOptions) {
   const [status, setStatus] = useState<ConnectionStatus>('idle');
   const [role, setRole] = useState<OnlineRole>(null);
+  const [myPlayer, setMyPlayer] = useState<Player | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [rematchRequestedByOpponent, setRematchRequestedByOpponent] = useState(false);
   const [myRematchSent, setMyRematchSent] = useState(false);
@@ -87,6 +88,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     }
     setStatus('idle');
     setRole(null);
+    setMyPlayer(null);
     setRoomId(null);
     setRematchRequestedByOpponent(false);
     setMyRematchSent(false);
@@ -158,6 +160,9 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
 
         switch (msg.type) {
           case 'INIT':
+            if (msg.hostPlayer) {
+              setMyPlayer(msg.hostPlayer === 'X' ? 'O' : 'X');
+            }
             optionsRef.current?.onInitSync?.(msg);
             break;
           case 'MOVE':
@@ -227,11 +232,12 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     [clearDisconnectGrace, startDisconnectGrace]
   );
 
-  // Create room as Host (Player X)
-  const createRoom = useCallback(async (): Promise<string> => {
+  // Create room as Host (Player X by default)
+  const createRoom = useCallback(async (assignedPlayer?: Player): Promise<string> => {
     cleanup();
     setStatus('creating');
     setRole('host');
+    setMyPlayer(assignedPlayer || 'X');
 
     // Generate short 6-char clean alphanumeric room code
     const newRoomId = Math.random().toString(36).substring(2, 8).toLowerCase();
@@ -267,9 +273,9 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     return newRoomId;
   }, [cleanup, attachConnectionHandlers]);
 
-  // Join room as Guest (Player O)
+  // Join room as Guest (Player O by default)
   const joinRoom = useCallback(
-    async (targetRoomId: string) => {
+    async (targetRoomId: string, assignedRole: OnlineRole = 'guest', assignedPlayer?: Player) => {
       cleanup();
       let cleanId = targetRoomId.trim().toLowerCase();
       if (cleanId.includes('room=')) {
@@ -279,7 +285,8 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
       if (!cleanId) return;
 
       setStatus('connecting');
-      setRole('guest');
+      setRole(assignedRole);
+      setMyPlayer(assignedPlayer || (assignedRole === 'host' ? 'X' : 'O'));
       setRoomId(cleanId);
 
       if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
@@ -368,12 +375,18 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
       const data = await res.json();
 
       if (data.status === 'matched') {
+        if (data.myPlayer) {
+          setMyPlayer(data.myPlayer);
+        }
+        if (data.role) {
+          setRole(data.role);
+        }
         if (data.role === 'guest') {
           if (peerRef.current) {
             peerRef.current.destroy();
             peerRef.current = null;
           }
-          await joinRoom(data.roomId);
+          await joinRoom(data.roomId, 'guest', data.myPlayer);
         }
         setIsSearching(false);
         if (searchPollTimerRef.current) {
@@ -400,6 +413,12 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
         });
         const data = await res.json();
         if (data.status === 'matched') {
+          if (data.myPlayer) {
+            setMyPlayer(data.myPlayer);
+          }
+          if (data.role) {
+            setRole(data.role);
+          }
           if (searchPollTimerRef.current) {
             clearInterval(searchPollTimerRef.current);
             searchPollTimerRef.current = null;
@@ -415,7 +434,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
               peerRef.current.destroy();
               peerRef.current = null;
             }
-            await joinRoom(data.roomId);
+            await joinRoom(data.roomId, 'guest', data.myPlayer);
           }
         }
       } catch (err) {
@@ -452,9 +471,9 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     setMyRematchSent(true);
     sendMessage({
       type: 'REMATCH_REQUEST',
-      fromPlayer: role === 'host' ? 'X' : 'O',
+      fromPlayer: myPlayer || (role === 'host' ? 'X' : 'O'),
     });
-  }, [role, sendMessage]);
+  }, [myPlayer, role, sendMessage]);
 
   // Accept rematch
   const acceptRematch = useCallback(
@@ -472,16 +491,16 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
 
   // Resign from game
   const resignOnline = useCallback(() => {
-    const myPlayer: Player = role === 'host' ? 'X' : 'O';
-    sendMessage({ type: 'RESIGN', player: myPlayer });
-  }, [role, sendMessage]);
+    const p: Player = myPlayer || (role === 'host' ? 'X' : 'O');
+    sendMessage({ type: 'RESIGN', player: p });
+  }, [myPlayer, role, sendMessage]);
 
   // Offer draw to opponent
   const offerDrawOnline = useCallback(() => {
-    const myPlayer: Player = role === 'host' ? 'X' : 'O';
+    const p: Player = myPlayer || (role === 'host' ? 'X' : 'O');
     setMyDrawOffered(true);
-    sendMessage({ type: 'DRAW_OFFER', fromPlayer: myPlayer });
-  }, [role, sendMessage]);
+    sendMessage({ type: 'DRAW_OFFER', fromPlayer: p });
+  }, [myPlayer, role, sendMessage]);
 
   // Accept draw offered by opponent
   const acceptDrawOnline = useCallback(() => {
@@ -511,6 +530,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
   return {
     status,
     role,
+    myPlayer,
     roomId,
     rematchRequestedByOpponent,
     myRematchSent,

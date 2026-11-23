@@ -12,6 +12,7 @@ interface ChessClockBarProps {
   winner: BoardWinner;
   gameMode: GameMode;
   onlineRole?: OnlineRole;
+  onlinePlayer?: Player | null;
   difficulty?: string;
 }
 
@@ -30,6 +31,7 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
   winner,
   gameMode,
   onlineRole,
+  onlinePlayer,
   difficulty,
 }) => {
   if (timeControl === 'off') return null;
@@ -43,11 +45,14 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
   const isXFlagged = timeX <= 0;
   const isOFlagged = timeO <= 0;
 
+  const isXSelf = onlinePlayer ? onlinePlayer === 'X' : onlineRole === 'host';
+  const isOSelf = onlinePlayer ? onlinePlayer === 'O' : onlineRole === 'guest';
+
   const playerXLabel =
     gameMode === 'ai'
       ? 'вы (x)'
       : gameMode === 'online'
-      ? onlineRole === 'host'
+      ? isXSelf
         ? 'вы (x)'
         : 'соперник (x)'
       : 'игрок 1 (x)';
@@ -64,7 +69,7 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
             : 'сложный'
         })`
       : gameMode === 'online'
-      ? onlineRole === 'guest'
+      ? isOSelf
         ? 'вы (o)'
         : 'соперник (o)'
       : 'игрок 2 (o)';

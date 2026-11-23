@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Undo2, RotateCcw, Flag, Handshake, Zap } from 'lucide-react';
-import { BoardWinner, GameMode, OnlineRole, WinReason } from '@/types/game';
+import { BoardWinner, GameMode, OnlineRole, Player, WinReason } from '@/types/game';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
 
 interface GameActionsBarProps {
@@ -12,6 +12,7 @@ interface GameActionsBarProps {
   /** false when the game was decided by counting boards (every board closed, no line). */
   wonByLine?: boolean;
   onlineRole?: OnlineRole;
+  onlinePlayer?: Player | null;
   historyLength: number;
   isAiThinking: boolean;
   canUndo: boolean;
@@ -34,6 +35,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
   winReason,
   wonByLine = true,
   onlineRole,
+  onlinePlayer,
   historyLength,
   canUndo,
   speedBlitzTime,
@@ -55,8 +57,10 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
     const isOnline = gameMode === 'online';
     const isMeWinner =
       isOnline &&
-      ((onlineRole === 'host' && winner === 'X') ||
-        (onlineRole === 'guest' && winner === 'O'));
+      (onlinePlayer
+        ? winner === onlinePlayer
+        : (onlineRole === 'host' && winner === 'X') ||
+          (onlineRole === 'guest' && winner === 'O'));
 
     let title = '';
     if (winner === 'TIE') {
