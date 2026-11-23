@@ -6,3 +6,4 @@ export { FEATURE_SPEC, NUM_FEATURES, NUM_FEATURES_PER_POSITION, extractFeatures 
 export { NetEvaluator, loadNetFromFiles } from './neteval.js';
 export { symmetric } from './position.js';
 export { mulberry32 } from './tables.js';
+export { allocateTime } from './time.js';

@@ -9,6 +9,8 @@ interface GameActionsBarProps {
   gameMode: GameMode;
   winner: BoardWinner;
   winReason?: WinReason;
+  /** false when the game was decided by counting boards (every board closed, no line). */
+  wonByLine?: boolean;
   onlineRole?: OnlineRole;
   historyLength: number;
   isAiThinking: boolean;
@@ -29,6 +31,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
   gameMode,
   winner,
   winReason,
+  wonByLine = true,
   onlineRole,
   historyLength,
   canUndo,
@@ -70,7 +73,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
     } else if (winReason === 'agreement') {
       subtitle = 'взаимное согласие игроков';
     } else if (winner !== 'TIE') {
-      subtitle = '3 захваченных сектора в ряд';
+      subtitle = wonByLine ? '3 захваченных сектора в ряд' : 'больше захваченных секторов';
     }
 
     return (

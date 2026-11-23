@@ -12,6 +12,15 @@ const FIRST_REQUEST_EXTRA_MS = 12000; // net download + start-up
 const REPLY_GRACE_MS = 3000;
 const MAX_FAILURES = 2;
 
+/** Clock-based budget: the worker spends a share of the remaining time (see engine time.js). */
+export interface QnetClock {
+  timeLeftMs: number;
+  incrementMs?: number;
+  ply?: number;
+  overheadMs?: number;
+  maxMs?: number;
+}
+
 interface WorkerReply {
   id: number;
   move?: number;
@@ -102,13 +111,32 @@ export function warmUpQnet(): void {
 }
 
 /**
- * Ask the engine for a move in `state`, thinking for about `timeMs`. Resolves to `null` when the
- * engine is unavailable, slow, or returns something the site's own rules reject.
+ * Let the engine think about `state` (the human to move) until the next request. Fire and forget:
+ * no reply, no timeout, and failures are ignored. Does nothing before the engine has loaded.
  */
-export async function getQnetMove(state: GameState, timeMs: number): Promise<Move | null> {
+export function ponderQnet(state: GameState): void {
+  if (!warmed || !worker) return;
+  try {
+    worker.postMessage({ id: 0, type: 'ponder', state: toCompact(state) });
+  } catch {
+    // pondering is best-effort
+  }
+}
+
+/**
+ * Ask the engine for a move in `state`. `budget` is either a fixed thinking time in ms or the
+ * engine's remaining clock. Resolves to `null` when the engine is unavailable, slow, or returns
+ * something the site's own rules reject.
+ */
+export async function getQnetMove(state: GameState, budget: number | QnetClock): Promise<Move | null> {
   try {
     const extra = warmed ? 0 : FIRST_REQUEST_EXTRA_MS;
-    const reply = await request({ type: 'move', state: toCompact(state), timeMs }, timeMs + REPLY_GRACE_MS + extra);
+    const message =
+      typeof budget === 'number'
+        ? { type: 'move', state: toCompact(state), timeMs: budget }
+        : { type: 'move', state: toCompact(state), clock: budget };
+    const waitMs = typeof budget === 'number' ? budget : Math.min(budget.maxMs ?? budget.timeLeftMs, budget.timeLeftMs);
+    const reply = await request(message, waitMs + REPLY_GRACE_MS + extra);
     warmed = true;
     if (typeof reply.move !== 'number') return null;
     const boardIdx = Math.floor(reply.move / 9);

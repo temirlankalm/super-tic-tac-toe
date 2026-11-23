@@ -137,6 +137,11 @@ export default function Home() {
     onMove: handleMoveEvent,
     onlineRole: peerOnline.role,
     isOnlineConnected: peerOnline.status === 'connected',
+    // Remaining clock of `player` in ms, or null when there is no time control (qnet budgets by it).
+    getClockMs: (player) =>
+      timeControlRef.current === 'off' || timeControlRef.current === null
+        ? null
+        : (player === 'X' ? timeXRef.current : timeORef.current) * 1000,
     onLocalMove: (boardIdx, cellIdx, player) => {
       if (gameStateRef.current?.gameMode === 'online') {
         peerOnline.sendMessage({
@@ -385,6 +390,7 @@ export default function Home() {
         gameMode={gameState.gameMode}
         winner={gameState.winner}
         winReason={gameState.winReason}
+        wonByLine={gameState.globalWinningLine !== null}
         onlineRole={peerOnline.role}
         historyLength={gameState.history.length}
         isAiThinking={gameState.isAiThinking}
