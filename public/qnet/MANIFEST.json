@@ -3,15 +3,15 @@
   "tables.js": "6473bbed99320039fd4223a5a5d40ce12901437b4a56a116951d75faa9bf6658",
   "position.js": "1ca6872e76d53dcda6578e755ba7a2e367ae5635086147e329bdc1b80643e006",
   "eval.js": "29b6c31dc41f5fc4fa9014c94305f7d2b181dfa4bdf30b6e44417db323058f20",
-  "features.js": "f3d23782edee9092c7b17afadc87391188f1061961190b5f53fa266fe608adc9",
-  "neteval.js": "beeae38ccde4a178c6e584edb4b71eaa500301a6874984aa994b9535ec33da4e",
+  "features.js": "9fc956e857e6f272e5e1cdd61ed51765dd9a3f01412a6cfdcf08af9cf367a5ac",
+  "neteval.js": "071623902f38390ecd849e1e84b2b56b7579abe4a585f62f00f14a04d02e2dfb",
   "search.js": "7c1170dbf56ece9e9ca4d82f5590a63a402589dd0160daeade306066f998c615",
-  "index.js": "e978b40cd1198b763896336b75305186e80a5d83171acac90fbd9c54c94cd5a0",
+  "index.js": "8e7144ea53ac1b22e6abcb0cd50c00a35558c764bcef4dd494e4c3e2643f0858",
   "time.js": "79d8e40b93dc69c9d79f64a31d640e04eb4105147c2fe2ec2fd069b2d67d7ecf",
   "worker.js": "a587a32a12b8d2247942cab0f56d343fe19e2aedba4366e1f84d495d76abe954",
-  "net.json": "dc010b9e34e11117373567ee0164be02c91a5b33c9f0c6950ee44cc20d9ef45a",
-  "net.bin": "bb5a5257180b3424c38a6c304517b14b710bbc1817d12451f87e69af1f9a8256"
+  "net.json": "a874c26b119030caf2083b0c13c687d98abac1bb8cc384ae7857e3b2852a5713",
+  "net.bin": "13d34e68d8273ddaaaa6ba406b22faeecf16a51a8e3966ef3c919339e8d338f2"
  },
- "qnet_commit": "f4c4d061a9c400ce0ccce5a9304a3b4fd475db3e-dirty",
- "net": "g2_linear"
+ "qnet_commit": "ef51ffe63e6523bb075ae421ce64db3a3cdd62f3",
+ "net": "g3_lines_tuned"
 }
