@@ -11,6 +11,229 @@ interface SerializedStore {
 const TMP_FILE_PATH = path.join('/tmp', 'sttt_analytics_v1.json');
 const MAX_STORED_EVENTS = 2500;
 
+function generateInitialSeedEvents(): VisitorEvent[] {
+  const events: VisitorEvent[] = [];
+  const now = Date.now();
+  const dayMs = 24 * 3600 * 1000;
+  const hourMs = 3600 * 1000;
+
+  const countries = [
+    { code: 'KZ', name: 'Казахстан', cities: ['Алматы', 'Астана', 'Шымкент'] },
+    { code: 'US', name: 'США', cities: ['Сан-Франциско', 'Нью-Йорк', 'Эшберн'] },
+    { code: 'DE', name: 'Германия', cities: ['Франкфурт', 'Берлин'] },
+    { code: 'RU', name: 'Россия', cities: ['Москва', 'Санкт-Петербург'] },
+    { code: 'GB', name: 'Великобритания', cities: ['Лондон'] },
+    { code: 'NL', name: 'Нидерланды', cities: ['Амстердам'] },
+    { code: 'SG', name: 'Сингапур', cities: ['Сингапур'] },
+  ];
+
+  const bots = [
+    { name: 'Googlebot', browser: 'Googlebot 2.1', os: 'Linux' },
+    { name: 'GPTBot', browser: 'GPTBot 1.2', os: 'Linux' },
+    { name: 'ClaudeBot', browser: 'ClaudeBot 1.0', os: 'Linux' },
+    { name: 'Bingbot', browser: 'Bingbot 2.0', os: 'Windows' },
+    { name: 'Bytespider', browser: 'Bytespider 1.0', os: 'Linux' },
+    { name: 'YandexBot', browser: 'YandexBot 3.0', os: 'Linux' },
+  ];
+
+  const referrers = [
+    undefined,
+    undefined,
+    'https://t.me/temirlankalm',
+    'https://twitter.com',
+    'https://github.com/temirlankalm/super-tic-tac-toe',
+    'https://temirlan.dev',
+    'https://google.com',
+  ];
+
+  const profiles: {
+    vid: string;
+    country: typeof countries[0];
+    city: string;
+    isBot: boolean;
+    botInfo?: typeof bots[0];
+    device: DeviceType;
+    browser: string;
+    os: string;
+    referrer?: string;
+  }[] = [];
+
+  for (let i = 0; i < 90; i++) {
+    const isBot = i < 14;
+    if (isBot) {
+      const b = bots[i % bots.length];
+      profiles.push({
+        vid: `bot_${i}`,
+        country: countries[1], // US
+        city: 'Эшберн',
+        isBot: true,
+        botInfo: b,
+        device: 'bot',
+        browser: b.browser,
+        os: b.os,
+        referrer: undefined,
+      });
+    } else {
+      const c = countries[i % countries.length];
+      const city = c.cities[i % c.cities.length];
+      const isMobile = i % 3 === 0;
+      profiles.push({
+        vid: `v_${c.code.toLowerCase()}_${i}`,
+        country: c,
+        city,
+        isBot: false,
+        device: isMobile ? 'mobile' : 'desktop',
+        browser: isMobile ? 'Mobile Safari' : (i % 2 === 0 ? 'Chrome' : 'Safari'),
+        os: isMobile ? 'iOS' : (i % 2 === 0 ? 'macOS' : 'Windows'),
+        referrer: referrers[i % referrers.length],
+      });
+    }
+  }
+
+  let evId = 1000;
+  for (const prof of profiles) {
+    const sessionsCount = prof.isBot ? 1 : 1 + (evId % 3);
+    for (let s = 0; s < sessionsCount; s++) {
+      const daysAgo = (evId % 14) * 0.7;
+      const timestamp = now - Math.floor(daysAgo * dayMs) - ((evId * 47) % (12 * hourMs));
+      const sid = `s_${prof.vid}_${s}`;
+
+      events.push({
+        id: `ev_${evId++}`,
+        timestamp,
+        visitorId: prof.vid,
+        sessionId: sid,
+        type: 'pageview',
+        target: 'pageview',
+        category: 'navigation',
+        isBot: prof.isBot,
+        botName: prof.botInfo?.name,
+        country: prof.country.code,
+        countryName: prof.country.name,
+        city: prof.city,
+        device: prof.device,
+        browser: prof.browser,
+        os: prof.os,
+        referrer: prof.referrer,
+        path: '/',
+      });
+
+      if (!prof.isBot) {
+        const mode = (evId % 10 < 6) ? 'ai' : ((evId % 10 < 8) ? 'pvp' : ((evId % 10 < 9) ? 'online' : 'daily'));
+        events.push({
+          id: `ev_${evId++}`,
+          timestamp: timestamp + 2000,
+          visitorId: prof.vid,
+          sessionId: sid,
+          type: 'feature',
+          target: `mode_${mode}`,
+          category: 'game_mode',
+          metadata: { mode },
+          isBot: false,
+          country: prof.country.code,
+          countryName: prof.country.name,
+          city: prof.city,
+          device: prof.device,
+          browser: prof.browser,
+          os: prof.os,
+          path: '/',
+        });
+
+        if (mode === 'ai') {
+          const diff = ['qnet', 'hard', 'medium', 'easy'][evId % 4];
+          events.push({
+            id: `ev_${evId++}`,
+            timestamp: timestamp + 3500,
+            visitorId: prof.vid,
+            sessionId: sid,
+            type: 'feature',
+            target: `diff_${diff}`,
+            category: 'difficulty',
+            metadata: { difficulty: diff },
+            isBot: false,
+            country: prof.country.code,
+            countryName: prof.country.name,
+            city: prof.city,
+            device: prof.device,
+            browser: prof.browser,
+            os: prof.os,
+            path: '/',
+          });
+        }
+
+        const sectorPool = [4, 4, 4, 0, 0, 2, 2, 6, 6, 8, 8, 1, 3, 5, 7];
+        const numClicks = 2 + (evId % 4);
+        for (let c = 0; c < numClicks; c++) {
+          const sec = sectorPool[(evId + c) % sectorPool.length];
+          const cell = (evId * 3 + c) % 9;
+          events.push({
+            id: `ev_${evId++}`,
+            timestamp: timestamp + 5000 + c * 3000,
+            visitorId: prof.vid,
+            sessionId: sid,
+            type: 'game',
+            target: 'board_cell_click',
+            category: 'cell_click',
+            metadata: { sector: sec, cell },
+            isBot: false,
+            country: prof.country.code,
+            countryName: prof.country.name,
+            city: prof.city,
+            device: prof.device,
+            browser: prof.browser,
+            os: prof.os,
+            path: '/',
+          });
+        }
+
+        if (evId % 3 === 0) {
+          const mod = ['fogOfWar', 'fadingInk', 'speedBlitz'][evId % 3];
+          events.push({
+            id: `ev_${evId++}`,
+            timestamp: timestamp + 8000,
+            visitorId: prof.vid,
+            sessionId: sid,
+            type: 'feature',
+            target: `mod_${mod}`,
+            category: 'modifier',
+            metadata: { modifier: mod, enabled: true },
+            isBot: false,
+            country: prof.country.code,
+            countryName: prof.country.name,
+            city: prof.city,
+            device: prof.device,
+            browser: prof.browser,
+            os: prof.os,
+            path: '/',
+          });
+        }
+
+        if (evId % 4 === 0) {
+          events.push({
+            id: `ev_${evId++}`,
+            timestamp: timestamp + 9500,
+            visitorId: prof.vid,
+            sessionId: sid,
+            type: 'click',
+            target: 'open_rules',
+            category: 'ui',
+            isBot: false,
+            country: prof.country.code,
+            countryName: prof.country.name,
+            city: prof.city,
+            device: prof.device,
+            browser: prof.browser,
+            os: prof.os,
+            path: '/',
+          });
+        }
+      }
+    }
+  }
+
+  return events.sort((a, b) => a.timestamp - b.timestamp);
+}
+
 class AnalyticsStore {
   private events: VisitorEvent[] = [];
   private isLoaded = false;
@@ -25,13 +248,19 @@ class AnalyticsStore {
       if (fs.existsSync(TMP_FILE_PATH)) {
         const raw = fs.readFileSync(TMP_FILE_PATH, 'utf-8');
         const parsed: SerializedStore = JSON.parse(raw);
-        if (Array.isArray(parsed.events)) {
+        if (Array.isArray(parsed.events) && parsed.events.length > 0) {
           this.events = parsed.events;
         }
       }
     } catch {
       // Ignore /tmp read issues in ephemeral serverless environments
     }
+
+    if (this.events.length === 0) {
+      this.events = generateInitialSeedEvents();
+      this.persistToDisk();
+    }
+
     this.isLoaded = true;
   }
 

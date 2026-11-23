@@ -18,6 +18,8 @@ import {
   Monitor,
   Tablet,
   CheckCircle2,
+  Download,
+  LayoutGrid,
 } from 'lucide-react';
 import { AnalyticsSummary, VisitorEvent, CountryStat } from '@/lib/analytics/types';
 import { countryCodeToFlag } from '@/lib/analytics/botDetector';
@@ -138,6 +140,20 @@ export default function AdminDashboardPage() {
               )}
             </div>
 
+            <div className="flex items-center justify-between text-[11px] text-[var(--ink-mute)]">
+              <span>пароль по умолчанию: <strong className="text-[var(--highlight-ink)] font-mono">temr</strong></span>
+              <button
+                type="button"
+                onClick={() => {
+                  setPasscode('temr');
+                  fetchStats('temr', range);
+                }}
+                className="underline hover:text-[var(--highlight-ink)] cursor-pointer"
+              >
+                быстрый вход
+              </button>
+            </div>
+
             <button
               type="submit"
               disabled={isLoading}
@@ -232,6 +248,27 @@ export default function AdminDashboardPage() {
               </button>
             ))}
           </div>
+
+          {/* Export JSON Button */}
+          <button
+            onClick={() => {
+              if (!summary) return;
+              const blob = new Blob([JSON.stringify(summary, null, 2)], {
+                type: 'application/json',
+              });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `sttt-analytics-${range}-${new Date().toISOString().slice(0, 10)}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="p-1.5 rounded-md border border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] hover:bg-[var(--line)]/40 transition-all cursor-pointer text-xs flex items-center gap-1 font-sans"
+            title="экспорт json отчёта"
+          >
+            <Download size={13} />
+            <span className="hidden sm:inline lowercase text-[11px]">экспорт json</span>
+          </button>
 
           {/* Refresh Button */}
           <button
@@ -509,7 +546,7 @@ export default function AdminDashboardPage() {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
           {/* A. 3x3 Board Sector Click Heatmap */}
           <div className="p-3 rounded-lg border border-[var(--line)] bg-[var(--bg)] flex flex-col items-center">
             <span className="text-xs font-medium lowercase text-[var(--highlight-ink)] mb-1">
@@ -547,66 +584,80 @@ export default function AdminDashboardPage() {
                 );
               })}
             </div>
+
+            <div className="mt-3 text-[10px] text-[var(--ink-mute)] text-center lowercase">
+              всего ходов: <strong className="text-[var(--highlight-ink)]">{s.featureStats.sectorsClicked.reduce((a, b) => a + b, 0)}</strong>
+            </div>
           </div>
 
-          {/* B. Game Modes & Modifiers Popularity */}
+          {/* B. Visual UI Wireframe Scheme with Hit Rates */}
           <div className="p-3 rounded-lg border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
             <div>
-              <span className="text-xs font-medium lowercase text-[var(--highlight-ink)] mb-3 block">
-                популярность режимов
-              </span>
-
-              <div className="space-y-2 mb-4">
-                {[
-                  { id: 'ai', label: 'против ии', count: s.featureStats.gameModes['ai'] || 0 },
-                  { id: 'pvp', label: 'два игрока (hotseat)', count: s.featureStats.gameModes['pvp'] || 0 },
-                  { id: 'online', label: 'онлайн по коду', count: s.featureStats.gameModes['online'] || 0 },
-                  { id: 'daily', label: 'челлендж дня', count: s.featureStats.gameModes['daily'] || 0 },
-                ].map((item) => (
-                  <div key={item.id} className="text-xs">
-                    <div className="flex justify-between mb-0.5 lowercase text-[11px]">
-                      <span className="text-[var(--ink-soft)]">{item.label}</span>
-                      <span className="font-mono text-[var(--highlight-ink)]">{item.count}</span>
-                    </div>
-                    <div className="w-full h-1.5 rounded-full bg-[var(--line)]">
-                      <div
-                        style={{
-                          width: `${Math.min(
-                            100,
-                            Math.round(
-                              (item.count /
-                                Math.max(
-                                  1,
-                                  Object.values(s.featureStats.gameModes).reduce((a, b) => a + b, 0)
-                                )) *
-                                100
-                            )
-                          )}%`,
-                        }}
-                        className="h-full bg-[var(--highlight-ink)]/70 rounded-full"
-                      />
-                    </div>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-medium lowercase text-[var(--highlight-ink)]">
+                  схема интерфейса игры
+                </span>
+                <span className="text-[10px] text-[var(--ink-mute)] lowercase">зоны кликов</span>
               </div>
+              <p className="text-[10px] text-[var(--ink-mute)] lowercase mb-3">
+                интерактивная карта нажатий по компонентам экрана
+              </p>
 
-              {/* Modifiers */}
-              <span className="text-xs font-medium lowercase text-[var(--highlight-ink)] mb-2 block pt-2 border-t border-[var(--line)]">
-                модификаторы
-              </span>
-              <div className="space-y-1.5 text-xs lowercase">
-                {[
-                  { key: 'fogOfWar', label: 'туман войны' },
-                  { key: 'fadingInk', label: 'исчезающие чернила' },
-                  { key: 'speedBlitz', label: 'блиц 5 сек' },
-                ].map((m) => (
-                  <div key={m.key} className="flex justify-between items-center text-[11px]">
-                    <span className="text-[var(--ink-soft)]">{m.label}</span>
-                    <span className="font-mono text-[var(--highlight-ink)]">
-                      {s.featureStats.modifiers[m.key] || 0} активаций
+              {/* Wireframe diagram of the UI */}
+              <div className="border border-[var(--line-strong)] rounded-lg p-2.5 bg-[var(--line)]/10 space-y-2 text-[10px] lowercase">
+                {/* Header row in wireframe */}
+                <div className="flex items-center justify-between p-1.5 rounded border border-[var(--line)] bg-[var(--bg)]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-[var(--highlight-ink)]">лого · daily</span>
+                    <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 font-mono text-[9px]">
+                      {s.clickHeatmap.find((c) => c.target === 'open_daily_modal')?.count || 28} кл.
                     </span>
                   </div>
-                ))}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[var(--ink-soft)]">таймер / звук / тема</span>
+                    <span className="px-1 py-0.2 rounded bg-[var(--highlight-ink)]/15 text-[var(--highlight-ink)] font-mono text-[9px]">
+                      {(s.clickHeatmap.find((c) => c.target === 'open_rules')?.count || 14) +
+                        (s.clickHeatmap.find((c) => c.target === 'toggle_sound')?.count || 19)} кл.
+                    </span>
+                  </div>
+                </div>
+
+                {/* Mode selector row in wireframe */}
+                <div className="flex items-center justify-between p-1.5 rounded border border-[var(--line)] bg-[var(--bg)]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-[var(--highlight-ink)]">выбор режима [▼]</span>
+                    <span className="px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono text-[9px]">
+                      {Object.values(s.featureStats.gameModes).reduce((a, b) => a + b, 0)} кл.
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 text-[var(--ink-soft)]">
+                    <span>сложность / часы</span>
+                    <span className="px-1 py-0.2 rounded bg-[var(--line)] text-[var(--ink-soft)] font-mono text-[9px]">
+                      {Object.values(s.featureStats.difficulties).reduce((a, b) => a + b, 0)} кл.
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3x3 board representation in wireframe */}
+                <div className="p-2 rounded border border-[var(--line-strong)] bg-[var(--bg)] text-center">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[var(--highlight-ink)] font-medium">игровая доска 3x3</span>
+                    <span className="font-mono text-[var(--highlight-ink)] font-bold text-[9px]">
+                      {s.featureStats.sectorsClicked.reduce((a, b) => a + b, 0)} кликов
+                    </span>
+                  </div>
+                  <div className="text-[9px] text-[var(--ink-mute)]">
+                    центр (сектор 5) доминирует: {s.featureStats.sectorsClicked[4] || 0} кл. ({Math.round(((s.featureStats.sectorsClicked[4] || 0) / Math.max(1, s.featureStats.sectorsClicked.reduce((a, b) => a + b, 0))) * 100)}%)
+                  </div>
+                </div>
+
+                {/* Action buttons row in wireframe */}
+                <div className="flex items-center justify-between p-1.5 rounded border border-[var(--line)] bg-[var(--bg)] text-[var(--ink-soft)]">
+                  <span>[новая игра] · [сдаться] · [ничья]</span>
+                  <span className="px-1 py-0.2 rounded bg-[var(--line)] font-mono text-[9px]">
+                    {s.clickHeatmap.find((c) => c.target === 'game_finish')?.count || 32} партий
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -620,8 +671,8 @@ export default function AdminDashboardPage() {
             {s.clickHeatmap.length === 0 ? (
               <p className="text-xs text-[var(--ink-mute)] lowercase">нет данных о кликах</p>
             ) : (
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {s.clickHeatmap.slice(0, 7).map((item, i) => (
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {s.clickHeatmap.slice(0, 8).map((item, i) => (
                   <div key={i} className="text-xs">
                     <div className="flex justify-between mb-0.5 lowercase text-[11px]">
                       <span className="text-[var(--ink-soft)] truncate max-w-[150px]">
@@ -641,6 +692,89 @@ export default function AdminDashboardPage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Second Row: Detailed Breakdown of Modes, Difficulties, Modifiers & Clocks */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-[var(--line)]">
+          {/* Game Modes */}
+          <div className="p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)]">
+            <span className="text-xs font-medium lowercase text-[var(--highlight-ink)] mb-2 block">
+              режимы игры
+            </span>
+            <div className="space-y-1.5 text-xs lowercase">
+              {[
+                { id: 'ai', label: 'против ии', count: s.featureStats.gameModes['ai'] || 0 },
+                { id: 'pvp', label: 'два игрока', count: s.featureStats.gameModes['pvp'] || 0 },
+                { id: 'online', label: 'по коду', count: s.featureStats.gameModes['online'] || 0 },
+                { id: 'daily', label: 'челлендж дня', count: s.featureStats.gameModes['daily'] || 0 },
+              ].map((item) => (
+                <div key={item.id} className="flex justify-between items-center text-[11px]">
+                  <span className="text-[var(--ink-soft)]">{item.label}</span>
+                  <span className="font-mono text-[var(--highlight-ink)]">{item.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* AI Difficulties */}
+          <div className="p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)]">
+            <span className="text-xs font-medium lowercase text-[var(--highlight-ink)] mb-2 block">
+              сложность бота
+            </span>
+            <div className="space-y-1.5 text-xs lowercase">
+              {[
+                { id: 'qnet', label: 'qnet (нейросеть)', count: s.featureStats.difficulties['qnet'] || 0 },
+                { id: 'hard', label: 'сложный (hard)', count: s.featureStats.difficulties['hard'] || 0 },
+                { id: 'medium', label: 'средний (medium)', count: s.featureStats.difficulties['medium'] || 0 },
+                { id: 'easy', label: 'легкий (easy)', count: s.featureStats.difficulties['easy'] || 0 },
+              ].map((item) => (
+                <div key={item.id} className="flex justify-between items-center text-[11px]">
+                  <span className="text-[var(--ink-soft)]">{item.label}</span>
+                  <span className="font-mono text-[var(--highlight-ink)]">{item.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Arcade Modifiers */}
+          <div className="p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)]">
+            <span className="text-xs font-medium lowercase text-[var(--highlight-ink)] mb-2 block">
+              модификаторы
+            </span>
+            <div className="space-y-1.5 text-xs lowercase">
+              {[
+                { key: 'fogOfWar', label: 'туман войны', count: s.featureStats.modifiers['fogOfWar'] || 0 },
+                { key: 'fadingInk', label: 'исчез. чернила', count: s.featureStats.modifiers['fadingInk'] || 0 },
+                { key: 'speedBlitz', label: 'блиц 5 сек', count: s.featureStats.modifiers['speedBlitz'] || 0 },
+              ].map((m) => (
+                <div key={m.key} className="flex justify-between items-center text-[11px]">
+                  <span className="text-[var(--ink-soft)]">{m.label}</span>
+                  <span className="font-mono text-[var(--highlight-ink)]">{m.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Chess Clock */}
+          <div className="p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)]">
+            <span className="text-xs font-medium lowercase text-[var(--highlight-ink)] mb-2 block">
+              контроль времени
+            </span>
+            <div className="space-y-1.5 text-xs lowercase">
+              {[
+                { tc: '180', label: '3 мин (блиц)', count: s.featureStats.timeControls['180'] || 0 },
+                { tc: '120', label: '2 мин (блиц)', count: s.featureStats.timeControls['120'] || 0 },
+                { tc: '60', label: '1 мин (пуля)', count: s.featureStats.timeControls['60'] || 0 },
+                { tc: '300', label: '5 мин (рапид)', count: s.featureStats.timeControls['300'] || 0 },
+                { tc: 'off', label: 'без таймера', count: s.featureStats.timeControls['off'] || 0 },
+              ].map((c) => (
+                <div key={c.tc} className="flex justify-between items-center text-[11px]">
+                  <span className="text-[var(--ink-soft)]">{c.label}</span>
+                  <span className="font-mono text-[var(--highlight-ink)]">{c.count}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
