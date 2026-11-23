@@ -5,10 +5,16 @@ import confetti from 'canvas-confetti';
 import { AiDifficulty, GameMode, GameModifiers, GameState, Move, OnlineRole, Player } from '@/types/game';
 import { applyMove, createInitialState, getValidMoves, isMoveValid } from '@/lib/gameLogic';
 import { getBestAiMove } from '@/lib/ai';
-import { getQnetMove, warmUpQnet } from '@/lib/qnet';
+import { getQnetMove, ponderQnet, warmUpQnet } from '@/lib/qnet';
 
-// Thinking time per move for the qnet level (the engine searches until this budget is used).
+// Thinking time per move for the qnet level when there is no clock.
 const QNET_THINK_MS = 1000;
+// With a clock, qnet budgets from its remaining time but never thinks longer than this per move.
+const QNET_MAX_THINK_MS = 4000;
+// Delay before asking qnet: its search already takes a while, so no extra pause is needed. The
+// other levels keep the old 420 ms "thinking" pause. Either delay runs on the AI's clock.
+const QNET_DELAY_MS = 60;
+const AI_DELAY_MS = 420;
 
 export interface MoveEvent {
   player: Player;
@@ -22,6 +28,8 @@ export interface UseSuperTicTacToeOptions {
   onLocalMove?: (boardIdx: number, cellIdx: number, player: Player) => void;
   onlineRole?: OnlineRole;
   isOnlineConnected?: boolean;
+  /** Remaining clock of `player` in ms, or null without a time control. */
+  getClockMs?: (player: Player) => number | null;
 }
 
 export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
@@ -253,14 +261,19 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
       const snapshot = gameStateRef.current;
       if (snapshot.difficulty === 'qnet') {
         const requestId = ++aiRequestRef.current;
-        getQnetMove(snapshot, QNET_THINK_MS).then((move) => {
+        const clockMs = optionsRef.current?.getClockMs?.(snapshot.currentPlayer) ?? null;
+        const budget =
+          clockMs === null
+            ? QNET_THINK_MS
+            : { timeLeftMs: clockMs, ply: snapshot.history.length, overheadMs: 150, maxMs: QNET_MAX_THINK_MS };
+        getQnetMove(snapshot, budget).then((move) => {
           if (requestId !== aiRequestRef.current) return; // reset or mode change superseded it
           commitAiMove(move, snapshot.cells);
         });
         return;
       }
       commitAiMove(null, null);
-    }, 420);
+    }, gameStateRef.current.difficulty === 'qnet' ? QNET_DELAY_MS : AI_DELAY_MS);
 
     return () => clearTimeout(timer);
   }, [
@@ -270,6 +283,22 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
     gameState.winner,
     triggerVictory,
   ]);
+
+  // While the human thinks, let qnet think about the same position in the background (pondering):
+  // its transposition table survives between moves, so the next real search starts deeper. The
+  // worker stops pondering as soon as the move request arrives. `ponderKey` changes on every move
+  // that hands the turn to the human in a qnet game, and is null otherwise.
+  const ponderKey =
+    gameState.gameMode === 'ai' &&
+    gameState.difficulty === 'qnet' &&
+    gameState.winner === null &&
+    gameState.currentPlayer === gameState.humanPlayer &&
+    gameState.history.length > 0
+      ? gameState.cells
+      : null;
+  useEffect(() => {
+    if (ponderKey !== null) ponderQnet(gameStateRef.current);
+  }, [ponderKey]);
 
   const resetGame = useCallback(() => {
     aiThinkingRef.current = false;

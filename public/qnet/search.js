@@ -8,13 +8,15 @@
 
 import { Evaluator } from './eval.js';
 import { FREE, ONGOING, Position } from './position.js';
-import { MOVE_BOARD, MOVE_CELL, WIN, WINCELLS } from './tables.js';
+import { MOVE_BOARD, MOVE_CELL, POP, WIN, WINCELLS } from './tables.js';
 
 export const MATE = 30000;
 export const MATE_BOUND = MATE - 200;
 const INF = 31000;
 const MAX_PLY = 96;
 const NO_MOVE = 127;
+const FORCED_MS = 50; // search budget when only one move is legal
+const FORCED_NODES = 300_000;
 
 const EXACT = 0;
 const LOWER = 1;
@@ -37,11 +39,13 @@ const now = () => (typeof performance !== 'undefined' ? performance.now() : Date
 
 export class Searcher {
   /**
-   * @param {{evaluator?: Evaluator, ttBits?: number, lmr?: boolean}} [opts]
+   * @param {{evaluator?: Evaluator, ttBits?: number, lmr?: boolean, leafWin?: boolean}} [opts]
+   *   leafWin: score leaves where the mover can win the game on the spot as mates (default on).
    */
-  constructor({ evaluator = new Evaluator(), ttBits = 22, lmr = true } = {}) {
+  constructor({ evaluator = new Evaluator(), ttBits = 22, lmr = true, leafWin = true } = {}) {
     this.evaluator = evaluator;
     this.lmr = lmr;
+    this.leafWin = leafWin;
     this.ttMask = (1 << ttBits) - 1;
     this.ttKey = new Int32Array(1 << ttBits);
     this.ttData = new Int32Array(1 << ttBits);
@@ -129,15 +133,47 @@ export class Searcher {
 
   // -- search ----------------------------------------------------------------------------
 
+  /**
+   * True when the side to move can win the game with its next move: by completing a line of
+   * boards, or by closing the last open board while ahead on boards won (the count tiebreak).
+   */
+  #canWinNow() {
+    const pos = this.pos;
+    const me = pos.side;
+    const bb = pos.bb;
+    const won = pos.won[me];
+    const open = ~pos.closed & 511;
+    const boards = pos.active !== FREE ? 1 << pos.active : open;
+    for (let b = 0; b < 9; b++) {
+      if ((boards >> b) & 1 && WIN[won | (1 << b)] === 1 && WINCELLS[(bb[me * 9 + b] << 9) | bb[(me ^ 1) * 9 + b]] !== 0) return true;
+    }
+    if (POP[open] !== 1) return false;
+    // One open board left: whoever closes it ends the game, decided by boards won.
+    const b = 31 - Math.clz32(open);
+    const mine = bb[me * 9 + b];
+    const theirs = bb[(me ^ 1) * 9 + b];
+    const lead = POP[won] - POP[pos.won[me ^ 1]];
+    if (WINCELLS[(mine << 9) | theirs] !== 0) return lead + 1 > 0;
+    return POP[mine | theirs] === 8 && lead > 0; // filling the last cell draws the board
+  }
+
+  #timeUp() {
+    return now() > this.deadline;
+  }
+
   #negamax(depth, alpha, beta, ply) {
     const pos = this.pos;
     if (pos.winner !== ONGOING) {
       if (pos.winner === 2) return 0;
       return pos.winner === pos.side ? MATE - ply : -(MATE - ply);
     }
-    if ((++this.nodes & 1023) === 0 && (now() > this.deadline || this.nodes > this.nodeLimit)) throw new Aborted();
-    if (depth <= 0) return this.evaluator.evaluate(pos);
-    if (ply >= MAX_PLY - 1) return this.evaluator.evaluate(pos);
+    if ((++this.nodes & 1023) === 0 && (this.#timeUp() || this.nodes > this.nodeLimit)) throw new Aborted();
+    if (depth <= 0 || ply >= MAX_PLY - 1) {
+      // A leaf where the mover can complete a line of boards is a forced win one ply away: score
+      // it exactly instead of trusting the static evaluation.
+      if (this.leafWin && this.#canWinNow()) return MATE - ply - 1;
+      return this.evaluator.evaluate(pos);
+    }
 
     // mate-distance pruning
     if (alpha < -MATE + ply) alpha = -MATE + ply;
@@ -274,7 +310,13 @@ export class Searcher {
     const buf = new Int32Array(81);
     const count = this.pos.generate(buf, 0);
     let rootMoves = Array.from(buf.subarray(0, count));
-    if (count === 1) return { move: rootMoves[0], score: 0, depth: 0, nodes: 0, ms: 0 };
+    // A forced move still gets a short search, so the reported score is real (not a fake 0) and
+    // the transposition table is warm for the next move.
+    const forced = count === 1;
+    if (forced) {
+      this.deadline = start + Math.min(timeMs, FORCED_MS);
+      this.nodeLimit = Math.min(nodes, FORCED_NODES);
+    }
 
     // initial order: same heuristic as inner nodes, TT move first
     this.moves.set(rootMoves, 0);
@@ -322,7 +364,7 @@ export class Searcher {
       if (now() > this.deadline) break;
     }
     const ms = now() - start;
-    return { ...result, nodes: this.nodes, ms };
+    return { ...result, nodes: this.nodes, ms, forced };
   }
 }
 
