@@ -14,7 +14,17 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'super tic-tac-toe',
-  description: 'minimalist ultimate tic-tac-toe game with single-player ai and 2-player mode',
+  description: 'minimalist ultimate tic-tac-toe game with single-player ai, daily challenge, and online play',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'super tic-tac-toe',
+  },
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icons/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({
@@ -29,6 +39,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <meta name="theme-color" content="#efeeee" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#141719" media="(prefers-color-scheme: dark)" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -40,6 +53,12 @@ export default function RootLayout({
                   document.documentElement.classList.remove('dark');
                 }
               } catch(e) {}
+
+              if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/sw.js').catch(() => {});
+                });
+              }
             `,
           }}
         />

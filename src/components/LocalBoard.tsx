@@ -13,6 +13,7 @@ interface LocalBoardProps {
   winningLine: number[] | null;
   isActive: boolean;
   isGlobalWinningBoard: boolean;
+  isFogged?: boolean;
   lastMove: Move | null;
   onCellClick: (boardIdx: number, cellIdx: number) => void;
   disabled: boolean;
@@ -25,6 +26,7 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
   winningLine,
   isActive,
   isGlobalWinningBoard,
+  isFogged,
   lastMove,
   onCellClick,
   disabled,
@@ -110,6 +112,18 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
                 tie
               </span>
             )}
+          </div>
+        )}
+
+        {/* Fog of War Overlay */}
+        {isFogged && !isResolved && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--bg)]/92 backdrop-blur-[2px] transition-all duration-300 pointer-events-none select-none rounded-[2px]">
+            <div className="flex flex-col items-center gap-1 opacity-35">
+              <div className="w-1.5 h-1.5 rounded-full border border-[var(--ink-mute)]" />
+              <span className="text-[9px] uppercase tracking-widest text-[var(--ink-mute)] font-mono">
+                fog
+              </span>
+            </div>
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { HelpCircle, Bot, User, Sun, Moon, Clock, Volume2, VolumeX, Globe } from 'lucide-react';
+import { HelpCircle, Bot, User, Sun, Moon, Clock, Volume2, VolumeX, Globe, Flame, Sliders, Zap } from 'lucide-react';
 import { AiDifficulty, ConnectionStatus, GameState, OnlineRole, TimeControl } from '@/types/game';
 import { HandDrawnLogo } from './hand-drawn/HandDrawnLogo';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
@@ -17,6 +17,12 @@ interface GameStatusProps {
   drawOfferedByOpponent?: boolean;
   myDrawOffered?: boolean;
   drawDeclinedNotice?: boolean;
+  dailyStreak?: number;
+  activeModifiersCount?: number;
+  disconnectGraceSeconds?: number | null;
+  isQuickSearching?: boolean;
+  quickSearchElapsed?: number;
+  quickSearchTimeoutReached?: boolean;
   onToggleMode: () => void;
   onSetDifficulty: (difficulty: AiDifficulty) => void;
   onSetTimeControl: (tc: TimeControl) => void;
@@ -26,6 +32,11 @@ interface GameStatusProps {
   onOpenOnlineModal?: () => void;
   onAcceptDraw?: () => void;
   onDeclineDraw?: () => void;
+  onOpenDailyModal?: () => void;
+  onOpenSettingsModal?: () => void;
+  onStartQuickMatch?: () => void;
+  onCancelQuickMatch?: () => void;
+  onQuickMatchPlayAi?: () => void;
 }
 
 const timeLabels: Record<TimeControl, string> = {
@@ -59,6 +70,12 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   drawOfferedByOpponent,
   myDrawOffered,
   drawDeclinedNotice,
+  dailyStreak,
+  activeModifiersCount,
+  disconnectGraceSeconds,
+  isQuickSearching,
+  quickSearchElapsed = 0,
+  quickSearchTimeoutReached = false,
   onToggleMode,
   onSetDifficulty,
   onSetTimeControl,
@@ -68,6 +85,11 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   onOpenOnlineModal,
   onAcceptDraw,
   onDeclineDraw,
+  onOpenDailyModal,
+  onOpenSettingsModal,
+  onStartQuickMatch,
+  onCancelQuickMatch,
+  onQuickMatchPlayAi,
 }) => {
   const {
     currentPlayer,
@@ -100,8 +122,8 @@ export const GameStatus: React.FC<GameStatusProps> = ({
     <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-3">
       {/* Top Bar: Brand & Game Configurations */}
       <div className="flex items-center justify-between pb-2.5 border-b border-[var(--line)] gap-2">
-        {/* Brand & Rules */}
-        <div className="flex items-center gap-2.5">
+        {/* Brand, Rules & Quick Tools */}
+        <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5">
             <HandDrawnLogo className="h-6 w-auto text-[var(--highlight-ink)]" />
             <span className="text-[11px] text-[var(--ink-mute)] font-light tracking-widest lowercase">
@@ -117,6 +139,36 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           >
             <HelpCircle size={15} />
           </button>
+          {onOpenDailyModal && (
+            <button
+              type="button"
+              onClick={onOpenDailyModal}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-[11px]"
+              title="челлендж дня и стрик"
+            >
+              <Flame size={12} className={dailyStreak && dailyStreak > 0 ? "fill-amber-500 text-amber-500" : ""} />
+              <span>{dailyStreak && dailyStreak > 0 ? `${dailyStreak}` : 'день'}</span>
+            </button>
+          )}
+          {onOpenSettingsModal && (
+            <button
+              type="button"
+              onClick={onOpenSettingsModal}
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border transition-all cursor-pointer font-sans lowercase text-[11px] ${
+                activeModifiersCount && activeModifiersCount > 0
+                  ? 'border-[var(--line-strong)] text-[var(--highlight-ink)] bg-[var(--line)]/30 font-medium'
+                  : 'border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
+              }`}
+              title="аркадные модификаторы"
+            >
+              <Sliders size={12} />
+              {activeModifiersCount && activeModifiersCount > 0 && (
+                <span className="text-[9px] px-1 rounded-full bg-[var(--highlight-ink)] text-[var(--bg)] font-medium">
+                  {activeModifiersCount}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Configurations Bar */}
@@ -145,6 +197,19 @@ export const GameStatus: React.FC<GameStatusProps> = ({
               </>
             )}
           </button>
+
+          {/* Quick Match Button */}
+          {gameMode === 'online' && !isQuickSearching && connectionStatus !== 'connected' && onStartQuickMatch && (
+            <button
+              type="button"
+              onClick={onStartQuickMatch}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-[var(--highlight-ink)] text-[var(--bg)] hover:opacity-90 transition-all cursor-pointer font-sans lowercase text-xs font-medium"
+              title="найти случайного соперника онлайн"
+            >
+              <Zap size={12} />
+              <span>найти игру</span>
+            </button>
+          )}
 
           {/* Online Room Trigger Button */}
           {gameMode === 'online' && (
@@ -281,6 +346,52 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Quick Match Searching Banner */}
+      {isQuickSearching && (
+        <div className="pt-2">
+          <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--line)]/25 border border-[var(--line-strong)] text-xs w-full animate-fade-up">
+            <div className="flex items-center gap-2 text-[var(--highlight-ink)] lowercase">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+              <span>поиск соперника… ({quickSearchElapsed}с)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {quickSearchTimeoutReached && onQuickMatchPlayAi && (
+                <button
+                  type="button"
+                  onClick={onQuickMatchPlayAi}
+                  className="px-2 py-0.5 rounded bg-[var(--highlight-ink)] text-[var(--bg)] font-medium lowercase text-[11px] hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  сыграть с ии
+                </button>
+              )}
+              {onCancelQuickMatch && (
+                <button
+                  type="button"
+                  onClick={onCancelQuickMatch}
+                  className="px-2 py-0.5 rounded border border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] lowercase text-[11px] transition-colors cursor-pointer"
+                >
+                  отмена
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Disconnect Grace Period Countdown Banner */}
+      {typeof disconnectGraceSeconds === 'number' && disconnectGraceSeconds > 0 && (
+        <div className="pt-2">
+          <div className="flex items-center justify-between p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs w-full text-rose-500 animate-fade-up">
+            <span className="lowercase">
+              соперник отключился · ожидание возврата: {disconnectGraceSeconds}с…
+            </span>
+            <span className="text-[11px] text-[var(--ink-mute)] lowercase">
+              иначе тех. победа
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Online Draw Offer Negotiation Banner */}
       {gameMode === 'online' && winner === null && (

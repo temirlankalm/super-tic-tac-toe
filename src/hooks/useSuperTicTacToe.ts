@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { AiDifficulty, GameMode, GameState, Move, OnlineRole, Player } from '@/types/game';
-import { applyMove, createInitialState, isMoveValid } from '@/lib/gameLogic';
+import { AiDifficulty, GameMode, GameModifiers, GameState, Move, OnlineRole, Player } from '@/types/game';
+import { applyMove, createInitialState, getValidMoves, isMoveValid } from '@/lib/gameLogic';
 import { getBestAiMove } from '@/lib/ai';
 import { getQnetMove, warmUpQnet } from '@/lib/qnet';
 
@@ -29,7 +29,26 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
     createInitialState('ai', 'X', 'hard')
   );
 
+  const [speedBlitzTime, setSpeedBlitzTime] = useState<number>(5.0);
+  const handleCellClickRef = useRef<(boardIdx: number, cellIdx: number) => void>(() => {});
   const aiThinkingRef = useRef(false);
+
+  const toggleModifier = useCallback((modKey: keyof GameModifiers) => {
+    setGameState((prev) => ({
+      ...prev,
+      modifiers: {
+        ...prev.modifiers,
+        [modKey]: !prev.modifiers[modKey],
+      },
+    }));
+  }, []);
+
+  const setModifiers = useCallback((newModifiers: GameModifiers) => {
+    setGameState((prev) => ({
+      ...prev,
+      modifiers: { ...newModifiers },
+    }));
+  }, []);
   const gameStateRef = useRef(gameState);
   useEffect(() => {
     gameStateRef.current = gameState;
@@ -135,6 +154,38 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
     [triggerVictory]
   );
 
+  handleCellClickRef.current = handleCellClick;
+
+  // Speed Blitz 5-second countdown loop
+  useEffect(() => {
+    if (!gameState.modifiers?.speedBlitz || gameState.winner !== null) {
+      setSpeedBlitzTime(5.0);
+      return;
+    }
+
+    setSpeedBlitzTime(5.0);
+    const interval = setInterval(() => {
+      setSpeedBlitzTime((curr) => {
+        const next = Math.max(0, curr - 0.1);
+        if (next <= 0) {
+          clearInterval(interval);
+          const snapshot = gameStateRef.current;
+          if (snapshot.winner === null && !snapshot.isAiThinking) {
+            const valids = getValidMoves(snapshot);
+            if (valids.length > 0) {
+              const randomMove = valids[Math.floor(Math.random() * valids.length)];
+              handleCellClickRef.current(randomMove.boardIdx, randomMove.cellIdx);
+            }
+          }
+          return 5.0;
+        }
+        return parseFloat(next.toFixed(1));
+      });
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [gameState.currentPlayer, gameState.modifiers?.speedBlitz, gameState.winner]);
+
   // Sync state received from host on init
   const syncState = useCallback((partial: Partial<GameState>) => {
     setGameState((prev) => ({ ...prev, ...partial }));
@@ -223,7 +274,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
   const resetGame = useCallback(() => {
     aiThinkingRef.current = false;
     aiRequestRef.current++;
-    setGameState((prev) => createInitialState(prev.gameMode, prev.humanPlayer, prev.difficulty));
+    setGameState((prev) => createInitialState(prev.gameMode, prev.humanPlayer, prev.difficulty, prev.modifiers));
   }, []);
 
   const undoMove = useCallback(() => {
@@ -258,7 +309,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
   const setGameMode = useCallback((mode: GameMode) => {
     aiThinkingRef.current = false;
     aiRequestRef.current++;
-    setGameState((prev) => createInitialState(mode, prev.humanPlayer, prev.difficulty));
+    setGameState((prev) => createInitialState(mode, prev.humanPlayer, prev.difficulty, prev.modifiers));
   }, []);
 
   const toggleGameMode = useCallback(() => {
@@ -268,7 +319,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
       const modes: GameMode[] = ['ai', 'pvp', 'online'];
       const currentIndex = modes.indexOf(prev.gameMode);
       const nextMode = modes[(currentIndex + 1) % modes.length];
-      return createInitialState(nextMode, prev.humanPlayer, prev.difficulty);
+      return createInitialState(nextMode, prev.humanPlayer, prev.difficulty, prev.modifiers);
     });
   }, []);
 
@@ -316,6 +367,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
 
   return {
     gameState,
+    speedBlitzTime,
     handleCellClick,
     applyRemoteMove,
     syncState,
@@ -324,6 +376,8 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
     setGameMode,
     toggleGameMode,
     setDifficulty,
+    toggleModifier,
+    setModifiers,
     handleTimeout,
     handleResign,
     handleDraw,

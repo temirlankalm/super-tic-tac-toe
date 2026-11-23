@@ -8,12 +8,25 @@ export type WinReason = 'normal' | 'timeout' | 'resignation' | 'agreement';
 
 export type TimeControl = 'off' | 60 | 120 | 180 | 300;
 
-export type GameMode = 'ai' | 'pvp' | 'online';
+export type GameMode = 'ai' | 'pvp' | 'online' | 'daily';
+
+export interface GameModifiers {
+  fogOfWar: boolean;
+  fadingInk: boolean;
+  speedBlitz: boolean;
+}
+
+export const DEFAULT_MODIFIERS: GameModifiers = {
+  fogOfWar: false,
+  fadingInk: false,
+  speedBlitz: false,
+};
 
 export type OnlineRole = 'host' | 'guest' | null;
 
 export type ConnectionStatus =
   | 'idle'
+  | 'searching'
   | 'creating'
   | 'waiting'
   | 'connecting'
@@ -32,6 +45,7 @@ export type PeerMessage =
       activeBoard: number | null;
       timeX: number;
       timeO: number;
+      modifiers?: GameModifiers;
     }
   | {
       type: 'MOVE';
@@ -113,4 +127,9 @@ export interface GameState {
   difficulty: AiDifficulty;
   humanPlayer: Player;
   isAiThinking: boolean;
+  modifiers: GameModifiers;
+  playerMoveHistory?: {
+    X: { boardIdx: number; cellIdx: number }[];
+    O: { boardIdx: number; cellIdx: number }[];
+  };
 }

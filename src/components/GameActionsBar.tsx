@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Undo2, RotateCcw, Flag, Handshake } from 'lucide-react';
+import { Undo2, RotateCcw, Flag, Handshake, Zap } from 'lucide-react';
 import { BoardWinner, GameMode, OnlineRole, WinReason } from '@/types/game';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
 
@@ -13,6 +13,7 @@ interface GameActionsBarProps {
   historyLength: number;
   isAiThinking: boolean;
   canUndo: boolean;
+  speedBlitzTime?: number | null;
   myDrawOffered?: boolean;
   rematchRequestedByOpponent?: boolean;
   myRematchSent?: boolean;
@@ -32,6 +33,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
   onlineRole,
   historyLength,
   canUndo,
+  speedBlitzTime,
   myDrawOffered,
   rematchRequestedByOpponent,
   myRematchSent,
@@ -162,8 +164,23 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
           <div className="w-8" />
         )}
 
-        {/* Center Group: Resign & Offer Draw */}
+        {/* Center Group: Speed Blitz Timer, Resign & Offer Draw */}
         <div className="flex items-center gap-2">
+          {/* Speed Blitz 5s Countdown Badge */}
+          {speedBlitzTime !== undefined && speedBlitzTime !== null && (
+            <div
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-mono font-medium transition-colors ${
+                speedBlitzTime <= 2.0
+                  ? 'bg-rose-500/15 text-rose-500 animate-pulse'
+                  : 'bg-[var(--line)]/40 text-[var(--highlight-ink)]'
+              }`}
+              title="осталось времени на текущий ход"
+            >
+              <Zap size={11} className={speedBlitzTime <= 2.0 ? 'fill-rose-500' : ''} />
+              <span>{speedBlitzTime.toFixed(1)}с</span>
+            </div>
+          )}
+
           {/* Resign Button */}
           {historyLength > 0 && (
             isResignConfirmOpen ? (

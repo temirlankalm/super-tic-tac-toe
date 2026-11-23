@@ -58,6 +58,13 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
           const isGlobalWin =
             globalWinningLine !== null && globalWinningLine.includes(boardIdx);
 
+          const isFogged =
+            Boolean(gameState.modifiers?.fogOfWar) &&
+            winner === null &&
+            !isActive &&
+            boardWinner === null &&
+            !cells[boardIdx].some((c) => c !== null);
+
           // Authentic main divider borders (thicker, continuous ink lines)
           const isRightCol = boardIdx % 3 === 2;
           const isBottomRow = boardIdx >= 6;
@@ -78,9 +85,10 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
                 winningLine={boardWinningLines[boardIdx]}
                 isActive={isActive}
                 isGlobalWinningBoard={isGlobalWin}
+                isFogged={isFogged}
                 lastMove={lastMove}
                 onCellClick={onCellClick}
-                disabled={isBoardDisabled}
+                disabled={isBoardDisabled || isFogged}
               />
             </div>
           );

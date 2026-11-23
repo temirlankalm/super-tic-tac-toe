@@ -1,4 +1,4 @@
-import { AiDifficulty, BoardWinner, CellState, GameMode, GameState, Move, Player } from '@/types/game';
+import { AiDifficulty, BoardWinner, CellState, DEFAULT_MODIFIERS, GameMode, GameModifiers, GameState, Move, Player } from '@/types/game';
 
 export const WINNING_COMBINATIONS = [
   [0, 1, 2], // rows
@@ -116,7 +116,8 @@ export function getValidMoves(state: GameState): { boardIdx: number; cellIdx: nu
 export function createInitialState(
   gameMode: GameMode = 'ai',
   humanPlayer: Player = 'X',
-  difficulty: AiDifficulty = 'hard'
+  difficulty: AiDifficulty = 'hard',
+  modifiers: GameModifiers = DEFAULT_MODIFIERS
 ): GameState {
   return {
     cells: Array(9)
@@ -134,6 +135,11 @@ export function createInitialState(
     difficulty,
     humanPlayer,
     isAiThinking: false,
+    modifiers: { ...modifiers },
+    playerMoveHistory: {
+      X: [],
+      O: [],
+    },
   };
 }
 
@@ -176,6 +182,24 @@ export function applyMove(
   // Check global game status
   const globalEval = evaluateGlobalBoard(nextBoardWinners);
 
+  // Handle Fading Ink: keep track of last 4 moves per player
+  const nextPlayerMoveHistory = state.playerMoveHistory ? {
+    X: [...state.playerMoveHistory.X],
+    O: [...state.playerMoveHistory.O],
+  } : { X: [], O: [] };
+
+  if (state.modifiers?.fadingInk) {
+    const playerMoves = nextPlayerMoveHistory[state.currentPlayer];
+    playerMoves.push({ boardIdx, cellIdx });
+    // If player already made more than 4 moves, the oldest move fades away
+    if (playerMoves.length > 4) {
+      const expiredMove = playerMoves.shift()!;
+      if (nextCells[expiredMove.boardIdx][expiredMove.cellIdx] === state.currentPlayer) {
+        nextCells[expiredMove.boardIdx][expiredMove.cellIdx] = null;
+      }
+    }
+  }
+
   // Determine next active board (unless game is over)
   let nextActiveBoard: number | null = null;
   if (globalEval.winner === null) {
@@ -208,5 +232,6 @@ export function applyMove(
     winner: globalEval.winner,
     globalWinningLine: globalEval.line,
     history: [...state.history, historyEntry],
+    playerMoveHistory: nextPlayerMoveHistory,
   };
 }
