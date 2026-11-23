@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { analytics } from '@/lib/analytics/client';
 import { MoveEvent, useSuperTicTacToe } from '@/hooks/useSuperTicTacToe';
 import { useTheme } from '@/hooks/useTheme';
 import { useChessClock } from '@/hooks/useChessClock';
@@ -42,6 +43,7 @@ export default function Home() {
 
   useEffect(() => {
     setDailyStats(getDailyStats());
+    analytics.pageview('/');
   }, []);
 
   const { theme, toggleTheme } = useTheme();
@@ -333,6 +335,7 @@ export default function Home() {
 
   const handleSelectMode = (targetMode: GameMode) => {
     if (gameState.gameMode === targetMode) return;
+    analytics.gameMode(targetMode);
 
     if (
       gameState.gameMode === 'daily' &&
@@ -520,16 +523,16 @@ export default function Home() {
         disconnectGraceSeconds={peerOnline.disconnectGraceSeconds}
         onSelectMode={handleSelectMode}
         onToggleMode={handleToggleMode}
-        onSetDifficulty={setDifficulty}
-        onSetTimeControl={setTimeControl}
+        onSetDifficulty={(d) => { analytics.difficulty(d); setDifficulty(d); }}
+        onSetTimeControl={(t) => { analytics.timeControl(t); setTimeControl(t); }}
         onToggleTheme={toggleTheme}
         onToggleSound={toggleSound}
-        onOpenRules={() => setIsRulesOpen(true)}
+        onOpenRules={() => { analytics.click("open_rules", "modal"); setIsRulesOpen(true); }}
         onOpenOnlineModal={handleOpenOnlineModal}
         onAcceptDraw={handleAcceptDraw}
         onDeclineDraw={handleDeclineDraw}
-        onOpenDailyModal={() => setIsDailyModalOpen(true)}
-        onOpenSettingsModal={() => setIsSettingsOpen(true)}
+        onOpenDailyModal={() => { analytics.click("open_daily_modal", "modal"); setIsDailyModalOpen(true); }}
+        onOpenSettingsModal={() => { analytics.click("open_settings_modal", "modal"); setIsSettingsOpen(true); }}
       />
 
       {/* Chess Clock Bar (visible when timer is active) */}
@@ -551,7 +554,10 @@ export default function Home() {
         onlineRole={peerOnline.role}
         onlinePlayer={peerOnline.myPlayer}
         connectionStatus={peerOnline.status}
-        onCellClick={handleCellClick}
+        onCellClick={(b, c) => {
+          analytics.cellClick(b, c);
+          handleCellClick(b, c);
+        }}
       />
 
       {/* Ergonomic In-Game Actions & Game Over Bar */}
