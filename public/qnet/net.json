@@ -1,31 +1,46 @@
 {
  "format": 1,
- "spec": "kyunet-features-v1:local9x19686+global4^9+sent9x19686+1",
- "num_features": 616493,
+ "spec": "qnet-features-v2:local9x19686+global4^9+sent9x19686+1+lines8x7^3",
+ "num_features": 619237,
  "hidden": 1,
  "hidden2": 0,
- "scale": 300.0,
- "floats": 616494,
- "sha256": "bb5a5257180b3424c38a6c304517b14b710bbc1817d12451f87e69af1f9a8256",
- "git_commit": "42a8210dd37451108e9fc9784049d96a5103be1b",
+ "scale": 300,
+ "floats": 619238,
+ "sha256": "13d34e68d8273ddaaaa6ba406b22faeecf16a51a8e3966ef3c919339e8d338f2",
+ "git_commit": "ef51ffe63e6523bb075ae421ce64db3a3cdd62f3",
+ "trainer": "engine-js/tools/train_linear.mjs",
  "train_config": {
   "data": [
-   "data/gen0",
-   "data/gen1"
+   "/home/runner/work/qnet/qnet/data/g3"
   ],
-  "out": "nets/g2_linear",
-  "hidden": 1,
-  "hidden2": 0,
-  "epochs": 4,
-  "batch": 8192,
-  "lr": 0.002,
-  "scale": 300.0,
+  "maxPositions": 16000000,
+  "epochs": 2,
+  "lrOld": 0.002,
+  "lrNew": 0.01,
+  "freezeOld": 0,
   "lam": 0.3,
-  "val_fraction": 0.02,
+  "scale": 300,
+  "val": 0.02,
   "seed": 1,
-  "device": "auto",
-  "init": null
+  "init": "nets/g3_lines_only",
+  "out": "nets/g3_lines_tuned"
  },
- "positions": 12917194,
- "final_val_loss": 0.6442393660545349
+ "positions": 15999988,
+ "history": [
+  {
+   "epoch": 0,
+   "val": 0.6283477915634451
+  },
+  {
+   "epoch": 1,
+   "train": 0.6272276364077937,
+   "val": 0.626679612603278
+  },
+  {
+   "epoch": 2,
+   "train": 0.6264989891353505,
+   "val": 0.6263286299496792
+  }
+ ],
+ "final_val_loss": 0.6263286299496792
 }

@@ -4,7 +4,7 @@
 // from training/train.py (float32, little-endian) plus a JSON description. Plain JS, no
 // dependencies, so it runs unchanged in Node and in a browser Web Worker.
 
-import { FEATURE_SPEC, NUM_FEATURES, NUM_FEATURES_PER_POSITION, extractFeatures } from './features.js';
+import { FEATURE_SETS } from './features.js';
 
 const CLAMP = 2800; // keeps scores well inside the mate range
 
@@ -15,9 +15,13 @@ export class NetEvaluator {
    */
   constructor(meta, weights) {
     if (meta.format !== 1) throw new Error(`unsupported net format ${meta.format}`);
-    if (meta.spec !== FEATURE_SPEC || meta.num_features !== NUM_FEATURES) {
-      throw new Error(`net was trained for features "${meta.spec}", engine has "${FEATURE_SPEC}"`);
+    const set = FEATURE_SETS[meta.spec];
+    if (!set || meta.num_features !== set.numFeatures) {
+      throw new Error(`net was trained for features "${meta.spec}", which this engine does not have`);
     }
+    const NUM_FEATURES = set.numFeatures;
+    this.extract = set.extract;
+    this.perPosition = set.perPosition;
     const buf = ArrayBuffer.isView(weights) ? weights.buffer.slice(weights.byteOffset, weights.byteOffset + weights.byteLength) : weights;
     const w = new Float32Array(buf);
     const H = meta.hidden;
@@ -39,7 +43,7 @@ export class NetEvaluator {
       this.w3 = w.subarray(o, (o += H2));
       this.b3 = w[o];
     }
-    this.feat = new Int32Array(NUM_FEATURES_PER_POSITION);
+    this.feat = new Int32Array(set.perPosition);
     this.acc = new Float64Array(H);
     this.hid = new Float64Array(Math.max(H2, 1));
   }
@@ -47,18 +51,19 @@ export class NetEvaluator {
   /** Score for the side to move, in the same integer units the search uses. */
   evaluate(pos) {
     const feat = this.feat;
-    extractFeatures(pos, feat);
+    this.extract(pos, feat);
+    const n = this.perPosition;
     const emb = this.emb;
     const H = this.H;
     let y;
     if (this.H2 === 0) {
       // linear model: H = 1, bias stored in b1[0]
       y = this.b1[0];
-      for (let i = 0; i < NUM_FEATURES_PER_POSITION; i++) y += emb[feat[i]];
+      for (let i = 0; i < n; i++) y += emb[feat[i]];
     } else {
       const acc = this.acc;
       for (let h = 0; h < H; h++) acc[h] = this.b1[h];
-      for (let i = 0; i < NUM_FEATURES_PER_POSITION; i++) {
+      for (let i = 0; i < n; i++) {
         const base = feat[i] * H;
         for (let h = 0; h < H; h++) acc[h] += emb[base + h];
       }
