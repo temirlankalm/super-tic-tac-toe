@@ -212,7 +212,8 @@ export function generateShareText(
   won: boolean,
   movesCount: number,
   streak: number,
-  boardWinners: BoardWinner[]
+  boardWinners: BoardWinner[],
+  lang: 'ru' | 'en' = 'ru'
 ): string {
   // Convert 9 board winners into 3x3 emoji grid
   // 🟩 = Player (X) won this sector
@@ -236,7 +237,11 @@ export function generateShareText(
   }
 
   const resultLine = won
-    ? `победа за ${movesCount} ходов · стрик: ${streak} 🔥`
+    ? lang === 'en'
+      ? `won in ${movesCount} moves · streak: ${streak} 🔥`
+      : `победа за ${movesCount} ходов · стрик: ${streak} 🔥`
+    : lang === 'en'
+    ? `played in ${movesCount} moves · streak: ${streak}`
     : `партия сыграна (${movesCount} ходов) · стрик: ${streak}`;
 
   return `ttt · super #${challengeNum}

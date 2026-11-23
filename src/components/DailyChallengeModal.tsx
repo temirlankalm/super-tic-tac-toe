@@ -10,6 +10,7 @@ import {
   getTodayResult,
 } from '@/lib/daily';
 import { BoardWinner } from '@/types/game';
+import { useTranslation } from '@/i18n/LanguageContext';
 
 interface DailyChallengeModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
   onClose,
   onStartDailyMatch,
 }) => {
+  const { t, language } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [challengeNum, setChallengeNum] = useState(1);
   const [todayResult, setTodayResult] = useState<ReturnType<typeof getTodayResult>>(null);
@@ -50,7 +52,21 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
     const moves = todayResult ? todayResult.movesCount : 0;
     const streak = dailyStats.currentStreak;
 
-    const shareText = generateShareText(challengeNum, won, moves, streak, winners);
+    const shareText = generateShareText(challengeNum, won, moves, streak, winners, language);
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({
+          title: `t³ · super #${challengeNum}`,
+          text: shareText,
+        });
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+        return;
+      }
+    } catch {
+      // fallback to clipboard
+    }
 
     try {
       if (navigator.clipboard) {
@@ -78,14 +94,14 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
           <div className="flex items-center gap-2">
             <Calendar size={17} className="text-[var(--highlight-ink)]" />
             <h2 className="text-base font-normal lowercase tracking-tight">
-              челлендж дня · #{challengeNum}
+              {t.dailyModal.title.replace('{num}', String(challengeNum)).replace('#{num}', `#${challengeNum}`)}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="p-1 rounded-md text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
-            aria-label="Закрыть"
+            aria-label={t.common.close}
           >
             <X size={17} />
           </button>
@@ -98,7 +114,7 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
               <Flame size={18} className="fill-amber-500" />
               <span>{dailyStats.currentStreak}</span>
             </div>
-            <span className="text-[11px] text-[var(--ink-mute)] lowercase">текущий стрик</span>
+            <span className="text-[11px] text-[var(--ink-mute)] lowercase">{t.dailyModal.currentStreak}</span>
           </div>
 
           <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-[var(--line)]/20 border border-[var(--line)] text-center">
@@ -106,7 +122,7 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
               <Trophy size={16} />
               <span>{dailyStats.maxStreak}</span>
             </div>
-            <span className="text-[11px] text-[var(--ink-mute)] lowercase">рекордный стрик</span>
+            <span className="text-[11px] text-[var(--ink-mute)] lowercase">{t.dailyModal.recordStreak}</span>
           </div>
         </div>
 
@@ -115,12 +131,16 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
           <div className="space-y-4">
             <div className="p-3.5 rounded-xl bg-[var(--active-board-bg)] border border-[var(--line-strong)] text-center">
               <div className="text-sm font-medium text-[var(--highlight-ink)] lowercase mb-1">
-                {todayResult.won ? 'испытание дня пройдено!' : 'испытание завершено'}
+                {todayResult.won ? t.dailyModal.statusWon : t.dailyModal.statusLost}
               </div>
               <p className="text-xs text-[var(--ink-soft)] lowercase mb-3">
                 {todayResult.won
-                  ? `победа за ${todayResult.movesCount} ходов · возвращайся завтра!`
-                  : `партия сыграна (${todayResult.movesCount} ходов) · завтра новый шанс`}
+                  ? (language === 'ru'
+                      ? `победа за ${todayResult.movesCount} ходов · возвращайся завтра!`
+                      : `won in ${todayResult.movesCount} moves · return tomorrow!`)
+                  : (language === 'ru'
+                      ? `партия сыграна (${todayResult.movesCount} ходов) · завтра новый шанс`
+                      : `puzzle completed (${todayResult.movesCount} moves) · new chance tomorrow`)}
               </p>
 
               {/* 3x3 Mini Sector Emoji Grid Preview */}
@@ -150,12 +170,12 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
                 {copied ? (
                   <>
                     <Check size={14} />
-                    <span>карточка скопирована в буфер</span>
+                    <span>{t.dailyModal.shareSuccess}</span>
                   </>
                 ) : (
                   <>
                     <Share2 size={14} />
-                    <span>поделиться результатом (Wordle style)</span>
+                    <span>{t.dailyModal.shareButton}</span>
                   </>
                 )}
               </button>
@@ -165,11 +185,12 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
           <div className="space-y-3.5">
             <div className="p-3.5 rounded-xl bg-[var(--line)]/15 border border-[var(--line)]">
               <h3 className="text-xs font-medium text-[var(--highlight-ink)] lowercase mb-1">
-                правила ежедневного матча
+                {language === 'ru' ? 'правила ежедневного матча' : 'daily puzzle rules'}
               </h3>
               <p className="text-xs text-[var(--ink-soft)] font-light leading-relaxed lowercase">
-                каждый день в 00:00 создаётся уникальный матч дня, одинаковый для всех игроков мира.
-                одержи победу, чтобы защитить и приумножить свой стрик!
+                {language === 'ru'
+                  ? 'каждый день в 00:00 создаётся уникальный матч дня, одинаковый для всех игроков мира. одержи победу, чтобы защитить и приумножить свой стрик!'
+                  : 'a unique tactical puzzle is generated each midnight, identical for all players worldwide. win to grow your streak!'}
               </p>
             </div>
 
@@ -182,7 +203,7 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
               className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[var(--highlight-ink)] text-[var(--bg)] text-xs font-sans font-medium lowercase hover:opacity-90 transition-all cursor-pointer shadow-xs"
             >
               <Play size={14} className="fill-current" />
-              <span>играть челлендж дня</span>
+              <span>{t.dailyModal.playButton}</span>
             </button>
           </div>
         )}
@@ -191,13 +212,13 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
         {dailyStats.history.length > 0 && (
           <div className="mt-4 pt-3 border-t border-[var(--line)]">
             <span className="text-[10px] text-[var(--ink-mute)] uppercase tracking-wider block mb-1.5 font-medium">
-              последние матчи
+              {language === 'ru' ? 'последние матчи' : 'recent matches'}
             </span>
             <div className="flex items-center gap-1 flex-wrap">
               {dailyStats.history.slice(0, 14).map((entry, i) => (
                 <div
                   key={i}
-                  title={`${entry.date}: ${entry.won ? 'победа' : 'поражение'} (${entry.movesCount} ходов)`}
+                  title={`${entry.date}: ${entry.won ? (language === 'ru' ? 'победа' : 'win') : (language === 'ru' ? 'поражение' : 'loss')} (${entry.movesCount} ${t.common.daysShort})`}
                   className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] ${
                     entry.won
                       ? 'bg-emerald-500 text-white'

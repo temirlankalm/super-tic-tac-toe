@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from '@/i18n/LanguageContext';
 
 interface RulesModalProps {
   isOpen: boolean;
@@ -9,6 +10,8 @@ interface RulesModalProps {
 }
 
 export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
+  const { t, language } = useTranslation();
+
   if (!isOpen) return null;
 
   return (
@@ -23,13 +26,13 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
         {/* Header */}
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-[var(--line)]">
           <h2 className="text-lg md:text-xl font-normal lowercase tracking-tight">
-            правила super tic-tac-toe
+            {t.rulesModal.title}
           </h2>
           <button
             type="button"
             onClick={onClose}
             className="p-1 rounded-md text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
-            aria-label="Закрыть правила"
+            aria-label={t.common.close}
           >
             <X size={18} />
           </button>
@@ -39,46 +42,48 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
         <div className="space-y-4 text-sm leading-relaxed text-[var(--ink)]">
           <div>
             <h3 className="font-medium text-[var(--highlight-ink)] lowercase mb-1">
-              1. золотое правило направления хода
+              {t.rulesModal.rule1Title}
             </h3>
             <p className="text-[var(--ink-soft)] font-light">
-              Клетка, которую вы выбираете внутри малого сектора 3×3, определяет, в каком секторе глобального поля соперник обязан сделать следующий ход. Например, ход в правый верхний угол отправляет оппонента в правый верхний сектор.
+              {t.rulesModal.rule1Desc}
             </p>
           </div>
 
           <div>
             <h3 className="font-medium text-[var(--highlight-ink)] lowercase mb-1">
-              2. победа в секторе
+              {t.rulesModal.rule2Title}
             </h3>
             <p className="text-[var(--ink-soft)] font-light">
-              Соберите три своих знака в ряд внутри любого малого квадрата, чтобы захватить этот сектор. На нём появится крупный символ X или O.
+              {t.rulesModal.rule2Desc}
             </p>
           </div>
 
           <div>
             <h3 className="font-medium text-[var(--highlight-ink)] lowercase mb-1">
-              3. свободный ход (free play)
+              {t.rulesModal.rule3Title}
             </h3>
             <p className="text-[var(--ink-soft)] font-light">
-              Если соперник направляет вас в сектор, который уже выигран или полностью заполнен, вы получаете свободу выбора — можете сделать ход в <span className="text-[var(--highlight-ink)] font-medium">любую открытую клетку</span> на всей доске.
+              {t.rulesModal.rule3Desc}
             </p>
           </div>
 
           <div>
             <h3 className="font-medium text-[var(--highlight-ink)] lowercase mb-1">
-              4. победа в матче
+              {t.rulesModal.rule4Title}
             </h3>
             <p className="text-[var(--ink-soft)] font-light">
-              Выиграйте три сектора в ряд по горизонтали, вертикали или диагонали глобального поля 3×3, чтобы одержать итоговую победу.
+              {t.rulesModal.rule4Desc}
             </p>
           </div>
 
           <div>
             <h3 className="font-medium text-[var(--highlight-ink)] lowercase mb-1">
-              5. режим шахматных часов
+              {language === 'ru' ? '5. режим шахматных часов' : '5. chess clock mode'}
             </h3>
             <p className="text-[var(--ink-soft)] font-light">
-              Выберите 1 мин (пуля), 2 мин, 3 мин (блиц) или 5 мин (рапид). Таймер начинает обратный отсчет только после первого хода и переключается при передаче хода. Если время истекает, сопернику присуждается победа.
+              {language === 'ru'
+                ? 'Выберите 1 мин (пуля), 2 мин, 3 мин (блиц) или 5 мин (рапид). Таймер начинает обратный отсчет только после первого хода и переключается при передаче хода. Если время истекает, сопернику присуждается победа.'
+                : 'Select 1 min (bullet), 2 min, 3 min (blitz), or 5 min (rapid). The clock counts down after your first move and alternates each turn. Running out of time results in defeat.'}
             </p>
           </div>
         </div>
@@ -90,7 +95,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg text-xs tracking-wider lowercase bg-[var(--line)] hover:bg-[var(--line-strong)] text-[var(--highlight-ink)] transition-colors cursor-pointer font-medium"
           >
-            понятно
+            {t.rulesModal.button}
           </button>
         </div>
       </div>

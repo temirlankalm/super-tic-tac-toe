@@ -3,6 +3,7 @@
 import React from 'react';
 import { CellState } from '@/types/game';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
+import { useTranslation } from '@/i18n/LanguageContext';
 
 interface CellProps {
   value: CellState;
@@ -27,6 +28,7 @@ export const Cell: React.FC<CellProps> = ({
   opacity,
   isExpiringSoon,
 }) => {
+  const { t } = useTranslation();
   // Deterministic variation (0, 1, or 2)
   const variant = (boardIdx * 7 + cellIdx * 3) % 3;
 
@@ -56,7 +58,7 @@ export const Cell: React.FC<CellProps> = ({
           {isExpiringSoon && (
             <span
               className="absolute top-0.5 right-0.5 w-1 h-1 rounded-full bg-rose-400/80 animate-pulse pointer-events-none"
-              title="знак исчезнет на следующем ходу"
+              title={t.cell.fadingSoon}
             />
           )}
         </div>
@@ -75,7 +77,7 @@ export const Cell: React.FC<CellProps> = ({
           {isExpiringSoon && (
             <span
               className="absolute top-0.5 right-0.5 w-1 h-1 rounded-full bg-rose-400/80 animate-pulse pointer-events-none"
-              title="знак исчезнет на следующем ходу"
+              title={t.cell.fadingSoon}
             />
           )}
         </div>

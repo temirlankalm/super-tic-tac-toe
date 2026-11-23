@@ -1,10 +1,32 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { HelpCircle, Bot, User, Users, Sun, Moon, Clock, Volume2, VolumeX, Globe, Flame, Sliders, ChevronDown } from 'lucide-react';
-import { AiDifficulty, ConnectionStatus, GameMode, GameState, OnlineRole, Player, TimeControl } from '@/types/game';
+import {
+  HelpCircle,
+  Bot,
+  Users,
+  Sun,
+  Moon,
+  Clock,
+  Volume2,
+  VolumeX,
+  Globe,
+  Flame,
+  Sliders,
+  ChevronDown,
+} from 'lucide-react';
+import {
+  AiDifficulty,
+  ConnectionStatus,
+  GameMode,
+  GameState,
+  OnlineRole,
+  Player,
+  TimeControl,
+} from '@/types/game';
 import { HandDrawnLogo } from './hand-drawn/HandDrawnLogo';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
+import { useTranslation } from '@/i18n/LanguageContext';
 
 interface GameStatusProps {
   gameState: GameState;
@@ -35,25 +57,17 @@ interface GameStatusProps {
   onOpenSettingsModal?: () => void;
 }
 
-const timeLabels: Record<TimeControl, string> = {
-  off: 'off',
-  60: '1m',
-  120: '2m',
-  180: '3m',
-  300: '5m',
-};
-
-const sectorNames = [
-  'верх-лево',
-  'верх-центр',
-  'верх-право',
-  'центр-лево',
-  'центр',
-  'центр-право',
-  'низ-лево',
-  'низ-центр',
-  'низ-право',
-];
+const sectorKeys = [
+  'topLeft',
+  'topCenter',
+  'topRight',
+  'centerLeft',
+  'center',
+  'centerRight',
+  'bottomLeft',
+  'bottomCenter',
+  'bottomRight',
+] as const;
 
 export const GameStatus: React.FC<GameStatusProps> = ({
   gameState,
@@ -83,6 +97,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   onOpenDailyModal,
   onOpenSettingsModal,
 }) => {
+  const { t, language, toggleLanguage } = useTranslation();
   const {
     currentPlayer,
     winner,
@@ -115,6 +130,11 @@ export const GameStatus: React.FC<GameStatusProps> = ({
     };
   }, [isTimeMenuOpen, isModeMenuOpen]);
 
+  const activeSectorName =
+    activeBoard !== null && activeBoard >= 0 && activeBoard < 9
+      ? t.sectors[sectorKeys[activeBoard]]
+      : '';
+
   return (
     <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-3">
       {/* Row 1: Brand Logo & Global App Utilities */}
@@ -124,7 +144,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           <div className="flex items-center gap-1.5">
             <HandDrawnLogo className="h-6 w-auto text-[var(--highlight-ink)]" />
             <span className="text-[11px] text-[var(--ink-mute)] font-light tracking-widest lowercase">
-              · super
+              {t.common.brandTag}
             </span>
           </div>
 
@@ -133,10 +153,17 @@ export const GameStatus: React.FC<GameStatusProps> = ({
               type="button"
               onClick={onOpenDailyModal}
               className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-[11px]"
-              title="челлендж дня и стрик"
+              title={t.header.dailyTitle}
             >
-              <Flame size={12} className={dailyStreak && dailyStreak > 0 ? "fill-amber-500 text-amber-500" : ""} />
-              <span>{dailyStreak && dailyStreak > 0 ? `${dailyStreak}` : 'день'}</span>
+              <Flame
+                size={12}
+                className={dailyStreak && dailyStreak > 0 ? 'fill-amber-500 text-amber-500' : ''}
+              />
+              <span>
+                {dailyStreak && dailyStreak > 0
+                  ? `${dailyStreak}${t.common.daysShort}`
+                  : t.header.dailyButton}
+              </span>
             </button>
           )}
 
@@ -149,7 +176,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                   ? 'border-[var(--line-strong)] text-[var(--highlight-ink)] bg-[var(--line)]/30 font-medium'
                   : 'border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
               }`}
-              title="аркадные модификаторы"
+              title={t.header.modifiersTitle}
             >
               <Sliders size={12} />
               {activeModifiersCount && activeModifiersCount > 0 && (
@@ -161,7 +188,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           )}
         </div>
 
-        {/* Right: Clock, Sound, Theme, Rules */}
+        {/* Right: Clock, Language Switch, Sound, Theme, Rules */}
         <div className="flex items-center gap-1.5 text-xs">
           {/* Chess Clock Timer Selector */}
           <div className="relative" ref={timeMenuRef}>
@@ -173,25 +200,25 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                   ? 'border-[var(--line-strong)] text-[var(--highlight-ink)] bg-[var(--active-board-bg)] font-medium'
                   : 'border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
               }`}
-              title="шахматные часы"
-              aria-label="Выбрать контроль времени"
+              title={t.header.clockTitle}
+              aria-label={t.header.clockTitle}
             >
               <Clock size={13} />
-              <span>{timeLabels[timeControl]}</span>
+              <span>{t.header.timeLabels[timeControl]}</span>
             </button>
 
             {isTimeMenuOpen && (
               <div className="absolute right-0 top-full mt-1.5 z-40 py-1 px-1 min-w-[145px] rounded-lg bg-[var(--bg)] border border-[var(--line-strong)] shadow-lg animate-fade-up text-xs font-sans">
                 <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--ink-mute)] font-medium border-b border-[var(--line)] mb-1">
-                  контроль времени
+                  {t.header.clockMenuHeader}
                 </div>
                 {(
                   [
-                    { value: 'off', label: 'без таймера' },
-                    { value: 60, label: '1 мин (пуля)' },
-                    { value: 120, label: '2 мин (блиц)' },
-                    { value: 180, label: '3 мин (блиц)' },
-                    { value: 300, label: '5 мин (рапид)' },
+                    { value: 'off', label: t.header.timeOptions.off },
+                    { value: 60, label: t.header.timeOptions[60] },
+                    { value: 120, label: t.header.timeOptions[120] },
+                    { value: 180, label: t.header.timeOptions[180] },
+                    { value: 300, label: t.header.timeOptions[300] },
                   ] as const
                 ).map((opt) => (
                   <button
@@ -215,13 +242,24 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             )}
           </div>
 
+          {/* Language Switcher (RU / EN) */}
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            className="px-1.5 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-mono font-medium text-[11px] uppercase tracking-wider"
+            title={language === 'ru' ? 'Switch to English' : 'Переключить на русский'}
+            aria-label={t.header.langToggle}
+          >
+            {language === 'ru' ? 'EN' : 'RU'}
+          </button>
+
           {/* Sound toggle (Paper ASMR) */}
           <button
             type="button"
             onClick={onToggleSound}
             className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer"
-            title={isSoundEnabled ? 'выключить звук (paper asmr)' : 'включить звук'}
-            aria-label={isSoundEnabled ? 'выключить звук' : 'включить звук'}
+            title={isSoundEnabled ? t.header.soundOn : t.header.soundOff}
+            aria-label={isSoundEnabled ? t.header.soundOn : t.header.soundOff}
           >
             {isSoundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
           </button>
@@ -231,8 +269,8 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             type="button"
             onClick={onToggleTheme}
             className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer"
-            title={theme === 'dark' ? 'светлая тема' : 'тёмная тема'}
-            aria-label={theme === 'dark' ? 'светлая тема' : 'тёмная тема'}
+            title={theme === 'dark' ? t.header.lightTheme : t.header.darkTheme}
+            aria-label={theme === 'dark' ? t.header.lightTheme : t.header.darkTheme}
           >
             {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
           </button>
@@ -241,9 +279,9 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           <button
             type="button"
             onClick={onOpenRules}
-            aria-label="Правила игры"
+            aria-label={t.header.rulesTitle}
             className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
-            title="правила игры"
+            title={t.header.rulesTitle}
           >
             <HelpCircle size={13} />
           </button>
@@ -264,28 +302,28 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                 ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 font-medium'
                 : 'border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
             }`}
-            title="выбрать режим игры"
-            aria-label="Выбрать режим игры"
+            title={t.modes.chooseMode}
+            aria-label={t.modes.chooseMode}
           >
             {gameMode === 'ai' ? (
               <>
                 <Bot size={13} />
-                <span>против ии</span>
+                <span>{t.modes.ai.label}</span>
               </>
             ) : gameMode === 'pvp' ? (
               <>
                 <Users size={13} />
-                <span>два игрока</span>
+                <span>{t.modes.pvp.label}</span>
               </>
             ) : gameMode === 'daily' ? (
               <>
                 <Flame size={13} className="fill-amber-500 text-amber-500" />
-                <span>челлендж дня</span>
+                <span>{t.modes.daily.label}</span>
               </>
             ) : (
               <>
                 <Globe size={13} />
-                <span>по коду</span>
+                <span>{t.modes.online.label}</span>
               </>
             )}
             <ChevronDown
@@ -299,25 +337,25 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           {isModeMenuOpen && (
             <div className="absolute left-0 top-full mt-1.5 z-40 py-1 px-1 min-w-[210px] rounded-lg bg-[var(--bg)] border border-[var(--line-strong)] shadow-lg animate-fade-up text-xs font-sans">
               <div className="px-2.5 py-1 text-[10px] uppercase tracking-wider text-[var(--ink-mute)] font-medium border-b border-[var(--line)] mb-1">
-                выберите режим
+                {t.modes.chooseMode}
               </div>
               {[
                 {
                   mode: 'ai' as const,
-                  label: 'против ии',
-                  desc: 'одиночная игра с ботом',
+                  label: t.modes.ai.label,
+                  desc: t.modes.ai.desc,
                   icon: Bot,
                 },
                 {
                   mode: 'pvp' as const,
-                  label: 'два игрока',
-                  desc: 'на одном устройстве',
+                  label: t.modes.pvp.label,
+                  desc: t.modes.pvp.desc,
                   icon: Users,
                 },
                 {
                   mode: 'online' as const,
-                  label: 'по коду (онлайн)',
-                  desc: 'с другом по ссылке или коду',
+                  label: t.modes.online.label,
+                  desc: t.modes.online.desc,
                   icon: Globe,
                 },
               ].map(({ mode, label, desc, icon: Icon }) => (
@@ -361,10 +399,10 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             <div className="flex items-center rounded-md border border-[var(--line)] p-0.5 text-[11px] font-sans lowercase">
               {(
                 [
-                  { lvl: 'easy', label: 'легк' },
-                  { lvl: 'medium', label: 'сред' },
-                  { lvl: 'hard', label: 'слож' },
-                  { lvl: 'qnet', label: 'qnet' },
+                  { lvl: 'easy', label: t.difficulties.easy },
+                  { lvl: 'medium', label: t.difficulties.medium },
+                  { lvl: 'hard', label: t.difficulties.hard },
+                  { lvl: 'qnet', label: t.difficulties.qnet },
                 ] as const
               ).map(({ lvl, label }) => (
                 <button
@@ -390,7 +428,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                 type="button"
                 onClick={onOpenOnlineModal}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-xs"
-                title="открыть комнату / пригласить друга"
+                title={language === 'ru' ? 'открыть комнату / пригласить друга' : 'open room / invite friend'}
               >
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
@@ -405,14 +443,14 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                 />
                 <span>
                   {connectionStatus === 'connected'
-                    ? 'в сети'
+                    ? language === 'ru' ? 'в сети' : 'online'
                     : connectionStatus === 'waiting'
-                    ? 'ожидание…'
+                    ? language === 'ru' ? 'ожидание…' : 'waiting…'
                     : connectionStatus === 'connecting'
-                    ? 'вход…'
+                    ? language === 'ru' ? 'вход…' : 'joining…'
                     : roomId
                     ? `#${roomId}`
-                    : 'код комнаты'}
+                    : language === 'ru' ? 'код комнаты' : 'room code'}
                 </span>
               </button>
             </div>
@@ -425,10 +463,10 @@ export const GameStatus: React.FC<GameStatusProps> = ({
         <div className="pt-2">
           <div className="flex items-center justify-between p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs w-full text-rose-500 animate-fade-up">
             <span className="lowercase">
-              соперник отключился · ожидание возврата: {disconnectGraceSeconds}с…
+              {t.status.opponentDisconnected.replace('{seconds}', String(disconnectGraceSeconds))}
             </span>
             <span className="text-[11px] text-[var(--ink-mute)] lowercase">
-              иначе тех. победа
+              {language === 'ru' ? 'иначе тех. победа' : 'forfeit countdown'}
             </span>
           </div>
         </div>
@@ -440,7 +478,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           {drawOfferedByOpponent ? (
             <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--line)]/30 border border-[var(--line-strong)] text-xs animate-fade-up">
               <span className="text-[var(--highlight-ink)] lowercase">
-                соперник предлагает ничью
+                {t.actions.drawOfferedBanner}
               </span>
               <div className="flex items-center gap-1.5">
                 <button
@@ -448,24 +486,24 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                   onClick={onAcceptDraw}
                   className="px-2.5 py-1 rounded bg-[var(--highlight-ink)] text-[var(--bg)] font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer"
                 >
-                  согласиться
+                  {t.actions.acceptDraw}
                 </button>
                 <button
                   type="button"
                   onClick={onDeclineDraw}
                   className="px-2 py-1 rounded border border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] lowercase transition-colors cursor-pointer"
                 >
-                  отклонить
+                  {t.actions.declineDraw}
                 </button>
               </div>
             </div>
           ) : myDrawOffered ? (
             <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--line)]/20 border border-[var(--line)] text-xs text-[var(--ink-soft)] lowercase animate-fade-up">
-              <span>предложение ничьей отправлено сопернику…</span>
+              <span>{t.actions.offered}</span>
             </div>
           ) : drawDeclinedNotice ? (
             <div className="flex items-center justify-between p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-500 lowercase animate-fade-up">
-              <span>соперник отклонил предложение ничьей.</span>
+              <span>{t.actions.declined}</span>
             </div>
           ) : null}
         </div>
@@ -484,29 +522,29 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                     onClick={onOpenOnlineModal}
                     className="text-xs text-[var(--ink-mute)] hover:text-[var(--highlight-ink)] lowercase cursor-pointer underline-offset-2 underline decoration-[var(--underline)]"
                   >
-                    ожидание соперника… (отправьте ссылку)
+                    {language === 'ru' ? 'ожидание соперника… (отправьте ссылку)' : 'waiting for opponent… (send link)'}
                   </button>
                 )}
                 {connectionStatus === 'connecting' && (
                   <span className="text-xs text-[var(--ink-mute)] lowercase animate-pulse">
-                    подключение к комнате…
+                    {t.onlineModal.statusConnecting}
                   </span>
                 )}
                 {connectionStatus === 'disconnected' && (
                   <span className="text-xs text-rose-500 lowercase">
-                    соперник отключился
+                    {language === 'ru' ? 'соперник отключился' : 'opponent disconnected'}
                   </span>
                 )}
                 {connectionStatus === 'error' && (
                   <span className="text-xs text-rose-500 lowercase">
-                    ошибка подключения (комната не найдена)
+                    {language === 'ru' ? 'ошибка подключения (комната не найдена)' : 'connection error (room not found)'}
                   </span>
                 )}
               </div>
             ) : (
               <div className="flex items-center gap-2">
                 <span className="text-[var(--ink-soft)] lowercase">
-                  ход:
+                  {language === 'ru' ? 'ход:' : 'turn:'}
                 </span>
                 <span className="inline-flex items-center gap-1.5 font-medium text-[var(--highlight-ink)]">
                   {currentPlayer === 'X' ? (
@@ -516,7 +554,9 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                   )}
                   {gameMode === 'ai' && currentPlayer !== gameState.humanPlayer && (
                     <span className="text-xs text-[var(--ink-mute)] font-normal">
-                      {isAiThinking ? '(думает…)' : `(ии)`}
+                      {isAiThinking
+                        ? `(${difficulty === 'qnet' ? t.status.qnetThinking : t.status.aiThinking})`
+                        : `(${language === 'ru' ? 'ии' : 'ai'})`}
                     </span>
                   )}
                   {gameMode === 'online' && (
@@ -525,8 +565,8 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                         ? currentPlayer === onlinePlayer
                         : (onlineRole === 'host' && currentPlayer === 'X') ||
                           (onlineRole === 'guest' && currentPlayer === 'O'))
-                        ? '· ваш ход'
-                        : '· ход соперника'}
+                        ? `· ${t.status.yourTurn}`
+                        : `· ${t.status.opponentTurn}`}
                     </span>
                   )}
                 </span>
@@ -534,7 +574,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             )
           ) : (
             <span className="text-xs text-[var(--ink-mute)] lowercase">
-              партия завершена
+              {language === 'ru' ? 'партия завершена' : 'game finished'}
             </span>
           )}
         </div>
@@ -543,12 +583,15 @@ export const GameStatus: React.FC<GameStatusProps> = ({
         {winner === null && (
           <div className="flex items-center gap-2 text-xs text-[var(--ink-soft)] lowercase">
             {activeBoard === null ? (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--line)] text-[var(--highlight-ink)] font-medium text-[11px] animate-pulse lowercase">
-                ✦ свободный ход
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--line)] text-[var(--highlight-ink)] font-medium text-[11px] animate-pulse lowercase"
+                title={t.status.freeMoveTooltip}
+              >
+                ✦ {t.status.freeMove}
               </span>
             ) : (
               <div className="flex items-center gap-1.5">
-                <span>цель: {sectorNames[activeBoard]}</span>
+                <span>{language === 'ru' ? 'цель:' : 'target:'} {activeSectorName}</span>
                 {/* Visual 3x3 Mini Sector Locator */}
                 <div className="grid grid-cols-3 gap-0.5 w-3.5 h-3.5 border border-[var(--line-strong)] p-0.5 rounded-[2px]">
                   {Array.from({ length: 9 }).map((_, i) => (

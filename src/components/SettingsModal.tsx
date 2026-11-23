@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, Sliders, EyeOff, Sparkles, Zap } from 'lucide-react';
 import { GameModifiers } from '@/types/game';
+import { useTranslation } from '@/i18n/LanguageContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -17,34 +18,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleModifier,
   onClose,
 }) => {
+  const { t, language } = useTranslation();
+
   if (!isOpen) return null;
 
   const items: {
     key: keyof GameModifiers;
     title: string;
-    enTitle: string;
     desc: string;
     icon: React.ReactNode;
   }[] = [
     {
       key: 'fogOfWar',
-      title: 'туман войны',
-      enTitle: 'fog of war',
-      desc: 'виден только активный сектор и секторы с ходами. остальные скрыты полупрозрачной дымкой.',
+      title: t.settingsModal.fogOfWar.title,
+      desc: t.settingsModal.fogOfWar.desc,
       icon: <EyeOff size={16} />,
     },
     {
       key: 'fadingInk',
-      title: 'исчезающие чернила',
-      enTitle: 'fading ink',
-      desc: 'знаки живут на доске только последние 4 хода каждого игрока, затем исчезают.',
+      title: t.settingsModal.fadingInk.title,
+      desc: t.settingsModal.fadingInk.desc,
       icon: <Sparkles size={16} />,
     },
     {
       key: 'speedBlitz',
-      title: 'блиц-паника',
-      enTitle: '5s speed blitz',
-      desc: 'ровно 5 секунд на каждый ход. не успел — случайный ход в допустимый сектор.',
+      title: t.settingsModal.speedBlitz.title,
+      desc: t.settingsModal.speedBlitz.desc,
       icon: <Zap size={16} />,
     },
   ];
@@ -63,14 +62,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="flex items-center gap-2">
             <Sliders size={17} className="text-[var(--highlight-ink)]" />
             <h2 className="text-base font-normal lowercase tracking-tight">
-              аркадные модификаторы
+              {t.settingsModal.title}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="p-1 rounded-md text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
-            aria-label="Закрыть"
+            aria-label={t.common.close}
           >
             <X size={17} />
           </button>
@@ -105,9 +104,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span className="text-sm font-medium text-[var(--highlight-ink)] lowercase">
                         {item.title}
                       </span>
-                      <span className="text-[10px] text-[var(--ink-mute)] font-light lowercase">
-                        · {item.enTitle}
-                      </span>
                     </div>
                     <p className="text-xs text-[var(--ink-soft)] font-light lowercase mt-1 leading-relaxed">
                       {item.desc}
@@ -137,7 +133,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Footer info note */}
         <div className="mt-5 pt-3 border-t border-[var(--line)] text-center">
           <p className="text-[11px] text-[var(--ink-mute)] font-light lowercase">
-            модификаторы действуют на локальные режимы и синхронизируются в игре
+            {language === 'ru'
+              ? 'модификаторы действуют на локальные режимы и синхронизируются в игре'
+              : 'modifiers apply to local matches and sync during gameplay'}
           </p>
         </div>
       </div>

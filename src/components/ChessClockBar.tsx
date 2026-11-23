@@ -3,6 +3,7 @@
 import React from 'react';
 import { Player, BoardWinner, TimeControl, GameMode, OnlineRole } from '@/types/game';
 import { HandDrawnX, HandDrawnO } from './hand-drawn/HandDrawnMarks';
+import { useTranslation } from '@/i18n/LanguageContext';
 
 interface ChessClockBarProps {
   timeControl: TimeControl;
@@ -34,6 +35,8 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
   onlinePlayer,
   difficulty,
 }) => {
+  const { t, language } = useTranslation();
+
   if (timeControl === 'off') return null;
 
   const isXActive = winner === null && currentPlayer === 'X';
@@ -48,31 +51,30 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
   const isXSelf = onlinePlayer ? onlinePlayer === 'X' : onlineRole === 'host';
   const isOSelf = onlinePlayer ? onlinePlayer === 'O' : onlineRole === 'guest';
 
+  const opponentWord = language === 'ru' ? 'соперник' : 'opponent';
+  const aiWord = language === 'ru' ? 'ии' : 'ai';
+  const diffLabel =
+    difficulty && difficulty in t.difficulties
+      ? t.difficulties[difficulty as keyof typeof t.difficulties]
+      : difficulty || '';
+
   const playerXLabel =
     gameMode === 'ai'
-      ? 'вы (x)'
+      ? t.clock.youX
       : gameMode === 'online'
       ? isXSelf
-        ? 'вы (x)'
-        : 'соперник (x)'
-      : 'игрок 1 (x)';
+        ? t.clock.youX
+        : `${opponentWord} (x)`
+      : t.clock.player1X;
 
   const playerOLabel =
     gameMode === 'ai'
-      ? `ии (${
-          difficulty === 'medium'
-            ? 'средний'
-            : difficulty === 'easy'
-            ? 'легкий'
-            : difficulty === 'qnet'
-            ? 'qnet'
-            : 'сложный'
-        })`
+      ? `${aiWord} (${diffLabel})`
       : gameMode === 'online'
       ? isOSelf
-        ? 'вы (o)'
-        : 'соперник (o)'
-      : 'игрок 2 (o)';
+        ? language === 'ru' ? 'вы (o)' : 'you (o)'
+        : t.clock.opponentO
+      : t.clock.player2O;
 
   return (
     <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-3 animate-fade-up">
@@ -111,7 +113,7 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
             </span>
             {isXFlagged && (
               <span className="text-[10px] text-red-500 lowercase font-sans">
-                время
+                {t.clock.timesUp}
               </span>
             )}
           </div>
@@ -151,7 +153,7 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
             </span>
             {isOFlagged && (
               <span className="text-[10px] text-red-500 lowercase font-sans">
-                время
+                {t.clock.timesUp}
               </span>
             )}
           </div>

@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Undo2, RotateCcw, Flag, Handshake, Zap } from 'lucide-react';
+import { Undo2, RotateCcw, Flag, Handshake, Zap, Share2 } from 'lucide-react';
 import { BoardWinner, GameMode, OnlineRole, Player, WinReason } from '@/types/game';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
+import { useTranslation } from '@/i18n/LanguageContext';
 
 interface GameActionsBarProps {
   gameMode: GameMode;
@@ -27,6 +28,7 @@ interface GameActionsBarProps {
   onOfferDraw: () => void;
   onRequestRematch?: () => void;
   onAcceptRematch?: () => void;
+  onChallengeFriend?: () => void;
 }
 
 export const GameActionsBar: React.FC<GameActionsBarProps> = ({
@@ -49,7 +51,9 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
   onOfferDraw,
   onRequestRematch,
   onAcceptRematch,
+  onChallengeFriend,
 }) => {
+  const { t, language } = useTranslation();
   const [isResignConfirmOpen, setIsResignConfirmOpen] = useState(false);
 
   // 1. GAME OVER VIEW
@@ -64,22 +68,26 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
 
     let title = '';
     if (winner === 'TIE') {
-      title = winReason === 'agreement' ? 'ничья по соглашению' : 'ничья';
+      title = winReason === 'agreement' ? t.results.drawAgreement : t.results.drawGeneric;
     } else if (isOnline) {
-      title = isMeWinner ? 'вы победили!' : 'соперник победил';
+      title = isMeWinner ? t.results.youWon : t.results.opponentWon;
     } else {
-      title = winner === 'X' ? 'крестики победили' : 'нолики победили';
+      title = winner === 'X' ? t.results.xWon : t.results.oWon;
     }
 
     let subtitle = '';
     if (winReason === 'resignation') {
-      subtitle = 'соперник сдался';
+      subtitle = isOnline && isMeWinner ? t.results.opponentResigned : t.results.youResigned;
     } else if (winReason === 'timeout') {
-      subtitle = 'победа по времени (флаг)';
+      subtitle = t.results.timeOut;
     } else if (winReason === 'agreement') {
-      subtitle = 'взаимное согласие игроков';
+      subtitle = language === 'ru' ? 'взаимное согласие игроков' : 'mutual agreement';
     } else if (winner !== 'TIE') {
-      subtitle = wonByLine ? '3 захваченных сектора в ряд' : 'больше захваченных секторов';
+      subtitle = wonByLine
+        ? t.results.threeInRow
+        : language === 'ru'
+        ? 'больше захваченных секторов'
+        : 'majority of sectors claimed';
     }
 
     return (
@@ -101,7 +109,19 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
           </p>
         )}
 
-        <div className="flex items-center justify-center gap-2 pt-1">
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+          {/* Challenge a friend button (Growth feature) */}
+          {onChallengeFriend && (
+            <button
+              type="button"
+              onClick={onChallengeFriend}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[var(--line-strong)] hover:bg-[var(--line)]/40 text-[var(--highlight-ink)] text-xs font-sans font-medium lowercase transition-colors cursor-pointer"
+            >
+              <Share2 size={13} />
+              <span>{t.actions.challengeFriend}</span>
+            </button>
+          )}
+
           {isOnline ? (
             rematchRequestedByOpponent ? (
               <button
@@ -109,11 +129,11 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
                 onClick={onAcceptRematch}
                 className="px-4 py-2 rounded-lg bg-[var(--highlight-ink)] text-[var(--bg)] text-xs font-sans font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
               >
-                принять реванш
+                {t.actions.acceptRematch}
               </button>
             ) : myRematchSent ? (
               <span className="px-3 py-1.5 text-xs text-[var(--ink-soft)] lowercase">
-                запрос на реванш отправлен…
+                {t.actions.offered}
               </span>
             ) : (
               <button
@@ -122,7 +142,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[var(--line-strong)] hover:bg-[var(--line)]/40 text-[var(--highlight-ink)] text-xs font-sans font-medium lowercase transition-colors cursor-pointer"
               >
                 <RotateCcw size={13} />
-                <span>предложить реванш</span>
+                <span>{t.actions.rematch}</span>
               </button>
             )
           ) : (
@@ -132,7 +152,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--highlight-ink)] text-[var(--bg)] text-xs font-sans font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
             >
               <RotateCcw size={13} />
-              <span>сыграть снова</span>
+              <span>{t.actions.newGame}</span>
             </button>
           )}
         </div>
@@ -162,10 +182,10 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
                 ? 'hover:bg-[var(--line)] hover:text-[var(--highlight-ink)] cursor-pointer'
                 : 'opacity-30 cursor-not-allowed'
             }`}
-            title="Отменить последний ход"
+            title={language === 'ru' ? 'Отменить последний ход' : 'Undo last move'}
           >
             <Undo2 size={13} />
-            <span className="hidden sm:inline">ход назад</span>
+            <span className="hidden sm:inline">{language === 'ru' ? 'ход назад' : 'undo'}</span>
           </button>
         ) : (
           <div className="w-8" />
@@ -181,10 +201,10 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
                   ? 'bg-rose-500/15 text-rose-500 animate-pulse'
                   : 'bg-[var(--line)]/40 text-[var(--highlight-ink)]'
               }`}
-              title="осталось времени на текущий ход"
+              title={language === 'ru' ? 'осталось времени на текущий ход' : 'time left for current turn'}
             >
               <Zap size={11} className={speedBlitzTime <= 2.0 ? 'fill-rose-500' : ''} />
-              <span>{speedBlitzTime.toFixed(1)}с</span>
+              <span>{speedBlitzTime.toFixed(1)}s</span>
             </div>
           )}
 
@@ -192,7 +212,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
           {historyLength > 0 && (
             isResignConfirmOpen ? (
               <div className="flex items-center gap-1 bg-rose-500/10 border border-rose-500/30 px-2 py-1 rounded-lg text-xs animate-fade-up">
-                <span className="text-rose-500 lowercase">сдаться?</span>
+                <span className="text-rose-500 lowercase">{language === 'ru' ? 'сдаться?' : 'resign?'}</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -201,14 +221,14 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
                   }}
                   className="text-rose-600 dark:text-rose-400 font-medium hover:underline px-1 cursor-pointer lowercase"
                 >
-                  да
+                  {language === 'ru' ? 'да' : 'yes'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsResignConfirmOpen(false)}
                   className="text-[var(--ink-mute)] hover:text-[var(--ink-soft)] px-1 cursor-pointer lowercase"
                 >
-                  нет
+                  {language === 'ru' ? 'нет' : 'no'}
                 </button>
               </div>
             ) : (
@@ -216,10 +236,10 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
                 type="button"
                 onClick={() => setIsResignConfirmOpen(true)}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-colors cursor-pointer lowercase font-sans"
-                title="Сдаться в этой партии"
+                title={language === 'ru' ? 'Сдаться в этой партии' : 'Resign game'}
               >
                 <Flag size={13} />
-                <span>сдаться</span>
+                <span>{t.actions.resign}</span>
               </button>
             )
           )}
@@ -235,10 +255,10 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
                   ? 'opacity-40 cursor-not-allowed'
                   : 'hover:bg-[var(--line)] hover:text-[var(--highlight-ink)] cursor-pointer'
               }`}
-              title={myDrawOffered ? 'Предложение ничьей отправлено' : 'Предложить ничью'}
+              title={myDrawOffered ? t.actions.offered : t.actions.draw}
             >
               <Handshake size={13} />
-              <span>{myDrawOffered ? 'ничья…' : 'ничья'}</span>
+              <span>{myDrawOffered ? t.actions.offered : t.actions.draw}</span>
             </button>
           )}
         </div>
@@ -248,10 +268,10 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
           type="button"
           onClick={onReset}
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-[var(--line)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer lowercase font-sans"
-          title={gameMode === 'online' ? 'Предложить начать заново' : 'Начать партию заново'}
+          title={gameMode === 'online' ? t.actions.rematch : t.actions.newGame}
         >
           <RotateCcw size={13} />
-          <span className="hidden sm:inline">заново</span>
+          <span className="hidden sm:inline">{language === 'ru' ? 'заново' : 'reset'}</span>
         </button>
       </div>
     </div>
