@@ -11,6 +11,7 @@ import {
 } from '@/lib/daily';
 import { BoardWinner } from '@/types/game';
 import { useTranslation } from '@/i18n/LanguageContext';
+import { analytics } from '@/lib/analytics/client';
 
 interface DailyChallengeModalProps {
   isOpen: boolean;
@@ -53,6 +54,7 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
     const streak = dailyStats.currentStreak;
 
     const shareText = generateShareText(challengeNum, won, moves, streak, winners, language);
+    analytics.buttonClick('share_daily_result', { won, moves, streak, challengeNum });
 
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {

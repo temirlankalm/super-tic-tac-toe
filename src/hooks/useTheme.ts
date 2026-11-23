@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { analytics } from '@/lib/analytics/client';
 
 export type Theme = 'light' | 'dark';
 
@@ -26,6 +27,7 @@ export function useTheme() {
     setTheme(nextTheme);
     localStorage.setItem('ttt_theme', nextTheme);
     document.documentElement.classList.toggle('dark', nextTheme === 'dark');
+    analytics.themeToggle(nextTheme);
   };
 
   return { theme, toggleTheme, mounted };

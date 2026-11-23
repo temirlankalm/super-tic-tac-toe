@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import { Language, Translations } from './types';
 import { en } from './translations/en';
 import { ru } from './translations/ru';
+import { analytics } from '@/lib/analytics/client';
 
 interface LanguageContextType {
   language: Language;
@@ -58,6 +59,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       localStorage.setItem(STORAGE_KEY, lang);
       document.documentElement.lang = lang;
+      analytics.languageToggle(lang);
     } catch {}
   }, []);
 
@@ -67,6 +69,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       try {
         localStorage.setItem(STORAGE_KEY, next);
         document.documentElement.lang = next;
+        analytics.languageToggle(next);
       } catch {}
       return next;
     });

@@ -25,6 +25,7 @@ import {
   saveActiveDaily,
   clearActiveDaily,
   getTodayDateString,
+  getChallengeNumber,
 } from '@/lib/daily';
 import { GameMode, Player } from '@/types/game';
 import { useTranslation } from '@/i18n/LanguageContext';
@@ -266,6 +267,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
           gameState.boardWinners
         );
         setDailyStats(updated);
+        analytics.dailyPlayed(isWon, gameState.history.length, getChallengeNumber(getTodayDateString()));
         // Prompt share modal shortly after victory animation
         setTimeout(() => {
           setIsDailyModalOpen(true);
@@ -294,6 +296,36 @@ export function GameClient({ initialRoomId }: GameClientProps) {
     gameState.currentPlayer,
     gameState.activeBoard,
   ]);
+
+  // Track game start (on first move) and game end
+  const prevHistoryLenRef = useRef<number>(0);
+  const prevWinnerRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Game start: first move placed
+    if (gameState.history.length === 1 && prevHistoryLenRef.current === 0) {
+      analytics.gameStart(
+        gameState.gameMode,
+        gameState.gameMode === 'ai' ? gameState.difficulty : undefined,
+        peerOnline.roomId || undefined
+      );
+    }
+    prevHistoryLenRef.current = gameState.history.length;
+
+    // Game end: winner changed from null
+    if (gameState.winner !== null && prevWinnerRef.current === null) {
+      const result: 'win' | 'loss' | 'draw' =
+        gameState.winner === 'TIE'
+          ? 'draw'
+          : gameState.gameMode === 'ai'
+          ? gameState.winner === 'X'
+            ? 'win'
+            : 'loss'
+          : 'win';
+      analytics.gameEnd(result, gameState.gameMode, gameState.history.length);
+    }
+    prevWinnerRef.current = gameState.winner;
+  }, [gameState.winner, gameState.history.length, gameState.gameMode, gameState.difficulty, peerOnline.roomId]);
 
   // Detect ?room=xxxx query param or initialRoomId on mount to join room
   useEffect(() => {
@@ -512,11 +544,12 @@ export function GameClient({ initialRoomId }: GameClientProps) {
     let targetRoom = peerOnline.roomId;
     if (!targetRoom) {
       targetRoom = await peerOnline.createRoom();
+      analytics.roomCreated(targetRoom);
     }
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ttt.temr.dev';
     const roomUrl = `${origin}/?room=${targetRoom}`;
 
-    analytics.click('challenge_friend', 'growth');
+    analytics.buttonClick('challenge_a_friend', { roomId: targetRoom });
 
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
@@ -525,6 +558,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
           text: t.alerts.shareChallengeText,
           url: roomUrl,
         });
+        analytics.roomLinkShared('share', targetRoom);
         return;
       } catch {
         // User cancelled or share failed, fallback to modal
@@ -534,6 +568,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
     try {
       if (navigator.clipboard) {
         await navigator.clipboard.writeText(roomUrl);
+        analytics.roomLinkShared('copy', targetRoom);
       }
     } catch {}
 
@@ -636,11 +671,24 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         <span className="mx-2 opacity-40">·</span>
         <button
           type="button"
-          onClick={() => setIsRulesOpen(true)}
+          onClick={() => {
+            analytics.buttonClick('open_rules');
+            setIsRulesOpen(true);
+          }}
           className="hover:text-[var(--highlight-ink)] hairline-link cursor-pointer"
         >
           {t.common.rules}
         </button>
+        <span className="mx-2 opacity-40">·</span>
+        <a
+          href="https://temirlan.dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => analytics.outboundClick('https://temirlan.dev')}
+          className="hover:text-[var(--highlight-ink)] hairline-link cursor-pointer"
+        >
+          temirlan.dev
+        </a>
         <span className="mx-2 opacity-40">·</span>
         <Link
           href="/admin"

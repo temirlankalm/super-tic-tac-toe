@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import { X, Copy, Check, QrCode, Globe, LogIn, Share2 } from 'lucide-react';
 import { ConnectionStatus, OnlineRole } from '@/types/game';
 import { useTranslation } from '@/i18n/LanguageContext';
+import { analytics } from '@/lib/analytics/client';
 
 interface OnlineRoomModalProps {
   isOpen: boolean;
@@ -72,6 +73,7 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
           text: language === 'ru' ? 'Сыграй со мной в super tic-tac-toe!' : 'Join my game of Ultimate Tic-Tac-Toe!',
           url: roomUrl,
         });
+        analytics.roomLinkShared('share', roomId || undefined);
         setCopiedLink(true);
         setTimeout(() => setCopiedLink(false), 2000);
         return;
@@ -82,6 +84,7 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
 
     try {
       await navigator.clipboard.writeText(roomUrl);
+      analytics.roomLinkShared('copy', roomId || undefined);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);
     } catch {
@@ -94,6 +97,7 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
     if (!roomId) return;
     try {
       await navigator.clipboard.writeText(roomId);
+      analytics.buttonClick('copy_room_code', { roomId });
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2000);
     } catch {

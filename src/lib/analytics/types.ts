@@ -19,6 +19,8 @@ export interface VisitorEvent {
   device: DeviceType;
   browser: string;
   os: string;
+  language: string;
+  isReturning?: boolean;
   referrer?: string;
   path: string;
 }
@@ -34,7 +36,7 @@ export interface CountryStat {
 }
 
 export interface TimePoint {
-  time: string; // e.g. "14:00" or "2026-11-23"
+  time: string; // e.g. "14:00" or "11.23"
   label: string;
   count: number;
   uniques: number;
@@ -56,17 +58,75 @@ export interface FeatureStats {
   sectorsClicked: number[]; // 9 sectors (0..8)
 }
 
+export interface PeriodStats {
+  visits: number;
+  uniques: number;
+  bots: number;
+}
+
+export interface FunnelStats {
+  visits: number;
+  gameStarts: number;
+  gameFinishes: number;
+  roomsOrShares: number;
+}
+
+export interface GameBehaviorStats {
+  startsByMode: Record<string, number>;
+  completionRate: number; // 0 to 100 percentage
+  totalStarts: number;
+  totalFinishes: number;
+  averageSessionSeconds: number;
+}
+
+export interface ReferrerCategoryStat {
+  category: 'Direct' | 'Search' | 'Social' | 'Reddit' | 'Other';
+  count: number;
+  percentage: number;
+  sources: { name: string; count: number }[];
+}
+
 export interface AnalyticsSummary {
+  // Visitors & Periods
+  visitorsNow: number; // active in last 5 min
+  today: PeriodStats;
+  last7d: PeriodStats;
+  last30d: PeriodStats;
   totalVisits: number;
   uniqueVisitors: number;
   totalBots: number;
   botPercentage: number;
-  topReferrers: { referrer: string; count: number }[];
-  devices: { device: DeviceType; count: number; percentage: number }[];
+
+  // Breakdown
+  humansVsBots: {
+    humanVisits: number;
+    humanUniques: number;
+    botVisits: number;
+    botUniques: number;
+    botPercentage: number;
+  };
+  returningVsNew: {
+    returning: number;
+    newVisitors: number;
+    returningPercentage: number;
+  };
+
+  // Traffic & Geography
   countries: CountryStat[];
-  timeline: TimePoint[]; // hourly for last 24h
-  dailyTimeline: TimePoint[]; // daily for last 14-30d
+  topReferrers: { referrer: string; count: number }[];
+  referrersCategorized: ReferrerCategoryStat[];
+  devices: { device: DeviceType; count: number; percentage: number }[];
+
+  // Behavior & Funnel
+  gameBehavior: GameBehaviorStats;
+  funnel: FunnelStats;
+  buttonClicks: ClickStat[];
   clickHeatmap: ClickStat[];
   featureStats: FeatureStats;
+
+  // Timelines & Events
+  timeline: TimePoint[]; // hourly for last 24h
+  dailyTimeline: TimePoint[]; // daily for last 14-30d
   recentEvents: VisitorEvent[];
+  botBreakdown: { name: string; count: number }[];
 }
