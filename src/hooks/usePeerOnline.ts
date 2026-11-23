@@ -32,19 +32,13 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
   const [myDrawOffered, setMyDrawOffered] = useState(false);
   const [drawDeclinedNotice, setDrawDeclinedNotice] = useState(false);
 
-  // Quick match & disconnect states
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchElapsed, setSearchElapsed] = useState(0);
-  const [searchTimeoutReached, setSearchTimeoutReached] = useState(false);
+  // Disconnect grace state
   const [disconnectGraceSeconds, setDisconnectGraceSeconds] = useState<number | null>(null);
 
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
   const connectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const searchPollTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const searchSecondsTimerRef = useRef<NodeJS.Timeout | null>(null);
   const disconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const localPlayerIdRef = useRef<string | null>(null);
 
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -63,14 +57,6 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     if (connectTimeoutRef.current) {
       clearTimeout(connectTimeoutRef.current);
       connectTimeoutRef.current = null;
-    }
-    if (searchPollTimerRef.current) {
-      clearInterval(searchPollTimerRef.current);
-      searchPollTimerRef.current = null;
-    }
-    if (searchSecondsTimerRef.current) {
-      clearInterval(searchSecondsTimerRef.current);
-      searchSecondsTimerRef.current = null;
     }
     clearDisconnectGrace();
 
@@ -95,9 +81,6 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     setDrawOfferedByOpponent(false);
     setMyDrawOffered(false);
     setDrawDeclinedNotice(false);
-    setIsSearching(false);
-    setSearchElapsed(0);
-    setSearchTimeoutReached(false);
   }, [clearDisconnectGrace]);
 
   // Start 30s disconnect grace period
@@ -141,15 +124,6 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
         }
         clearDisconnectGrace();
         setStatus('connected');
-        setIsSearching(false);
-        if (searchPollTimerRef.current) {
-          clearInterval(searchPollTimerRef.current);
-          searchPollTimerRef.current = null;
-        }
-        if (searchSecondsTimerRef.current) {
-          clearInterval(searchSecondsTimerRef.current);
-          searchSecondsTimerRef.current = null;
-        }
         optionsRef.current?.onOpponentReconnected?.();
         optionsRef.current?.onConnected?.();
       });
@@ -312,160 +286,6 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     [cleanup, attachConnectionHandlers]
   );
 
-  // Quick match search & lobby pairing
-  const startQuickMatch = useCallback(async () => {
-    cleanup();
-    setIsSearching(true);
-    setStatus('searching');
-    setSearchElapsed(0);
-    setSearchTimeoutReached(false);
-
-    const playerId = 'p_' + Math.random().toString(36).substring(2, 9);
-    localPlayerIdRef.current = playerId;
-
-    const tempRoomId = Math.random().toString(36).substring(2, 8).toLowerCase();
-    setRoomId(tempRoomId);
-
-    const { Peer } = await import('peerjs');
-    const peerId = `sttt-${tempRoomId}`;
-    const peer = new Peer(peerId, { debug: 1 });
-    peerRef.current = peer;
-    setRole('host');
-
-    peer.on('connection', (incomingConn) => {
-      if (connRef.current && connRef.current.open) {
-        incomingConn.close();
-        return;
-      }
-      setIsSearching(false);
-      if (searchPollTimerRef.current) {
-        clearInterval(searchPollTimerRef.current);
-        searchPollTimerRef.current = null;
-      }
-      if (searchSecondsTimerRef.current) {
-        clearInterval(searchSecondsTimerRef.current);
-        searchSecondsTimerRef.current = null;
-      }
-      attachConnectionHandlers(incomingConn);
-    });
-
-    peer.on('error', (err) => {
-      console.warn('Quick match peer status notice:', err);
-    });
-
-    let elapsed = 0;
-    searchSecondsTimerRef.current = setInterval(() => {
-      elapsed += 1;
-      setSearchElapsed(elapsed);
-      if (elapsed >= 18) {
-        setSearchTimeoutReached(true);
-      }
-    }, 1000);
-
-    try {
-      const res = await fetch('/api/matchmake', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'join',
-          playerId,
-          roomId: tempRoomId,
-        }),
-      });
-      const data = await res.json();
-
-      if (data.status === 'matched') {
-        if (data.myPlayer) {
-          setMyPlayer(data.myPlayer);
-        }
-        if (data.role) {
-          setRole(data.role);
-        }
-        if (data.role === 'guest') {
-          if (peerRef.current) {
-            peerRef.current.destroy();
-            peerRef.current = null;
-          }
-          await joinRoom(data.roomId, 'guest', data.myPlayer);
-        }
-        setIsSearching(false);
-        if (searchPollTimerRef.current) {
-          clearInterval(searchPollTimerRef.current);
-          searchPollTimerRef.current = null;
-        }
-        if (searchSecondsTimerRef.current) {
-          clearInterval(searchSecondsTimerRef.current);
-          searchSecondsTimerRef.current = null;
-        }
-        return;
-      }
-    } catch (err) {
-      console.error('Matchmaking join error:', err);
-    }
-
-    // Polling interval if waiting
-    searchPollTimerRef.current = setInterval(async () => {
-      try {
-        const res = await fetch('/api/matchmake', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'poll', playerId }),
-        });
-        const data = await res.json();
-        if (data.status === 'matched') {
-          if (data.myPlayer) {
-            setMyPlayer(data.myPlayer);
-          }
-          if (data.role) {
-            setRole(data.role);
-          }
-          if (searchPollTimerRef.current) {
-            clearInterval(searchPollTimerRef.current);
-            searchPollTimerRef.current = null;
-          }
-          if (searchSecondsTimerRef.current) {
-            clearInterval(searchSecondsTimerRef.current);
-            searchSecondsTimerRef.current = null;
-          }
-          setIsSearching(false);
-
-          if (data.role === 'guest') {
-            if (peerRef.current) {
-              peerRef.current.destroy();
-              peerRef.current = null;
-            }
-            await joinRoom(data.roomId, 'guest', data.myPlayer);
-          }
-        }
-      } catch (err) {
-        console.error('Matchmaking poll error:', err);
-      }
-    }, 1200);
-  }, [cleanup, attachConnectionHandlers, joinRoom]);
-
-  // Cancel quick match search
-  const cancelQuickMatch = useCallback(async () => {
-    if (searchPollTimerRef.current) {
-      clearInterval(searchPollTimerRef.current);
-      searchPollTimerRef.current = null;
-    }
-    if (searchSecondsTimerRef.current) {
-      clearInterval(searchSecondsTimerRef.current);
-      searchSecondsTimerRef.current = null;
-    }
-    const pid = localPlayerIdRef.current;
-    if (pid) {
-      try {
-        fetch('/api/matchmake', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'leave', playerId: pid }),
-        }).catch(() => {});
-      } catch {}
-    }
-    cleanup();
-  }, [cleanup]);
-
   // Request rematch
   const requestRematch = useCallback(() => {
     setMyRematchSent(true);
@@ -537,15 +357,10 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     drawOfferedByOpponent,
     myDrawOffered,
     drawDeclinedNotice,
-    isSearching,
-    searchElapsed,
-    searchTimeoutReached,
     disconnectGraceSeconds,
     createRoom,
     joinRoom,
     leaveRoom,
-    startQuickMatch,
-    cancelQuickMatch,
     sendMessage,
     requestRematch,
     acceptRematch,

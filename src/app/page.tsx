@@ -373,27 +373,6 @@ export default function Home() {
     }
   };
 
-  // Quick Match Handlers
-  const handleStartQuickMatch = () => {
-    setGameMode('online');
-    setTimeControl(180); // Default 3m blitz for quick play
-    resetClocks(180);
-    peerOnline.startQuickMatch();
-    haptic('tap');
-  };
-
-  const handleCancelQuickMatch = () => {
-    peerOnline.cancelQuickMatch();
-    haptic('tap');
-  };
-
-  const handleQuickMatchPlayAi = () => {
-    peerOnline.cancelQuickMatch();
-    setGameMode('ai');
-    resetClocks(timeControl);
-    haptic('tap');
-  };
-
   // Daily Challenge Start from Modal
   const handleStartDailyMatch = () => {
     setGameMode('daily');
@@ -534,9 +513,6 @@ export default function Home() {
         dailyStreak={dailyStats.currentStreak}
         activeModifiersCount={activeModifiersCount}
         disconnectGraceSeconds={peerOnline.disconnectGraceSeconds}
-        isQuickSearching={peerOnline.isSearching}
-        quickSearchElapsed={peerOnline.searchElapsed}
-        quickSearchTimeoutReached={peerOnline.searchTimeoutReached}
         onToggleMode={handleToggleMode}
         onSetDifficulty={setDifficulty}
         onSetTimeControl={setTimeControl}
@@ -548,9 +524,6 @@ export default function Home() {
         onDeclineDraw={handleDeclineDraw}
         onOpenDailyModal={() => setIsDailyModalOpen(true)}
         onOpenSettingsModal={() => setIsSettingsOpen(true)}
-        onStartQuickMatch={handleStartQuickMatch}
-        onCancelQuickMatch={handleCancelQuickMatch}
-        onQuickMatchPlayAi={handleQuickMatchPlayAi}
       />
 
       {/* Chess Clock Bar (visible when timer is active) */}

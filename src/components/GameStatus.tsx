@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { HelpCircle, Bot, User, Sun, Moon, Clock, Volume2, VolumeX, Globe, Flame, Sliders, Zap } from 'lucide-react';
+import { HelpCircle, Bot, User, Sun, Moon, Clock, Volume2, VolumeX, Globe, Flame, Sliders } from 'lucide-react';
 import { AiDifficulty, ConnectionStatus, GameState, OnlineRole, Player, TimeControl } from '@/types/game';
 import { HandDrawnLogo } from './hand-drawn/HandDrawnLogo';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
@@ -21,9 +21,6 @@ interface GameStatusProps {
   dailyStreak?: number;
   activeModifiersCount?: number;
   disconnectGraceSeconds?: number | null;
-  isQuickSearching?: boolean;
-  quickSearchElapsed?: number;
-  quickSearchTimeoutReached?: boolean;
   onToggleMode: () => void;
   onSetDifficulty: (difficulty: AiDifficulty) => void;
   onSetTimeControl: (tc: TimeControl) => void;
@@ -35,9 +32,6 @@ interface GameStatusProps {
   onDeclineDraw?: () => void;
   onOpenDailyModal?: () => void;
   onOpenSettingsModal?: () => void;
-  onStartQuickMatch?: () => void;
-  onCancelQuickMatch?: () => void;
-  onQuickMatchPlayAi?: () => void;
 }
 
 const timeLabels: Record<TimeControl, string> = {
@@ -75,9 +69,6 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   dailyStreak,
   activeModifiersCount,
   disconnectGraceSeconds,
-  isQuickSearching,
-  quickSearchElapsed = 0,
-  quickSearchTimeoutReached = false,
   onToggleMode,
   onSetDifficulty,
   onSetTimeControl,
@@ -89,9 +80,6 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   onDeclineDraw,
   onOpenDailyModal,
   onOpenSettingsModal,
-  onStartQuickMatch,
-  onCancelQuickMatch,
-  onQuickMatchPlayAi,
 }) => {
   const {
     currentPlayer,
@@ -103,14 +91,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   } = gameState;
 
   const [isTimeMenuOpen, setIsTimeMenuOpen] = useState(false);
-  const [isTimeoutPromptDismissed, setIsTimeoutPromptDismissed] = useState(false);
   const timeMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isQuickSearching) {
-      setIsTimeoutPromptDismissed(false);
-    }
-  }, [isQuickSearching]);
 
   // Close time menu on outside click
   useEffect(() => {
@@ -327,25 +308,13 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             </div>
           )}
 
-          {/* Quick Match & Room Trigger (when in online mode) */}
+          {/* Room Trigger (when in online mode) */}
           {gameMode === 'online' && (
             <div className="flex items-center gap-1.5">
-              {!isQuickSearching && connectionStatus !== 'connected' && onStartQuickMatch && (
-                <button
-                  type="button"
-                  onClick={onStartQuickMatch}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-[var(--highlight-ink)] text-[var(--bg)] hover:opacity-90 transition-all cursor-pointer font-sans lowercase text-xs font-medium shadow-xs"
-                  title="найти случайного соперника онлайн"
-                >
-                  <Zap size={12} />
-                  <span>найти игру</span>
-                </button>
-              )}
-
               <button
                 type="button"
                 onClick={onOpenOnlineModal}
-                className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-xs"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-xs"
                 title="открыть комнату / пригласить друга"
               >
                 <span
@@ -368,54 +337,13 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                     ? 'вход…'
                     : roomId
                     ? `#${roomId}`
-                    : 'комната'}
+                    : 'код комнаты'}
                 </span>
               </button>
             </div>
           )}
         </div>
       </div>
-
-      {/* Quick Match Searching Banner */}
-      {isQuickSearching && (
-        <div className="pt-2">
-          <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--line)]/25 border border-[var(--line-strong)] text-xs w-full animate-fade-up">
-            <div className="flex items-center gap-2 text-[var(--highlight-ink)] lowercase">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-              <span>поиск соперника… ({quickSearchElapsed}с)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              {quickSearchTimeoutReached && !isTimeoutPromptDismissed && onQuickMatchPlayAi && (
-                <>
-                  <button
-                    type="button"
-                    onClick={onQuickMatchPlayAi}
-                    className="px-2 py-0.5 rounded bg-[var(--highlight-ink)] text-[var(--bg)] font-medium lowercase text-[11px] hover:opacity-90 transition-opacity cursor-pointer"
-                  >
-                    сыграть с ии
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsTimeoutPromptDismissed(true)}
-                    className="px-2 py-0.5 rounded border border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] lowercase text-[11px] transition-colors cursor-pointer"
-                  >
-                    ждать дальше
-                  </button>
-                </>
-              )}
-              {onCancelQuickMatch && (
-                <button
-                  type="button"
-                  onClick={onCancelQuickMatch}
-                  className="px-2 py-0.5 rounded border border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] lowercase text-[11px] transition-colors cursor-pointer"
-                >
-                  отмена
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Disconnect Grace Period Countdown Banner */}
       {typeof disconnectGraceSeconds === 'number' && disconnectGraceSeconds > 0 && (
