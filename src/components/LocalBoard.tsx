@@ -14,6 +14,11 @@ interface LocalBoardProps {
   isActive: boolean;
   isGlobalWinningBoard: boolean;
   isFogged?: boolean;
+  fadingInk?: boolean;
+  playerMoveHistory?: {
+    X: { boardIdx: number; cellIdx: number }[];
+    O: { boardIdx: number; cellIdx: number }[];
+  };
   lastMove: Move | null;
   onCellClick: (boardIdx: number, cellIdx: number) => void;
   disabled: boolean;
@@ -27,6 +32,8 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
   isActive,
   isGlobalWinningBoard,
   isFogged,
+  fadingInk,
+  playerMoveHistory,
   lastMove,
   onCellClick,
   disabled,
@@ -37,7 +44,7 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
     <div
       className={`relative w-full h-full p-1 sm:p-2.5 transition-colors duration-200 flex flex-col justify-center items-center ${
         isActive && !isResolved
-          ? 'bg-[var(--active-board-bg)] ring-1.5 ring-[var(--active-board-border)] shadow-xs'
+          ? 'bg-[var(--active-board-bg)] ring-2 ring-[var(--active-board-border)] shadow-xs'
           : 'bg-transparent'
       } ${
         isGlobalWinningBoard
@@ -73,6 +80,28 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
             const isWinCell =
               winningLine !== null && winningLine.includes(cellIdx);
 
+            let cellOpacity: number | undefined = undefined;
+            let isExpiringSoon = false;
+
+            if (fadingInk && cellValue && playerMoveHistory) {
+              const history = playerMoveHistory[cellValue];
+              if (history) {
+                const moveIndex = history.findIndex(
+                  (m) => m.boardIdx === boardIdx && m.cellIdx === cellIdx
+                );
+                if (moveIndex !== -1) {
+                  const age = history.length - 1 - moveIndex;
+                  if (age === 0) cellOpacity = 1.0;
+                  else if (age === 1) cellOpacity = 0.75;
+                  else if (age === 2) cellOpacity = 0.50;
+                  else if (age >= 3) {
+                    cellOpacity = 0.28;
+                    isExpiringSoon = true;
+                  }
+                }
+              }
+            }
+
             return (
               <div
                 key={cellIdx}
@@ -83,6 +112,8 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
                   isPlayable={isPlayable}
                   isLastMove={isLast}
                   isWinningCell={isWinCell}
+                  opacity={cellOpacity}
+                  isExpiringSoon={isExpiringSoon}
                   onClick={() => onCellClick(boardIdx, cellIdx)}
                   boardIdx={boardIdx}
                   cellIdx={cellIdx}
@@ -117,10 +148,10 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
 
         {/* Fog of War Overlay */}
         {isFogged && !isResolved && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--bg)]/92 backdrop-blur-[2px] transition-all duration-300 pointer-events-none select-none rounded-[2px]">
-            <div className="flex flex-col items-center gap-1 opacity-35">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--bg)]/50 backdrop-blur-[1.5px] transition-all duration-300 pointer-events-none select-none rounded-[2px]">
+            <div className="flex flex-col items-center gap-1 opacity-25">
               <div className="w-1.5 h-1.5 rounded-full border border-[var(--ink-mute)]" />
-              <span className="text-[9px] uppercase tracking-widest text-[var(--ink-mute)] font-mono">
+              <span className="text-[8.5px] uppercase tracking-widest text-[var(--ink-mute)] font-mono">
                 fog
               </span>
             </div>

@@ -125,6 +125,10 @@ export default function Home() {
       playGameVictory(true);
       haptic('sector');
     },
+    onOpponentDisconnected: () => {
+      playClock();
+      haptic('tap');
+    },
     onOpponentForfeit: () => {
       // 30s disconnect grace period expired: award technical victory to remaining player
       const myPlayer: Player = peerOnline.role === 'host' ? 'X' : 'O';
@@ -280,6 +284,16 @@ export default function Home() {
   };
 
   const handleToggleMode = () => {
+    if (
+      gameState.gameMode === 'daily' &&
+      gameState.history.length > 0 &&
+      gameState.winner === null
+    ) {
+      if (typeof window !== 'undefined' && !window.confirm('выйти из игры дня? текущая партия будет прервана.')) {
+        return;
+      }
+    }
+
     const nextMode =
       gameState.gameMode === 'ai'
         ? 'pvp'
@@ -434,7 +448,7 @@ export default function Home() {
   const activeModifiersCount = Object.values(gameState.modifiers || {}).filter(Boolean).length;
 
   return (
-    <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 max-w-xl mx-auto w-full">
+    <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 max-w-xl mx-auto w-full pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       {/* Top Status & Game Setup Bar */}
       <GameStatus
         gameState={gameState}

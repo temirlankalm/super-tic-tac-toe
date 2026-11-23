@@ -12,6 +12,8 @@ interface CellProps {
   onClick: () => void;
   boardIdx: number;
   cellIdx: number;
+  opacity?: number;
+  isExpiringSoon?: boolean;
 }
 
 export const Cell: React.FC<CellProps> = ({
@@ -22,6 +24,8 @@ export const Cell: React.FC<CellProps> = ({
   onClick,
   boardIdx,
   cellIdx,
+  opacity,
+  isExpiringSoon,
 }) => {
   // Deterministic variation (0, 1, or 2)
   const variant = (boardIdx * 7 + cellIdx * 3) % 3;
@@ -39,23 +43,41 @@ export const Cell: React.FC<CellProps> = ({
       }`}
     >
       {value === 'X' && (
-        <div className="w-full h-full flex items-center justify-center animate-fade-up">
+        <div
+          className="w-full h-full flex items-center justify-center animate-fade-up transition-opacity duration-300 relative"
+          style={opacity !== undefined ? { opacity } : undefined}
+        >
           <HandDrawnX
             variant={variant}
             className={`w-[78%] h-[78%] ${
               isWinningCell ? 'text-[var(--highlight-ink)]' : 'text-[var(--ink)]'
             }`}
           />
+          {isExpiringSoon && (
+            <span
+              className="absolute top-0.5 right-0.5 w-1 h-1 rounded-full bg-rose-400/80 animate-pulse pointer-events-none"
+              title="знак исчезнет на следующем ходу"
+            />
+          )}
         </div>
       )}
       {value === 'O' && (
-        <div className="w-full h-full flex items-center justify-center animate-fade-up">
+        <div
+          className="w-full h-full flex items-center justify-center animate-fade-up transition-opacity duration-300 relative"
+          style={opacity !== undefined ? { opacity } : undefined}
+        >
           <HandDrawnO
             variant={variant}
             className={`w-[78%] h-[78%] ${
               isWinningCell ? 'text-[var(--highlight-ink)]' : 'text-[var(--ink)]'
             }`}
           />
+          {isExpiringSoon && (
+            <span
+              className="absolute top-0.5 right-0.5 w-1 h-1 rounded-full bg-rose-400/80 animate-pulse pointer-events-none"
+              title="знак исчезнет на следующем ходу"
+            />
+          )}
         </div>
       )}
 

@@ -164,9 +164,13 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
 
   handleCellClickRef.current = handleCellClick;
 
-  // Speed Blitz 5-second countdown loop
+  // Speed Blitz 5-second countdown loop: only activates once the game has started (history.length > 0)
   useEffect(() => {
-    if (!gameState.modifiers?.speedBlitz || gameState.winner !== null) {
+    if (
+      !gameState.modifiers?.speedBlitz ||
+      gameState.winner !== null ||
+      gameState.history.length === 0
+    ) {
       setSpeedBlitzTime(5.0);
       return;
     }
@@ -192,7 +196,12 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
     }, 100);
 
     return () => clearInterval(interval);
-  }, [gameState.currentPlayer, gameState.modifiers?.speedBlitz, gameState.winner]);
+  }, [
+    gameState.currentPlayer,
+    gameState.modifiers?.speedBlitz,
+    gameState.winner,
+    gameState.history.length,
+  ]);
 
   // Sync state received from host on init
   const syncState = useCallback((partial: Partial<GameState>) => {

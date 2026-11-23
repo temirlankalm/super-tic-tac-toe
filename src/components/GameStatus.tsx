@@ -101,7 +101,14 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   } = gameState;
 
   const [isTimeMenuOpen, setIsTimeMenuOpen] = useState(false);
+  const [isTimeoutPromptDismissed, setIsTimeoutPromptDismissed] = useState(false);
   const timeMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isQuickSearching) {
+      setIsTimeoutPromptDismissed(false);
+    }
+  }, [isQuickSearching]);
 
   // Close time menu on outside click
   useEffect(() => {
@@ -120,9 +127,9 @@ export const GameStatus: React.FC<GameStatusProps> = ({
 
   return (
     <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-3">
-      {/* Top Bar: Brand & Game Configurations */}
-      <div className="flex items-center justify-between pb-2.5 border-b border-[var(--line)] gap-2">
-        {/* Brand, Rules & Quick Tools */}
+      {/* Row 1: Brand Logo & Global App Utilities */}
+      <div className="flex items-center justify-between pb-2 border-b border-[var(--line)] gap-2">
+        {/* Left: Brand, Daily Streak & Modifiers */}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5">
             <HandDrawnLogo className="h-6 w-auto text-[var(--highlight-ink)]" />
@@ -130,15 +137,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
               · super
             </span>
           </div>
-          <button
-            type="button"
-            onClick={onOpenRules}
-            aria-label="Правила игры"
-            className="p-1 text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
-            title="правила игры"
-          >
-            <HelpCircle size={15} />
-          </button>
+
           {onOpenDailyModal && (
             <button
               type="button"
@@ -150,6 +149,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
               <span>{dailyStreak && dailyStreak > 0 ? `${dailyStreak}` : 'день'}</span>
             </button>
           )}
+
           {onOpenSettingsModal && (
             <button
               type="button"
@@ -171,106 +171,8 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           )}
         </div>
 
-        {/* Configurations Bar */}
+        {/* Right: Clock, Sound, Theme, Rules */}
         <div className="flex items-center gap-1.5 text-xs">
-          {/* Mode toggle */}
-          <button
-            type="button"
-            onClick={onToggleMode}
-            className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase"
-            title="Переключить режим (против ии / вдвоем / онлайн)"
-          >
-            {gameMode === 'ai' ? (
-              <>
-                <Bot size={13} />
-                <span>ии</span>
-              </>
-            ) : gameMode === 'pvp' ? (
-              <>
-                <User size={13} />
-                <span>2p</span>
-              </>
-            ) : (
-              <>
-                <Globe size={13} />
-                <span>онлайн</span>
-              </>
-            )}
-          </button>
-
-          {/* Quick Match Button */}
-          {gameMode === 'online' && !isQuickSearching && connectionStatus !== 'connected' && onStartQuickMatch && (
-            <button
-              type="button"
-              onClick={onStartQuickMatch}
-              className="flex items-center gap-1 px-2 py-1 rounded-md bg-[var(--highlight-ink)] text-[var(--bg)] hover:opacity-90 transition-all cursor-pointer font-sans lowercase text-xs font-medium"
-              title="найти случайного соперника онлайн"
-            >
-              <Zap size={12} />
-              <span>найти игру</span>
-            </button>
-          )}
-
-          {/* Online Room Trigger Button */}
-          {gameMode === 'online' && (
-            <button
-              type="button"
-              onClick={onOpenOnlineModal}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-xs"
-              title="открыть комнату / пригласить друга"
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  connectionStatus === 'connected'
-                    ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50'
-                    : connectionStatus === 'waiting' || connectionStatus === 'connecting'
-                    ? 'bg-amber-500 animate-pulse'
-                    : connectionStatus === 'disconnected' || connectionStatus === 'error'
-                    ? 'bg-rose-500'
-                    : 'bg-zinc-400'
-                }`}
-              />
-              <span>
-                {connectionStatus === 'connected'
-                  ? 'в сети'
-                  : connectionStatus === 'waiting'
-                  ? 'ожидание…'
-                  : connectionStatus === 'connecting'
-                  ? 'вход…'
-                  : roomId
-                  ? `#${roomId}`
-                  : 'комната'}
-              </span>
-            </button>
-          )}
-
-          {/* Difficulty selector (when in vs ai mode) */}
-          {gameMode === 'ai' && (
-            <div className="flex items-center rounded-md border border-[var(--line)] p-0.5 text-[11px] font-sans lowercase">
-              {(
-                [
-                  { lvl: 'easy', label: 'легк' },
-                  { lvl: 'medium', label: 'сред' },
-                  { lvl: 'hard', label: 'слож' },
-                  { lvl: 'qnet', label: 'qnet' },
-                ] as const
-              ).map(({ lvl, label }) => (
-                <button
-                  key={lvl}
-                  type="button"
-                  onClick={() => onSetDifficulty(lvl)}
-                  className={`px-1.5 py-0.5 rounded-[4px] transition-all cursor-pointer ${
-                    difficulty === lvl
-                      ? 'bg-[var(--line-strong)] text-[var(--highlight-ink)] font-medium'
-                      : 'text-[var(--ink-mute)] hover:text-[var(--ink-soft)]'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-
           {/* Chess Clock Timer Selector */}
           <div className="relative" ref={timeMenuRef}>
             <button
@@ -344,6 +246,131 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           >
             {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
           </button>
+
+          {/* Rules button */}
+          <button
+            type="button"
+            onClick={onOpenRules}
+            aria-label="Правила игры"
+            className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+            title="правила игры"
+          >
+            <HelpCircle size={13} />
+          </button>
+        </div>
+      </div>
+
+      {/* Row 2: Mode Navigation & Active Mode Controls */}
+      <div className="flex items-center justify-between pt-2 pb-1 gap-2 text-xs">
+        {/* Mode Switcher */}
+        <button
+          type="button"
+          onClick={onToggleMode}
+          className={`flex items-center gap-1.5 px-2 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] transition-all cursor-pointer font-sans lowercase text-xs ${
+            gameMode === 'daily'
+              ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 font-medium'
+              : 'text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
+          }`}
+          title="Переключить режим (против ии / вдвоем / онлайн)"
+        >
+          {gameMode === 'ai' ? (
+            <>
+              <Bot size={13} />
+              <span>ии</span>
+            </>
+          ) : gameMode === 'pvp' ? (
+            <>
+              <User size={13} />
+              <span>2p</span>
+            </>
+          ) : gameMode === 'daily' ? (
+            <>
+              <Flame size={13} className="fill-amber-500 text-amber-500" />
+              <span>челлендж дня</span>
+            </>
+          ) : (
+            <>
+              <Globe size={13} />
+              <span>онлайн</span>
+            </>
+          )}
+        </button>
+
+        {/* Right side: Controls for current active mode */}
+        <div className="flex items-center gap-1.5 text-xs">
+          {/* Difficulty selector (when in vs ai mode) */}
+          {gameMode === 'ai' && (
+            <div className="flex items-center rounded-md border border-[var(--line)] p-0.5 text-[11px] font-sans lowercase">
+              {(
+                [
+                  { lvl: 'easy', label: 'легк' },
+                  { lvl: 'medium', label: 'сред' },
+                  { lvl: 'hard', label: 'слож' },
+                  { lvl: 'qnet', label: 'qnet' },
+                ] as const
+              ).map(({ lvl, label }) => (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => onSetDifficulty(lvl)}
+                  className={`px-1.5 py-0.5 rounded-[4px] transition-all cursor-pointer ${
+                    difficulty === lvl
+                      ? 'bg-[var(--line-strong)] text-[var(--highlight-ink)] font-medium'
+                      : 'text-[var(--ink-mute)] hover:text-[var(--ink-soft)]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Quick Match & Room Trigger (when in online mode) */}
+          {gameMode === 'online' && (
+            <div className="flex items-center gap-1.5">
+              {!isQuickSearching && connectionStatus !== 'connected' && onStartQuickMatch && (
+                <button
+                  type="button"
+                  onClick={onStartQuickMatch}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-[var(--highlight-ink)] text-[var(--bg)] hover:opacity-90 transition-all cursor-pointer font-sans lowercase text-xs font-medium shadow-xs"
+                  title="найти случайного соперника онлайн"
+                >
+                  <Zap size={12} />
+                  <span>найти игру</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={onOpenOnlineModal}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-xs"
+                title="открыть комнату / пригласить друга"
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    connectionStatus === 'connected'
+                      ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50'
+                      : connectionStatus === 'waiting' || connectionStatus === 'connecting'
+                      ? 'bg-amber-500 animate-pulse'
+                      : connectionStatus === 'disconnected' || connectionStatus === 'error'
+                      ? 'bg-rose-500'
+                      : 'bg-zinc-400'
+                  }`}
+                />
+                <span>
+                  {connectionStatus === 'connected'
+                    ? 'в сети'
+                    : connectionStatus === 'waiting'
+                    ? 'ожидание…'
+                    : connectionStatus === 'connecting'
+                    ? 'вход…'
+                    : roomId
+                    ? `#${roomId}`
+                    : 'комната'}
+                </span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -356,14 +383,23 @@ export const GameStatus: React.FC<GameStatusProps> = ({
               <span>поиск соперника… ({quickSearchElapsed}с)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              {quickSearchTimeoutReached && onQuickMatchPlayAi && (
-                <button
-                  type="button"
-                  onClick={onQuickMatchPlayAi}
-                  className="px-2 py-0.5 rounded bg-[var(--highlight-ink)] text-[var(--bg)] font-medium lowercase text-[11px] hover:opacity-90 transition-opacity cursor-pointer"
-                >
-                  сыграть с ии
-                </button>
+              {quickSearchTimeoutReached && !isTimeoutPromptDismissed && onQuickMatchPlayAi && (
+                <>
+                  <button
+                    type="button"
+                    onClick={onQuickMatchPlayAi}
+                    className="px-2 py-0.5 rounded bg-[var(--highlight-ink)] text-[var(--bg)] font-medium lowercase text-[11px] hover:opacity-90 transition-opacity cursor-pointer"
+                  >
+                    сыграть с ии
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsTimeoutPromptDismissed(true)}
+                    className="px-2 py-0.5 rounded border border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] lowercase text-[11px] transition-colors cursor-pointer"
+                  >
+                    ждать дальше
+                  </button>
+                </>
               )}
               {onCancelQuickMatch && (
                 <button
