@@ -632,7 +632,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
 
       {/* Subtle Minimalist Footer */}
       <footer className="mt-5 md:mt-6 text-center text-xs text-[var(--ink-mute)] font-light tracking-wide lowercase">
-        <span>super tic-tac-toe</span>
+        <span>Tic³ · super tic-tac-toe</span>
         <span className="mx-2 opacity-40">·</span>
         <button
           type="button"

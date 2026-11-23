@@ -195,8 +195,8 @@ export const en: Translations = {
     confirmResignDaily: 'resign from the daily challenge? this will be recorded as a loss.',
     confirmLeaveDaily: 'leave the daily challenge? this will be recorded as a loss.',
     aiDeclineDraw: 'ai considers its position advantageous and declined the draw',
-    shareChallengeTitle: 't³ - Ultimate Tic-Tac-Toe',
-    shareChallengeText: 'Play Ultimate Tic-Tac-Toe with me!',
+    shareChallengeTitle: 'Tic³ - Ultimate Tic-Tac-Toe',
+    shareChallengeText: 'Play Ultimate Tic-Tac-Toe with me on Tic³!',
     shareChallengeCopied: 'room link copied to clipboard!',
   },
   cell: {

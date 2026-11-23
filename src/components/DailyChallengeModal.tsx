@@ -57,7 +57,7 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share({
-          title: `t³ · super #${challengeNum}`,
+          title: `Tic³ · super #${challengeNum}`,
           text: shareText,
         });
         setCopied(true);

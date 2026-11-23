@@ -68,7 +68,7 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: 't³ - Ultimate Tic-Tac-Toe',
+          title: 'Tic³ - Ultimate Tic-Tac-Toe',
           text: language === 'ru' ? 'Сыграй со мной в super tic-tac-toe!' : 'Join my game of Ultimate Tic-Tac-Toe!',
           url: roomUrl,
         });

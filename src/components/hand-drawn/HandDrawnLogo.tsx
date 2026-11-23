@@ -11,7 +11,8 @@ export const HandDrawnLogo: React.FC<LogoProps> = ({ className = 'h-6 w-auto' })
       className={className}
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="t³ logo"
+      role="img"
+      aria-label="Tic³ logo"
     >
       {/* Editorial serif lowercase t */}
       <path d="M 60 95 L 86 95 L 87 164 L 173 164 L 173 198 L 86 199 L 86 376 L 88 393 L 91 402 L 95 410 L 107 422 L 127 429 L 146 429 L 175 423 L 175 457 L 154 463 L 116 465 L 95 461 L 73 451 L 60 439 L 48 418 L 44 402 L 42 383 L 42 199 L 0 198 L 0 177 L 35 163 L 43 158 L 60 96 Z" />

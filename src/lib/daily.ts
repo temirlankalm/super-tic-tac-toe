@@ -244,7 +244,7 @@ export function generateShareText(
     ? `played in ${movesCount} moves · streak: ${streak}`
     : `партия сыграна (${movesCount} ходов) · стрик: ${streak}`;
 
-  return `ttt · super #${challengeNum}
+  return `Tic³ · super #${challengeNum}
 ${resultLine}
 ${rows.join('\n')}
 https://ttt.temr.dev`;

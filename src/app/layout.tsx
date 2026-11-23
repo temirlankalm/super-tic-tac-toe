@@ -24,12 +24,12 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://ttt.temr.dev'),
   title: {
-    default: 't³ - Ultimate Tic-Tac-Toe online',
-    template: '%s · t³',
+    default: 'Tic³ - Ultimate Tic-Tac-Toe online',
+    template: '%s · Tic³',
   },
   description:
     'Minimalist Ultimate Tic-Tac-Toe game online. Play against the neural engine qnet, challenge a friend via room code, or solve the daily challenge.',
-  applicationName: 't³ super tic-tac-toe',
+  applicationName: 'Tic³',
   authors: [{ name: 'Temirlan', url: 'https://temirlan.dev' }],
   creator: 'Temirlan',
   alternates: {
@@ -39,18 +39,18 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 't³ super tic-tac-toe',
+    title: 'Tic³',
   },
   icons: {
     icon: '/icon.svg',
     apple: '/icons/apple-touch-icon.png',
   },
   openGraph: {
-    title: 't³ - Ultimate Tic-Tac-Toe online',
+    title: 'Tic³ - Ultimate Tic-Tac-Toe online',
     description:
       'Play Ultimate Tic-Tac-Toe online against qnet AI, friends via room code, or tackle daily challenges.',
     url: 'https://ttt.temr.dev',
-    siteName: 't³ super tic-tac-toe',
+    siteName: 'Tic³',
     locale: 'en_US',
     type: 'website',
     images: [
@@ -58,13 +58,13 @@ export const metadata: Metadata = {
         url: '/og.png',
         width: 1200,
         height: 630,
-        alt: 't³ - Ultimate Tic-Tac-Toe online',
+        alt: 'Tic³ - Ultimate Tic-Tac-Toe online',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 't³ - Ultimate Tic-Tac-Toe online',
+    title: 'Tic³ - Ultimate Tic-Tac-Toe online',
     description:
       'Minimalist Ultimate Tic-Tac-Toe game online with AI engine, room codes, and daily challenge.',
     images: ['/og.png'],

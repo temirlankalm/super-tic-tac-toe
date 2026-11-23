@@ -11,32 +11,34 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const room = resolved?.room;
 
   if (room) {
-    const title = `Join game #${room} · t³ Ultimate Tic-Tac-Toe`;
-    const description = `Join my game of Ultimate Tic-Tac-Toe! Enter room #${room} and play in real time via peer-to-peer WebRTC.`;
+    const title = 'Join my Tic³ game';
+    const description = 'Click to play ultimate tic-tac-toe with me, no signup';
+    const roomUrl = `https://ttt.temr.dev/?room=${encodeURIComponent(room)}`;
+
     return {
       title,
       description,
       alternates: {
-        canonical: `https://ttt.temr.dev/?room=${encodeURIComponent(room)}`,
+        canonical: roomUrl,
       },
       openGraph: {
-        title: `Join my game of Ultimate Tic-Tac-Toe (#${room})`,
+        title,
         description,
-        url: `https://ttt.temr.dev/?room=${encodeURIComponent(room)}`,
-        siteName: 't³ super tic-tac-toe',
+        url: roomUrl,
+        siteName: 'Tic³',
         type: 'website',
         images: [
           {
             url: '/og.png',
             width: 1200,
             height: 630,
-            alt: `Join room #${room} on t³`,
+            alt: `Join room #${room} on Tic³`,
           },
         ],
       },
       twitter: {
         card: 'summary_large_image',
-        title: `Join my game of Ultimate Tic-Tac-Toe (#${room})`,
+        title,
         description,
         images: ['/og.png'],
       },
@@ -44,37 +46,56 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   }
 
   return {
-    title: 't³ - Ultimate Tic-Tac-Toe online',
+    title: 'Tic³ - Ultimate Tic-Tac-Toe online',
     description:
       'Minimalist Ultimate Tic-Tac-Toe game online. Play single-player against qnet AI, challenge a friend via room code, or solve the daily challenge.',
     alternates: {
       canonical: 'https://ttt.temr.dev',
     },
     openGraph: {
-      title: 't³ - Ultimate Tic-Tac-Toe online',
+      title: 'Tic³ - Ultimate Tic-Tac-Toe online',
       description:
         'Play Ultimate Tic-Tac-Toe online against qnet AI, friends via room code, or tackle daily challenges.',
       url: 'https://ttt.temr.dev',
-      siteName: 't³ super tic-tac-toe',
+      siteName: 'Tic³',
       type: 'website',
       images: [
         {
           url: '/og.png',
           width: 1200,
           height: 630,
-          alt: 't³ super tic-tac-toe',
+          alt: 'Tic³ - Ultimate Tic-Tac-Toe online',
         },
       ],
     },
     twitter: {
       card: 'summary_large_image',
-      title: 't³ - Ultimate Tic-Tac-Toe online',
+      title: 'Tic³ - Ultimate Tic-Tac-Toe online',
       description:
         'Minimalist Ultimate Tic-Tac-Toe game online with AI engine, room codes, and daily challenge.',
       images: ['/og.png'],
     },
   };
 }
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'VideoGame',
+  name: 'Tic³',
+  url: 'https://ttt.temr.dev',
+  genre: 'Board game',
+  browserRequirements: 'Requires JavaScript',
+  applicationCategory: 'Game',
+  operatingSystem: 'Any',
+  offers: {
+    '@type': 'Offer',
+    price: 0,
+    priceCurrency: 'USD',
+  },
+  description:
+    'Minimalist Ultimate Tic-Tac-Toe game online. Play against the neural engine qnet, challenge a friend via room code, or solve the daily challenge.',
+  inLanguage: ['en', 'ru'],
+};
 
 async function GamePageContent({ searchParams }: PageProps) {
   const resolved = await searchParams;
@@ -83,8 +104,14 @@ async function GamePageContent({ searchParams }: PageProps) {
 
 export default function Page(props: PageProps) {
   return (
-    <Suspense fallback={null}>
-      <GamePageContent {...props} />
-    </Suspense>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <Suspense fallback={null}>
+        <GamePageContent {...props} />
+      </Suspense>
+    </>
   );
 }

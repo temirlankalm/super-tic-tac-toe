@@ -142,10 +142,13 @@ export const GameStatus: React.FC<GameStatusProps> = ({
         {/* Left: Brand, Daily Streak & Modifiers */}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5">
-            <HandDrawnLogo className="h-6 w-auto text-[var(--highlight-ink)]" />
-            <span className="text-[11px] text-[var(--ink-mute)] font-light tracking-widest lowercase">
-              {t.common.brandTag}
-            </span>
+            <h1 className="flex items-center gap-1.5 font-normal">
+              <HandDrawnLogo className="h-6 w-auto text-[var(--highlight-ink)]" />
+              <span className="sr-only">Tic³</span>
+              <span className="text-[11px] text-[var(--ink-mute)] font-light tracking-widest lowercase">
+                {t.common.brandTag}
+              </span>
+            </h1>
           </div>
 
           {onOpenDailyModal && (

@@ -195,8 +195,8 @@ export const ru: Translations = {
     confirmResignDaily: 'сдаться в игре дня? партия будет засчитана как поражение.',
     confirmLeaveDaily: 'выйти из игры дня? партия будет засчитана как поражение.',
     aiDeclineDraw: 'ии считает свою позицию выгоднее и отклонил ничью',
-    shareChallengeTitle: 't³ - Ultimate Tic-Tac-Toe',
-    shareChallengeText: 'Сыграй со мной в super tic-tac-toe!',
+    shareChallengeTitle: 'Tic³ - Ultimate Tic-Tac-Toe',
+    shareChallengeText: 'Сыграй со мной в super tic-tac-toe на Tic³!',
     shareChallengeCopied: 'ссылка на комнату скопирована в буфер!',
   },
   cell: {
