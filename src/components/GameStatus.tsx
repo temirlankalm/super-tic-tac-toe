@@ -72,6 +72,7 @@ interface GameStatusProps {
   onOpenDailyModal?: () => void;
   onOpenSettingsModal?: () => void;
   onOpenNicknameModal?: () => void;
+  onLeaveRoom?: () => void;
 }
 
 const sectorKeys = [
@@ -125,6 +126,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   onOpenDailyModal,
   onOpenSettingsModal,
   onOpenNicknameModal,
+  onLeaveRoom,
 }) => {
   const { t, language, toggleLanguage } = useTranslation();
   const {
@@ -204,12 +206,12 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             <button
               type="button"
               onClick={onOpenNicknameModal}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-[11px] max-w-[70px] sm:max-w-[110px] truncate min-h-[32px] sm:min-h-0"
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans text-[11px] max-w-[90px] sm:max-w-[130px] truncate min-h-[32px] sm:min-h-0"
               title={t.header.nicknameTitle}
               aria-label={t.header.nicknameTitle}
             >
               <User size={12} className="shrink-0 text-[var(--ink-soft)]" />
-              <span className="truncate">{nickname || 'player'}</span>
+              <span className="truncate">{nickname || 'Player'}</span>
             </button>
           )}
 
@@ -361,7 +363,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
       </div>
 
       {/* Row 2: Mode Navigation & Active Mode Controls */}
-      <div className="flex items-center justify-between pt-2 pb-1 gap-2 text-xs">
+      <div className="flex flex-wrap items-center justify-between pt-2 pb-1 gap-2 text-xs">
         {/* Mode Selector Dropdown */}
         <div className="relative" ref={modeMenuRef}>
           <button
@@ -691,7 +693,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
         <div className="flex items-center gap-2">
           {winner === null ? (
             gameMode === 'online' && connectionStatus !== 'connected' ? (
-              <div className="flex items-center gap-2 animate-fade-up">
+              <div className="flex items-center gap-2 flex-wrap animate-fade-up">
                 {connectionStatus === 'waiting' && (
                   <button
                     type="button"
@@ -726,6 +728,15 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                       ? t.onlineModal.errorRoomFull
                       : t.onlineModal.errorConnectionFailed}
                   </span>
+                )}
+                {onLeaveRoom && (
+                  <button
+                    type="button"
+                    onClick={onLeaveRoom}
+                    className="px-2 py-0.5 rounded-md border border-[var(--line)] hover:border-rose-400 text-[11px] text-[var(--ink-soft)] hover:text-rose-500 transition-colors cursor-pointer lowercase"
+                  >
+                    {t.common.cancel}
+                  </button>
                 )}
               </div>
             ) : (
@@ -770,8 +781,15 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                         {t.status.yourTurn}
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 rounded-full bg-[var(--line)]/60 text-[var(--ink-soft)] text-[11px] lowercase">
-                        {opponentNickname ? `${opponentNickname} (${t.status.opponentTurn})` : t.status.opponentTurn}
+                      <span className="px-2 py-0.5 rounded-full bg-[var(--line)]/60 text-[var(--ink-soft)] text-[11px]">
+                        {opponentNickname ? (
+                          <>
+                            <span>{opponentNickname}</span>{' '}
+                            <span className="lowercase">({t.status.opponentTurn})</span>
+                          </>
+                        ) : (
+                          <span className="lowercase">{t.status.opponentTurn}</span>
+                        )}
                       </span>
                     )}
                     <span className="text-[10px] text-[var(--ink-mute)] font-sans lowercase">

@@ -68,16 +68,18 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
 
   const {
     nickname,
+    isLoaded: isNicknameLoaded,
     isFirstVisit,
     dismissFirstVisitHint,
     isModalOpen: isNicknameModalOpen,
     openModal: openNicknameModal,
     closeModal: closeNicknameModal,
     saveNickname,
+    adoptNickname,
     skipPrompt: skipNicknamePrompt,
   } = useNickname();
 
-  const elo = useElo(nickname);
+  const elo = useElo(nickname, isNicknameLoaded, adoptNickname);
 
   useEffect(() => {
     setDailyStats(getDailyStats());
@@ -175,6 +177,7 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
   const gameStartTimeRef = useRef<number>(Date.now());
   const recordedMatchIdRef = useRef<string | null>(null);
   const savedDifficultyRef = useRef<AiDifficulty | null>(null);
+  const previousModeRef = useRef<GameMode>('ai');
   const [showHowtoHint, setShowHowtoHint] = useState(false);
 
   // Handle sound & haptic response for every move
@@ -769,6 +772,11 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
       savedDifficultyRef.current = null;
     }
 
+    if (targetMode === 'online' && gameState.gameMode !== 'online') {
+      previousModeRef.current =
+        gameState.gameMode === 'daily' ? 'ai' : gameState.gameMode;
+    }
+
     setGameMode(targetMode);
     resetClocks();
     haptic('tap');
@@ -833,7 +841,8 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
 
   const handleLeaveRoom = () => {
     peerOnline.leaveRoom();
-    setGameMode('ai');
+    const restoreMode = previousModeRef.current === 'online' ? 'ai' : previousModeRef.current;
+    setGameMode(restoreMode);
     resetClocks();
     setIsOnlineModalOpen(false);
     if (typeof window !== 'undefined' && window.history.replaceState) {
@@ -1011,6 +1020,7 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
         onOpenDailyModal={() => { analytics.click("open_daily_modal", "modal"); setIsDailyModalOpen(true); }}
         onOpenSettingsModal={() => { analytics.click("open_settings_modal", "modal"); setIsSettingsOpen(true); }}
         onOpenNicknameModal={openNicknameModal}
+        onLeaveRoom={handleLeaveRoom}
       />
 
       {/* First visit nickname hint (Req 12) */}
@@ -1018,7 +1028,7 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
         <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-2 px-3 py-1.5 rounded-lg border border-[var(--line-strong)] bg-[var(--line)]/20 text-xs flex items-center justify-between animate-fade-up">
           <span className="text-[var(--ink-soft)] lowercase">
             {t.common.yourName}:{' '}
-            <strong className="text-[var(--highlight-ink)] font-medium font-sans">
+            <strong className="text-[var(--highlight-ink)] font-medium font-sans normal-case">
               {nickname}
             </strong>{' '}
             <button
@@ -1127,6 +1137,7 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
         wonByLine={gameState.globalWinningLine !== null}
         onlineRole={peerOnline.role}
         onlinePlayer={peerOnline.myPlayer}
+        connectionStatus={peerOnline.status}
         historyLength={gameState.history.length}
         isAiThinking={gameState.isAiThinking}
         canUndo={
@@ -1156,6 +1167,7 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
         onRequestRematch={handleRequestRematch}
         onAcceptRematch={handleAcceptRematch}
         onChallengeFriend={handleChallengeFriend}
+        onLeaveRoom={handleLeaveRoom}
       />
 
       {/* Subtle Minimalist Footer */}
@@ -1292,7 +1304,13 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
         theme={theme}
         myNickname={nickname}
         opponentNickname={peerOnline.opponentNickname}
-        onClose={() => setIsOnlineModalOpen(false)}
+        onClose={() => {
+          if (peerOnline.status !== 'connected') {
+            handleLeaveRoom();
+          } else {
+            setIsOnlineModalOpen(false);
+          }
+        }}
         onLeaveRoom={handleLeaveRoom}
         onCreateRoom={handleCreateRoom}
         onJoinRoom={handleJoinByCode}

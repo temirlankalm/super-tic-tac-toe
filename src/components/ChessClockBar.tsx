@@ -118,7 +118,7 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
                 isXActive ? 'opacity-100 text-[var(--highlight-ink)]' : 'opacity-60 text-[var(--ink)]'
               }`}
             />
-            <span className="text-xs truncate lowercase text-[var(--ink-soft)]">
+            <span className="text-xs truncate text-[var(--ink-soft)]">
               {playerXLabel}
             </span>
           </div>
@@ -158,7 +158,7 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
                 isOActive ? 'opacity-100 text-[var(--highlight-ink)]' : 'opacity-60 text-[var(--ink)]'
               }`}
             />
-            <span className="text-xs truncate lowercase text-[var(--ink-soft)]">
+            <span className="text-xs truncate text-[var(--ink-soft)]">
               {playerOLabel}
             </span>
           </div>

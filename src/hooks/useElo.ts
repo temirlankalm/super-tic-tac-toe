@@ -21,7 +21,11 @@ export function getOrCreatePlayerId(): string {
   }
 }
 
-export function useElo(nickname: string) {
+export function useElo(
+  nickname: string,
+  isNicknameLoaded: boolean = true,
+  onSyncServerNickname?: (serverNickname: string) => void
+) {
   const [playerId, setPlayerId] = useState<string>('');
   const [rating, setRating] = useState<number>(INITIAL_ELO);
   const [games, setGames] = useState<number>(0);
@@ -32,8 +36,10 @@ export function useElo(nickname: string) {
   const [isUpdating, setIsUpdating] = useState(false);
   const nicknameRef = useRef(nickname);
   nicknameRef.current = nickname;
+  const onSyncRef = useRef(onSyncServerNickname);
+  onSyncRef.current = onSyncServerNickname;
 
-  // Initialize playerId and fetch profile from server
+  // Initialize playerId and fetch profile from server once nickname is ready
   useEffect(() => {
     const pid = getOrCreatePlayerId();
     setPlayerId(pid);
@@ -48,24 +54,54 @@ export function useElo(nickname: string) {
       }
     } catch {}
 
-    // Fetch official server profile
-    if (pid) {
-      fetch(`/api/elo/profile?playerId=${encodeURIComponent(pid)}&nickname=${encodeURIComponent(nickname || 'Player')}`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data: PlayerProfile | null) => {
-          if (data) {
-            setRating(data.rating);
-            setGames(data.games);
-            setWins(data.wins);
-            setIsProvisional(data.isProvisional);
-            try {
-              localStorage.setItem(RATING_STORAGE_KEY, String(data.rating));
-            } catch {}
+    // Do not register profile on server before client auto-nickname has loaded from localStorage
+    if (!isNicknameLoaded || !nickname || !pid) return;
+
+    let cancelled = false;
+    fetch(
+      `/api/elo/profile?playerId=${encodeURIComponent(pid)}&nickname=${encodeURIComponent(nickname)}`,
+      { cache: 'no-store' }
+    )
+      .then((res) => (res.ok ? res.json() : null))
+      .then(async (data: PlayerProfile | null) => {
+        if (!data || cancelled) return;
+        let profile = data;
+
+        // Keep client nickname and server Elo profile strictly synchronized (single source of truth)
+        if (profile.nickname !== nickname) {
+          try {
+            const syncRes = await fetch('/api/elo/profile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ playerId: pid, nickname }),
+            });
+            const syncJson = await syncRes.json().catch(() => ({ ok: false }));
+            if (syncJson?.ok && syncJson?.player) {
+              profile = syncJson.player as PlayerProfile;
+            } else {
+              // Server nickname differed due to collision; adopt server's canonical name
+              onSyncRef.current?.(profile.nickname);
+            }
+          } catch {
+            // Ignore transient network errors
           }
-        })
-        .catch(() => {});
-    }
-  }, [nickname]);
+        }
+
+        if (cancelled) return;
+        setRating(profile.rating);
+        setGames(profile.games);
+        setWins(profile.wins);
+        setIsProvisional(profile.isProvisional);
+        try {
+          localStorage.setItem(RATING_STORAGE_KEY, String(profile.rating));
+        } catch {}
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nickname, isNicknameLoaded]);
 
   // Record an AI game result with server-side validation
   const recordAiGame = useCallback(

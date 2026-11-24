@@ -34,7 +34,7 @@ export const ru: Translations = {
   },
   header: {
     dailyTitle: 'челлендж дня и стрик',
-    dailyButton: 'день',
+    dailyButton: 'челлендж',
     modifiersButton: 'моды',
     modifiersTitle: 'аркадные модификаторы',
     clockTitle: 'шахматные часы',
@@ -84,9 +84,9 @@ export const ru: Translations = {
     },
   },
   difficulties: {
-    easy: 'легк',
-    medium: 'сред',
-    hard: 'слож',
+    easy: 'легко',
+    medium: 'средне',
+    hard: 'сложно',
     qnet: 'qnet',
   },
   status: {

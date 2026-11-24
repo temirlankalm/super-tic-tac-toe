@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { LeaderboardEntry, LeaderboardResponse } from '@/lib/elo/types';
 import { getOrCreatePlayerId } from '@/hooks/useElo';
+import { generateRandomNickname, sanitizeNickname } from '@/lib/nickname';
 import { useTranslation } from '@/i18n/LanguageContext';
 
 export function LeaderboardClient() {
@@ -49,7 +50,10 @@ export function LeaderboardClient() {
     setIsLoading(true);
     try {
       const idParam = pid || getOrCreatePlayerId();
-      const res = await fetch(`/api/elo/leaderboard?limit=100&playerId=${encodeURIComponent(idParam)}`);
+      const res = await fetch(
+        `/api/elo/leaderboard?limit=100&playerId=${encodeURIComponent(idParam)}`,
+        { cache: 'no-store' }
+      );
       if (res.ok) {
         const json: LeaderboardResponse = await res.json();
         setData(json);
@@ -64,7 +68,46 @@ export function LeaderboardClient() {
   useEffect(() => {
     const pid = getOrCreatePlayerId();
     setPlayerId(pid);
-    fetchLeaderboard(pid);
+
+    let localNick = '';
+    try {
+      const stored = localStorage.getItem('ttt_nickname');
+      if (stored) {
+        localNick = sanitizeNickname(stored);
+      } else {
+        localNick = generateRandomNickname();
+        localStorage.setItem('ttt_nickname', localNick);
+      }
+    } catch {
+      localNick = generateRandomNickname();
+    }
+
+    // Ensure profile exists and matches client nickname before reading leaderboard
+    fetch(
+      `/api/elo/profile?playerId=${encodeURIComponent(pid)}&nickname=${encodeURIComponent(localNick)}`,
+      { cache: 'no-store' }
+    )
+      .then((res) => (res.ok ? res.json() : null))
+      .then(async (prof) => {
+        if (prof && prof.nickname !== localNick) {
+          const syncRes = await fetch('/api/elo/profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerId: pid, nickname: localNick }),
+            cache: 'no-store',
+          });
+          const syncJson = await syncRes.json().catch(() => ({ ok: false }));
+          if (!syncJson?.ok && prof.nickname) {
+            try {
+              localStorage.setItem('ttt_nickname', prof.nickname);
+            } catch {}
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        fetchLeaderboard(pid);
+      });
   }, [fetchLeaderboard]);
 
   const currentPlayer = data?.currentPlayer;

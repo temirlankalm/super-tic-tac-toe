@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Undo2, RotateCcw, Flag, Handshake, Zap, Share2, Trophy } from 'lucide-react';
-import { BoardWinner, GameMode, OnlineRole, Player, WinReason } from '@/types/game';
+import { Undo2, RotateCcw, Flag, Handshake, Zap, Share2, Trophy, X } from 'lucide-react';
+import { BoardWinner, ConnectionStatus, GameMode, OnlineRole, Player, WinReason } from '@/types/game';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
 import { useTranslation } from '@/i18n/LanguageContext';
 
@@ -14,6 +14,7 @@ interface GameActionsBarProps {
   wonByLine?: boolean;
   onlineRole?: OnlineRole;
   onlinePlayer?: Player | null;
+  connectionStatus?: ConnectionStatus;
   historyLength: number;
   isAiThinking: boolean;
   canUndo: boolean;
@@ -37,6 +38,7 @@ interface GameActionsBarProps {
   onRequestRematch?: () => void;
   onAcceptRematch?: () => void;
   onChallengeFriend?: () => void;
+  onLeaveRoom?: () => void;
 }
 
 export const GameActionsBar: React.FC<GameActionsBarProps> = ({
@@ -46,6 +48,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
   wonByLine = true,
   onlineRole,
   onlinePlayer,
+  connectionStatus,
   historyLength,
   canUndo,
   speedBlitzTime,
@@ -68,6 +71,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
   onRequestRematch,
   onAcceptRematch,
   onChallengeFriend,
+  onLeaveRoom,
 }) => {
   const { t, language } = useTranslation();
   const [isResignConfirmOpen, setIsResignConfirmOpen] = useState(false);
@@ -146,7 +150,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
           ) : winner === 'O' ? (
             <HandDrawnO variant={0} className="w-6 h-6 text-[var(--highlight-ink)]" />
           ) : null}
-          <span className="text-base font-medium text-[var(--highlight-ink)] lowercase tracking-tight">
+          <span className="text-base font-medium text-[var(--highlight-ink)] tracking-tight">
             {title}
           </span>
         </div>
@@ -282,6 +286,21 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
               <span>{speedBlitzTime.toFixed(1)}s</span>
             </div>
           )}
+
+          {/* Leave / Cancel Waiting Room Button */}
+          {gameMode === 'online' &&
+            connectionStatus !== 'connected' &&
+            historyLength === 0 &&
+            onLeaveRoom && (
+              <button
+                type="button"
+                onClick={onLeaveRoom}
+                className="flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg border border-[var(--line)] hover:border-rose-400 hover:bg-rose-500/10 hover:text-rose-500 text-[var(--ink)] transition-colors cursor-pointer lowercase font-sans"
+              >
+                <X size={13} />
+                <span>{t.onlineModal.leaveRoom}</span>
+              </button>
+            )}
 
           {/* Resign Button */}
           {historyLength > 0 && (

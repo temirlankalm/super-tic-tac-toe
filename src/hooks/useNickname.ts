@@ -90,6 +90,14 @@ export function useNickname() {
     return random;
   }, []);
 
+  const adoptNickname = useCallback((serverName: string) => {
+    const clean = sanitizeNickname(serverName);
+    try {
+      localStorage.setItem(NICKNAME_STORAGE_KEY, clean);
+    } catch {}
+    setNicknameState(clean);
+  }, []);
+
   return {
     nickname,
     isLoaded,
@@ -97,6 +105,7 @@ export function useNickname() {
     isFirstVisit,
     dismissFirstVisitHint,
     saveNickname,
+    adoptNickname,
     skipPrompt,
     openModal,
     closeModal,

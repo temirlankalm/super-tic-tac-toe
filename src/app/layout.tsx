@@ -1,7 +1,11 @@
 import type { Metadata, Viewport } from 'next';
+import { Suspense } from 'react';
+import { cookies } from 'next/headers';
+import { connection } from 'next/server';
 import { Geist, Geist_Mono, Newsreader } from 'next/font/google';
 import './globals.css';
 import { LanguageProvider } from '@/i18n/LanguageContext';
+import { Language } from '@/i18n/types';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -77,6 +81,16 @@ export const metadata: Metadata = {
   },
 };
 
+async function LocaleShell({ children }: { children: React.ReactNode }) {
+  await connection();
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get('ttt_lang')?.value;
+  const initialLanguage: Language | undefined =
+    cookieLang === 'ru' || cookieLang === 'en' ? cookieLang : undefined;
+
+  return <LanguageProvider initialLanguage={initialLanguage}>{children}</LanguageProvider>;
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -92,12 +106,24 @@ export default function RootLayout({
         <meta name="theme-color" content="#efeeee" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#141719" media="(prefers-color-scheme: dark)" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <style>{`html[data-lang-hydrating="1"] body{opacity:0}`}</style>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const l = localStorage.getItem('ttt_lang') || (navigator.language && navigator.language.startsWith('ru') ? 'ru' : 'en');
-                if (l) document.documentElement.lang = l;
+                var cookieMatch = document.cookie.match(/(?:^|;\\s*)ttt_lang=(ru|en)(?:;|$)/);
+                var cookieLang = cookieMatch ? cookieMatch[1] : null;
+                var storedLang = localStorage.getItem('ttt_lang');
+                var l = (storedLang === 'ru' || storedLang === 'en') ? storedLang : (cookieLang || (navigator.language && navigator.language.startsWith('ru') ? 'ru' : 'en'));
+                if (l) {
+                  document.documentElement.lang = l;
+                  if (cookieLang !== l) {
+                    if (l !== 'en' && !cookieLang) {
+                      document.documentElement.setAttribute('data-lang-hydrating', '1');
+                    }
+                    document.cookie = 'ttt_lang=' + l + '; Max-Age=31536000; Path=/; SameSite=Lax';
+                  }
+                }
               } catch(e) {}
 
               try {
@@ -119,7 +145,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col justify-between">
-        <LanguageProvider>{children}</LanguageProvider>
+        <Suspense fallback={null}>
+          <LocaleShell>{children}</LocaleShell>
+        </Suspense>
       </body>
     </html>
   );
