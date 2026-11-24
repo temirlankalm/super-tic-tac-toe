@@ -693,14 +693,18 @@ export function AdminDashboardClient({
                     <span className="text-[10px] text-[var(--ink-soft)] block uppercase tracking-wider mb-1">
                       уровень сложности ии
                     </span>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {Object.entries(s.featureStats.difficulties || {}).map(([diff, count]) => (
-                        <div key={diff} className="flex items-center justify-between px-2.5 py-1 rounded-md border border-[var(--line)]/60 text-xs bg-[var(--line)]/10">
-                          <span className="text-[var(--highlight-ink)] lowercase font-mono">{diff}</span>
-                          <span className="text-[var(--ink-soft)] font-mono font-medium">{String(count)}</span>
-                        </div>
-                      ))}
-                    </div>
+                    {Object.entries(s.featureStats.difficulties || {}).length === 0 ? (
+                      <span className="text-xs text-[var(--ink-mute)] lowercase">нет данных</span>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {Object.entries(s.featureStats.difficulties || {}).map(([diff, count]) => (
+                          <div key={diff} className="flex items-center justify-between px-2.5 py-1 rounded-md border border-[var(--line)]/60 text-xs bg-[var(--line)]/10">
+                            <span className="text-[var(--highlight-ink)] lowercase font-mono">{diff}</span>
+                            <span className="text-[var(--ink-soft)] font-mono font-medium">{String(count)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Time controls */}
@@ -708,14 +712,18 @@ export function AdminDashboardClient({
                     <span className="text-[10px] text-[var(--ink-soft)] block uppercase tracking-wider mb-1">
                       контроль времени (таймер)
                     </span>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {Object.entries(s.featureStats.timeControls || {}).map(([tc, count]) => (
-                        <div key={tc} className="flex items-center justify-between px-2 py-1 rounded-md border border-[var(--line)]/60 text-xs bg-[var(--line)]/10">
-                          <span className="text-[var(--highlight-ink)] lowercase font-mono">{tc}</span>
-                          <span className="text-[var(--ink-soft)] font-mono font-medium">{String(count)}</span>
-                        </div>
-                      ))}
-                    </div>
+                    {Object.entries(s.featureStats.timeControls || {}).length === 0 ? (
+                      <span className="text-xs text-[var(--ink-mute)] lowercase">нет данных</span>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {Object.entries(s.featureStats.timeControls || {}).map(([tc, count]) => (
+                          <div key={tc} className="flex items-center justify-between px-2 py-1 rounded-md border border-[var(--line)]/60 text-xs bg-[var(--line)]/10">
+                            <span className="text-[var(--highlight-ink)] lowercase font-mono">{tc}</span>
+                            <span className="text-[var(--ink-soft)] font-mono font-medium">{String(count)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Modifiers */}
@@ -723,17 +731,21 @@ export function AdminDashboardClient({
                     <span className="text-[10px] text-[var(--ink-soft)] block uppercase tracking-wider mb-1">
                       модификаторы партий
                     </span>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {Object.entries(s.featureStats.modifiers || {}).map(([mod, count]) => {
-                        const label = mod === 'fogOfWar' ? 'туман' : mod === 'fadingInk' ? 'чернила' : mod === 'speedBlitz' ? 'блиц' : mod;
-                        return (
-                          <div key={mod} className="flex items-center justify-between px-2 py-1 rounded-md border border-[var(--line)]/60 text-xs bg-[var(--line)]/10">
-                            <span className="text-[var(--highlight-ink)] lowercase">{label}</span>
-                            <span className="text-[var(--ink-soft)] font-mono font-medium">{String(count)}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {Object.entries(s.featureStats.modifiers || {}).length === 0 ? (
+                      <span className="text-xs text-[var(--ink-mute)] lowercase">нет данных</span>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {Object.entries(s.featureStats.modifiers || {}).map(([mod, count]) => {
+                          const label = mod === 'fogOfWar' ? 'туман' : mod === 'fadingInk' ? 'чернила' : mod === 'speedBlitz' ? 'блиц' : mod;
+                          return (
+                            <div key={mod} className="flex items-center justify-between px-2 py-1 rounded-md border border-[var(--line)]/60 text-xs bg-[var(--line)]/10">
+                              <span className="text-[var(--highlight-ink)] lowercase">{label}</span>
+                              <span className="text-[var(--ink-soft)] font-mono font-medium">{String(count)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -942,10 +954,20 @@ export function AdminDashboardClient({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--line)]/50">
-                  {s.recentEvents
-                    .filter((e) => e.type === 'pageview' || e.category === 'navigation' || !e.isBot)
-                    .slice(0, 10)
-                    .map((ev) => {
+                  {(() => {
+                    const visitors = s.recentEvents.filter(
+                      (e) => e.type === 'pageview' || e.category === 'navigation' || !e.isBot
+                    );
+                    if (visitors.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={5} className="py-8 text-center text-xs text-[var(--ink-mute)] lowercase">
+                            пока нет зафиксированных визитов реальных пользователей
+                          </td>
+                        </tr>
+                      );
+                    }
+                    return visitors.slice(0, 10).map((ev) => {
                       const d = new Date(ev.timestamp);
                       const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                       const dateStr = d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
@@ -986,7 +1008,8 @@ export function AdminDashboardClient({
                           </td>
                         </tr>
                       );
-                    })}
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -1233,7 +1256,14 @@ export function AdminDashboardClient({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--line)]/50">
-                  {s.recentEvents.slice(0, 30).map((ev) => {
+                  {s.recentEvents.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-xs text-[var(--ink-mute)] lowercase">
+                        событий пока нет · они появятся в реальном времени при действиях пользователей
+                      </td>
+                    </tr>
+                  ) : (
+                    s.recentEvents.slice(0, 30).map((ev) => {
                     const timeAgoSec = Math.round((Date.now() - ev.timestamp) / 1000);
                     const timeStr =
                       timeAgoSec < 60
@@ -1288,7 +1318,8 @@ export function AdminDashboardClient({
                         </td>
                       </tr>
                     );
-                  })}
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
