@@ -30,8 +30,14 @@ import {
 import { AnalyticsSummary, VisitorEvent, CountryStat, TimePoint } from '@/lib/analytics/types';
 import { countryCodeToFlag } from '@/lib/analytics/botDetector';
 
-export function AdminDashboardClient() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+interface AdminDashboardClientProps {
+  initialAuthenticated?: boolean;
+}
+
+export function AdminDashboardClient({
+  initialAuthenticated = false,
+}: AdminDashboardClientProps) {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(initialAuthenticated);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
@@ -82,8 +88,10 @@ export function AdminDashboardClient() {
   }, []);
 
   useEffect(() => {
-    fetchStats(range);
-  }, [fetchStats, range]);
+    if (isAuthenticated) {
+      fetchStats(range);
+    }
+  }, [fetchStats, range, isAuthenticated]);
 
   // Auto-refresh interval (every 30s)
   useEffect(() => {
@@ -216,13 +224,13 @@ export function AdminDashboardClient() {
             </button>
 
             <div className="pt-2 flex items-center justify-between text-xs text-[var(--ink-mute)]">
-              <Link
-                href="/"
+              <a
+                href="https://ttt.temr.dev"
                 className="hover:text-[var(--highlight-ink)] hairline-link transition-colors flex items-center gap-1"
               >
                 <ArrowLeft size={12} />
                 <span>вернуться к игре</span>
-              </Link>
+              </a>
               <button
                 type="button"
                 onClick={toggleTheme}
@@ -247,13 +255,13 @@ export function AdminDashboardClient() {
       <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-[var(--line)] gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2.5">
-            <Link
-              href="/"
+            <a
+              href="https://ttt.temr.dev"
               className="p-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--line)]/30 text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
               title="вернуться к игре"
             >
               <ArrowLeft size={15} />
-            </Link>
+            </a>
             <h1 className="font-serif text-xl md:text-2xl font-medium tracking-tight text-[var(--highlight-ink)] lowercase">
               tic³ · telemetry & analytics
             </h1>

@@ -32,21 +32,34 @@ pnpm dev
   * Источники трафика: категоризация (Direct, Reddit, Search, Social, Other).
   * Живой поток событий (Live Stream) и выгрузка отчетов в CSV.
 
-### Настройка переменных окружения
+### Настройка отдельного поддомена аналитики (`admin.ttt.temr.dev`)
 
-Скопируй `.env.example` в `.env.local` или укажи переменные в настройках развертывания (Vercel / сервер):
+Админ-панель телеметрии изолирована на отдельном поддомене `admin.ttt.temr.dev`. На основном домене `ttt.temr.dev` любые маршруты `/admin*` и `/api/admin*` возвращают **404 Not Found**.
 
+#### 1. Настройка DNS и Vercel Host
+1. **DNS (у провайдера домена `temr.dev`):**
+   * **Тип записи:** `CNAME`
+   * **Имя / Хост:** `admin.ttt` (или `admin.ttt.temr.dev`)
+   * **Значение / Цель:** `cname.vercel-dns.com`
+   * **TTL:** Auto / 300
+2. **Vercel Dashboard:**
+   * Открой проект `super-tic-tac-toe` -> **Settings** -> **Domains**.
+   * Добавь домен `admin.ttt.temr.dev` (привязан к ветке `main`).
+
+#### 2. Переменные окружения (Environment Variables)
+Укажи в Vercel Dashboard (**Settings** -> **Environment Variables**) для всех окружений (`Production`, `Preview`):
+
+| Переменная | Описание | Пример значения |
+|---|---|---|
+| `ADMIN_EMAIL` | Разрешённый email администратора | `temirlan122110@gmail.com` |
+| `ADMIN_PASSWORD` | Пароль администратора | `Temirlan2010!` |
+| `ADMIN_PASSWORD_HASH` | (Опционально) SHA-256 хеш пароля | `fffa912e789f...` |
+| `ADMIN_SESSION_SECRET` | 32-байтный ключ подписи сессионных cookie | случайный 64-символьный hex |
+
+Для локальной разработки скопируй `.env.example` в `.env.local`:
 ```bash
 cp .env.example .env.local
 ```
-
-| Переменная | Описание | Значение по умолчанию |
-|---|---|---|
-| `ADMIN_PASSWORD` | Пароль для доступа к `/admin` | `temr` (в dev-режиме) |
-| `ADMIN_EMAIL` | (Опционально) Ограничить вход конкретным email | Не задано |
-| `ADMIN_PASSWORD_HASH` | (Опционально) SHA-256 хеш пароля | Не задано |
-| `ADMIN_SESSION_SECRET` | Секретный ключ для подписи сессионных cookie | Генерируется на основе пароля |
-| `ANALYTICS_DATA_PATH` | Кастомный путь к файлу БД аналитики | `.data/analytics.json` (или `/tmp`) |
 
 ---
 

@@ -1,15 +1,8 @@
 import crypto from 'crypto';
 import { NextRequest } from 'next/server';
+import { ADMIN_COOKIE_NAME, isAdminHost, getAdminCookieDomain } from './constants';
 
-export const ADMIN_COOKIE_NAME = 'sttt_admin_session';
-
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
-const SESSION_SECRET =
-  process.env.ADMIN_SESSION_SECRET ||
-  process.env.ADMIN_PASSWORD ||
-  'tic3_admin_default_session_secret_change_in_production';
+export { ADMIN_COOKIE_NAME, isAdminHost, getAdminCookieDomain };
 
 // In-memory rate limiting for login attempts per hashed IP (max 5 failed attempts / 15 minutes)
 interface LoginAttempt {
@@ -18,9 +11,13 @@ interface LoginAttempt {
 }
 const loginAttempts = new Map<string, LoginAttempt>();
 const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const LOCKOUT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes lockout
 
-export function checkLoginRateLimit(clientIpHash: string): { allowed: boolean; remainingAttempts: number; retryAfterSec?: number } {
+export function checkLoginRateLimit(clientIpHash: string): {
+  allowed: boolean;
+  remainingAttempts: number;
+  retryAfterSec?: number;
+} {
   const now = Date.now();
   const attempt = loginAttempts.get(clientIpHash);
 
@@ -56,36 +53,81 @@ export function resetLoginAttempts(clientIpHash: string) {
   loginAttempts.delete(clientIpHash);
 }
 
-function safeCompare(a: string, b: string): boolean {
-  try {
-    const bufA = Buffer.from(a);
-    const bufB = Buffer.from(b);
-    if (bufA.length !== bufB.length) return false;
-    return crypto.timingSafeEqual(bufA, bufB);
-  } catch {
-    return false;
-  }
+/**
+ * Constant-time comparison between two buffers of equal length.
+ */
+function safeTimingCompare(bufA: Buffer, bufB: Buffer): boolean {
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
 }
 
+/**
+ * Verifies admin credentials against environment variables ADMIN_EMAIL and ADMIN_PASSWORD / ADMIN_PASSWORD_HASH.
+ * Uses constant-time cryptographic comparison (timingSafeEqual) on SHA-256 hashes.
+ * Never allows login if no password environment variable is set.
+ */
 export function verifyAdminCredentials(inputPassword: string, inputEmail?: string): boolean {
-  if (!inputPassword) return false;
+  const envEmail = process.env.ADMIN_EMAIL;
+  const envPassword = process.env.ADMIN_PASSWORD;
+  const envPasswordHash = process.env.ADMIN_PASSWORD_HASH;
 
-  // 1. Email check if configured
-  if (ADMIN_EMAIL && ADMIN_EMAIL.trim()) {
-    if (!inputEmail || inputEmail.trim().toLowerCase() !== ADMIN_EMAIL.trim().toLowerCase()) {
+  // Never allow login if neither password nor password hash is configured in environment
+  if (!envPassword && !envPasswordHash) {
+    console.error('[Admin Auth] Authentication blocked: neither ADMIN_PASSWORD nor ADMIN_PASSWORD_HASH is set.');
+    return false;
+  }
+
+  if (!inputPassword || typeof inputPassword !== 'string') {
+    return false;
+  }
+
+  // 1. Email check: if ADMIN_EMAIL is configured, enforce exact match
+  if (envEmail && envEmail.trim()) {
+    if (!inputEmail || typeof inputEmail !== 'string') {
+      return false;
+    }
+    const inputEmailHash = crypto
+      .createHash('sha256')
+      .update(inputEmail.trim().toLowerCase())
+      .digest();
+    const targetEmailHash = crypto
+      .createHash('sha256')
+      .update(envEmail.trim().toLowerCase())
+      .digest();
+
+    if (!safeTimingCompare(inputEmailHash, targetEmailHash)) {
       return false;
     }
   }
 
-  // 2. Password Hash check if configured
-  if (ADMIN_PASSWORD_HASH && ADMIN_PASSWORD_HASH.trim()) {
-    const inputHash = crypto.createHash('sha256').update(inputPassword).digest('hex');
-    return safeCompare(inputHash, ADMIN_PASSWORD_HASH.trim().toLowerCase());
+  // 2. Password check using SHA-256 hash comparison with crypto.timingSafeEqual
+  const inputHash = crypto.createHash('sha256').update(inputPassword).digest();
+
+  if (envPasswordHash && envPasswordHash.trim()) {
+    try {
+      const targetHash = Buffer.from(envPasswordHash.trim().toLowerCase(), 'hex');
+      if (targetHash.length === inputHash.length && safeTimingCompare(inputHash, targetHash)) {
+        return true;
+      }
+    } catch {
+      return false;
+    }
   }
 
-  // 3. Plain password check (env var or default 'temr' for dev)
-  const targetPassword = ADMIN_PASSWORD || 'temr';
-  return safeCompare(inputPassword, targetPassword);
+  if (envPassword) {
+    const targetHash = crypto.createHash('sha256').update(envPassword).digest();
+    return safeTimingCompare(inputHash, targetHash);
+  }
+
+  return false;
+}
+
+function getSessionSecret(): string {
+  return (
+    process.env.ADMIN_SESSION_SECRET ||
+    process.env.ADMIN_PASSWORD ||
+    'tic3_admin_session_secret_please_set_in_production'
+  );
 }
 
 export function createSessionToken(): string {
@@ -95,7 +137,7 @@ export function createSessionToken(): string {
   const payloadB64 = Buffer.from(payloadStr).toString('base64url');
 
   const signature = crypto
-    .createHmac('sha256', SESSION_SECRET)
+    .createHmac('sha256', getSessionSecret())
     .update(payloadB64)
     .digest('base64url');
 
@@ -110,11 +152,13 @@ export function verifySessionToken(token: string | null | undefined): boolean {
   const [payloadB64, signature] = parts;
   try {
     const expectedSig = crypto
-      .createHmac('sha256', SESSION_SECRET)
+      .createHmac('sha256', getSessionSecret())
       .update(payloadB64)
       .digest('base64url');
 
-    if (!safeCompare(signature, expectedSig)) {
+    const sigBuf = Buffer.from(signature);
+    const expectedSigBuf = Buffer.from(expectedSig);
+    if (!safeTimingCompare(sigBuf, expectedSigBuf)) {
       return false;
     }
 

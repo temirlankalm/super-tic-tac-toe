@@ -4,6 +4,7 @@ import {
   ADMIN_COOKIE_NAME,
   checkLoginRateLimit,
   createSessionToken,
+  getAdminCookieDomain,
   recordFailedLogin,
   resetLoginAttempts,
   verifyAdminCredentials,
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
     // Success: clear rate limit counter and issue session token
     resetLoginAttempts(clientIpHash);
     const token = createSessionToken();
+    const cookieDomain = getAdminCookieDomain(req);
 
     const response = NextResponse.json({ ok: true });
     response.cookies.set({
@@ -65,8 +67,9 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      domain: cookieDomain,
       path: '/',
-      maxAge: 7 * 24 * 3600, // 7 days
+      maxAge: 7 * 24 * 3600, // 7 days session expiry
     });
 
     return response;

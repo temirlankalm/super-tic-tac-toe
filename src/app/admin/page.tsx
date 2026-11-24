@@ -1,4 +1,7 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
+import { cookies } from 'next/headers';
+import { ADMIN_COOKIE_NAME, verifySessionToken } from '@/lib/analytics/auth';
 import { AdminDashboardClient } from './AdminDashboardClient';
 
 export const metadata: Metadata = {
@@ -8,9 +11,23 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
     nocache: true,
+    noarchive: true,
+    nosnippet: true,
   },
 };
 
+async function AdminContent() {
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
+  const isAuthed = verifySessionToken(sessionToken);
+
+  return <AdminDashboardClient initialAuthenticated={isAuthed} />;
+}
+
 export default function AdminPage() {
-  return <AdminDashboardClient />;
+  return (
+    <Suspense fallback={null}>
+      <AdminContent />
+    </Suspense>
+  );
 }
