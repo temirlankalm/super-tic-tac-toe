@@ -1,6 +1,14 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
+import { cookies } from 'next/headers';
+import { connection } from 'next/server';
 import { GameClient } from './GameClient';
+import {
+  ADMIN_BADGE_COOKIE_NAME,
+  ADMIN_COOKIE_NAME,
+  verifyAdminBadgeToken,
+  verifySessionToken,
+} from '@/lib/analytics/auth';
 
 interface PageProps {
   searchParams: Promise<{ room?: string }>;
@@ -98,8 +106,13 @@ const jsonLd = {
 };
 
 async function GamePageContent({ searchParams }: PageProps) {
+  await connection();
   const resolved = await searchParams;
-  return <GameClient initialRoomId={resolved?.room} />;
+  const cookieStore = await cookies();
+  const badgeToken = cookieStore.get(ADMIN_BADGE_COOKIE_NAME)?.value;
+  const sessionToken = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
+  const isAdminViewer = verifyAdminBadgeToken(badgeToken) || verifySessionToken(sessionToken);
+  return <GameClient initialRoomId={resolved?.room} initialIsAdmin={isAdminViewer} />;
 }
 
 export default function Page(props: PageProps) {

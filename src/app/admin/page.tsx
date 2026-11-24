@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { cookies } from 'next/headers';
+import { connection } from 'next/server';
 import { ADMIN_COOKIE_NAME, verifySessionToken } from '@/lib/analytics/auth';
 import { AdminDashboardClient } from './AdminDashboardClient';
 
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
 };
 
 async function AdminContent() {
+  await connection();
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
   const isAuthed = verifySessionToken(sessionToken);

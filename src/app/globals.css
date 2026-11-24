@@ -1,9 +1,18 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-serif: var(--font-newsreader), Georgia, serif;
+}
 
 :root {
   /* Temirlan's Design System Palette (Light Theme - Warm Stone) */
   --bg: #efeeee;
   --bg-subtle: #e6e5e5;
+  --surface: rgba(255, 255, 255, 0.56);
+  --surface-hover: rgba(255, 255, 255, 0.78);
   --scrim: rgba(239, 238, 238, 0.88);
 
   --ink: #4e545a;
@@ -11,6 +20,7 @@
   --ink-mute: #9aa0a7;
   --highlight-ink: #2e3338;
 
+  --underline: rgba(78, 84, 90, 0.42);
   --line: rgba(78, 84, 90, 0.16);
   --line-strong: rgba(78, 84, 90, 0.45);
   --super-line: #4e545a;
@@ -30,6 +40,8 @@ html.dark {
   /* Temirlan's Dark Theme - Deep Graphite / Warm Charcoal */
   --bg: #141719;
   --bg-subtle: #1c2022;
+  --surface: rgba(255, 255, 255, 0.035);
+  --surface-hover: rgba(255, 255, 255, 0.065);
   --scrim: rgba(20, 23, 25, 0.88);
 
   --ink: #d2d6db;
@@ -37,6 +49,7 @@ html.dark {
   --ink-mute: #5f6570;
   --highlight-ink: #f5f7f9;
 
+  --underline: rgba(210, 214, 219, 0.42);
   --line: rgba(255, 255, 255, 0.12);
   --line-strong: rgba(255, 255, 255, 0.38);
   --super-line: #d2d6db;

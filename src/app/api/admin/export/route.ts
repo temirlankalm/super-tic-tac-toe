@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    await analyticsStore.ensureHydratedFromKv();
     const url = new URL(req.url);
     const rangeParam = url.searchParams.get('range') as '24h' | '7d' | '30d' | 'all' | null;
     const range = rangeParam || '7d';

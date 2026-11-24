@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import {
+  ADMIN_BADGE_COOKIE_NAME,
   ADMIN_COOKIE_NAME,
   areAdminAuthEnvVarsConfigured,
   checkLoginRateLimit,
+  createAdminBadgeToken,
   createSessionToken,
+  getAdminBadgeCookieDomain,
   getAdminCookieDomain,
   recordFailedLogin,
   resetLoginAttempts,
@@ -61,10 +64,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Success: clear rate limit counter and issue session token
+    // Success: clear rate limit counter and issue session + badge tokens
     resetLoginAttempts(clientIpHash);
     const token = createSessionToken();
+    const badgeToken = createAdminBadgeToken();
     const cookieDomain = getAdminCookieDomain(req);
+    const badgeDomain = getAdminBadgeCookieDomain(req);
 
     const response = NextResponse.json({ ok: true });
     response.cookies.set({
@@ -76,6 +81,17 @@ export async function POST(req: NextRequest) {
       domain: cookieDomain,
       path: '/',
       maxAge: 7 * 24 * 3600, // 7 days session expiry
+    });
+
+    response.cookies.set({
+      name: ADMIN_BADGE_COOKIE_NAME,
+      value: badgeToken,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      domain: badgeDomain,
+      path: '/',
+      maxAge: 90 * 24 * 3600, // 90 days visibility badge across .ttt.temr.dev
     });
 
     return response;

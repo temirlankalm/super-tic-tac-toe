@@ -124,6 +124,8 @@ export interface AnalyticsSummary {
   topReferrers: { referrer: string; count: number }[];
   referrersCategorized: ReferrerCategoryStat[];
   devices: { device: DeviceType; count: number; percentage: number }[];
+  browsers?: { name: string; count: number; percentage: number }[];
+  osBreakdown?: { name: string; count: number; percentage: number }[];
 
   // Behavior & Funnel
   gameBehavior: GameBehaviorStats;

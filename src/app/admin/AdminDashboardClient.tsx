@@ -1,10 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useTransition } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useCallback, useTransition, useMemo } from 'react';
 import {
   Users,
-  Eye,
   Bot,
   Globe,
   Clock,
@@ -17,74 +15,94 @@ import {
   Moon,
   TrendingUp,
   Gamepad2,
-  Share2,
-  CheckCircle2,
   Activity,
-  Shield,
   MousePointerClick,
   Compass,
   Laptop,
   Smartphone,
   Tablet,
   Grid3X3,
-  Layers,
-  Zap,
-  MapPin,
+  Sliders,
   Trash2,
+  Check,
+  X,
+  Repeat,
+  Radio,
 } from 'lucide-react';
-import { AnalyticsSummary, VisitorEvent, CountryStat, TimePoint, HourlyArrivalStat } from '@/lib/analytics/types';
+import { AnalyticsSummary, TimePoint, HourlyArrivalStat } from '@/lib/analytics/types';
 import { countryCodeToFlag } from '@/lib/analytics/botDetector';
-
-const SECTOR_NAMES: Record<number, string> = {
-  0: 'верх-лево (0)',
-  1: 'верх-центр (1)',
-  2: 'верх-право (2)',
-  3: 'центр-лево (3)',
-  4: 'центр (4)',
-  5: 'центр-право (5)',
-  6: 'низ-лево (6)',
-  7: 'низ-центр (7)',
-  8: 'низ-право (8)',
-};
+import { ADMIN_STRINGS, AdminLang } from './adminTranslations';
 
 interface AdminDashboardClientProps {
   initialAuthenticated?: boolean;
+}
+
+type DashboardTab = 'all' | 'traffic' | 'gameplay' | 'events';
+type EventFilter = 'all' | 'humans' | 'pageviews' | 'games' | 'bots';
+
+function formatDuration(seconds: number, lang: AdminLang): string {
+  if (!seconds || seconds <= 0) return lang === 'ru' ? '0с' : '0s';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m === 0) return lang === 'ru' ? `${s}с` : `${s}s`;
+  return lang === 'ru' ? `${m}м ${s}с` : `${m}m ${s}s`;
 }
 
 export function AdminDashboardClient({
   initialAuthenticated = false,
 }: AdminDashboardClientProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(initialAuthenticated);
-  const [email, setEmail] = useState('temirlan122110@gmail.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [range, setRange] = useState<'24h' | '7d' | '30d' | 'all'>('7d');
+  const [activeTab, setActiveTab] = useState<DashboardTab>('all');
+  const [eventFilter, setEventFilter] = useState<EventFilter>('all');
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isConfirmingClear, setIsConfirmingClear] = useState(false);
+  const [clearFeedback, setClearFeedback] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string>('');
-  const [isPending, startTransition] = useTransition();
+  const [hoveredTimeIdx, setHoveredTimeIdx] = useState<number | null>(null);
+  const [hoveredHourIdx, setHoveredHourIdx] = useState<number | null>(null);
+  const [, startTransition] = useTransition();
 
-  // Theme support
+  const [gameUrl, setGameUrl] = useState('https://ttt.temr.dev');
   const [isDark, setIsDark] = useState(false);
+  const [adminLang, setAdminLang] = useState<AdminLang>('ru');
+
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains('dark'));
-  }, []);
-
-  const [adminLang, setAdminLang] = useState<'ru' | 'en'>('ru');
-  useEffect(() => {
+    if (
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.hostname === 'admin.localhost')
+    ) {
+      setGameUrl(
+        window.location.hostname === 'admin.localhost'
+          ? `http://localhost:${window.location.port || '3000'}`
+          : '/'
+      );
+    }
     try {
-      const stored = localStorage.getItem('ttt_lang') || (navigator.language?.startsWith('ru') ? 'ru' : 'en');
+      const stored =
+        localStorage.getItem('ttt_lang') ||
+        (navigator.language?.startsWith('ru') ? 'ru' : 'en');
       if (stored === 'en' || stored === 'ru') {
         setAdminLang(stored);
       }
     } catch {}
   }, []);
 
+  const str = ADMIN_STRINGS[adminLang];
+
   const toggleAdminLang = () => {
-    const next = adminLang === 'ru' ? 'en' : 'ru';
+    const next: AdminLang = adminLang === 'ru' ? 'en' : 'ru';
     setAdminLang(next);
     try {
       localStorage.setItem('ttt_lang', next);
@@ -100,19 +118,25 @@ export function AdminDashboardClient({
     } catch {}
   };
 
-  // Check auth and fetch stats on initial mount
   const fetchStats = useCallback(async (activeRange: string) => {
     setIsLoadingStats(true);
     try {
-      const res = await fetch(`/api/admin/stats?range=${activeRange}`);
+      const res = await fetch(`/api/admin/stats?range=${activeRange}`, {
+        cache: 'no-store',
+      });
       if (res.ok) {
         const data: AnalyticsSummary = await res.json();
         setSummary(data);
         setIsAuthenticated(true);
         setAuthError(null);
-        setLastRefreshedAt(new Date().toLocaleTimeString());
+        setLastRefreshedAt(
+          new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          })
+        );
       } else {
-        // If 404 or 401, visitor is unauthenticated
         setIsAuthenticated(false);
       }
     } catch {
@@ -128,7 +152,6 @@ export function AdminDashboardClient({
     }
   }, [fetchStats, range, isAuthenticated]);
 
-  // Auto-refresh interval (every 30s)
   useEffect(() => {
     if (!isAuthenticated || !autoRefresh) return;
     const interval = setInterval(() => {
@@ -137,11 +160,10 @@ export function AdminDashboardClient({
     return () => clearInterval(interval);
   }, [isAuthenticated, autoRefresh, range, fetchStats]);
 
-  // Handle Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) {
-      setAuthError('введи пароль');
+      setAuthError(str.login.errorRequired);
       return;
     }
 
@@ -152,24 +174,26 @@ export function AdminDashboardClient({
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() || undefined, password: password.trim() }),
+        body: JSON.stringify({
+          email: email.trim() || undefined,
+          password: password.trim(),
+        }),
       });
 
       if (res.ok) {
         setPassword('');
         await fetchStats(range);
       } else {
-        const data = await res.json().catch(() => ({}));
-        setAuthError(data.error || 'неверные данные доступа');
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setAuthError(data.error || str.login.errorInvalid);
       }
     } catch {
-      setAuthError('ошибка соединения с сервером');
+      setAuthError(str.login.errorNetwork);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Handle Logout
   const handleLogout = async () => {
     try {
       await fetch('/api/admin/logout', { method: 'POST' });
@@ -178,96 +202,126 @@ export function AdminDashboardClient({
     setSummary(null);
   };
 
-  // Handle CSV Download
-  const handleExportCsv = () => {
-    window.location.href = `/api/admin/export?range=${range}`;
+  const handleExportCsv = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const res = await fetch(`/api/admin/export?range=${range}`);
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tic3-analytics-${range}-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {} finally {
+      setIsExporting(false);
+    }
   };
 
-  // Handle Clear All Data (Reset to 0)
-  const handleClearData = async () => {
-    if (!window.confirm('Сбросить все накопленные данные аналитики и начать строго с нуля?')) return;
+  const handleConfirmClearData = async () => {
     try {
       const res = await fetch('/api/admin/stats', { method: 'DELETE' });
       if (res.ok) {
-        fetchStats(range);
+        setIsConfirmingClear(false);
+        setClearFeedback(str.header.resetDone);
+        setTimeout(() => setClearFeedback(null), 3000);
+        await fetchStats(range);
       }
     } catch {}
   };
 
-  // 1. Loading Initial Auth Check
-  if (isAuthenticated === null) {
-    return (
-      <main className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg)] text-[var(--ink-soft)] font-sans">
-        <div className="flex items-center gap-2 text-xs">
-          <RefreshCw className="animate-spin" size={14} />
-          <span>{adminLang === 'ru' ? 'проверка сессии администратора…' : 'checking admin session…'}</span>
-        </div>
-      </main>
-    );
-  }
+  const filteredEvents = useMemo(() => {
+    if (!summary) return [];
+    const list = summary.recentEvents || [];
+    switch (eventFilter) {
+      case 'humans':
+        return list.filter((e) => !e.isBot);
+      case 'pageviews':
+        return list.filter((e) => !e.isBot && e.type === 'pageview');
+      case 'games':
+        return list.filter((e) => !e.isBot && e.type === 'game');
+      case 'bots':
+        return list.filter((e) => e.isBot);
+      default:
+        return list;
+    }
+  }, [summary, eventFilter]);
 
-  // 2. Unauthenticated Login Gate
+  // 1. Unauthenticated Login Gate
   if (!isAuthenticated) {
     return (
       <main className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg)] text-[var(--ink)] font-sans antialiased">
-        <div className="w-full max-w-sm rounded-2xl p-7 border border-[var(--line)] bg-[var(--bg)] shadow-xl transition-all">
+        <div className="w-full max-w-sm rounded-2xl p-7 border border-[var(--line)] bg-[var(--surface)] shadow-xl backdrop-blur-xs">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 text-[var(--highlight-ink)]">
               <Lock size={15} />
-              <h1 className="font-serif text-lg font-medium tracking-tight lowercase">
-                tic³ · admin access
+              <h1 className="font-serif text-xl font-medium tracking-tight lowercase">
+                {str.login.title}
               </h1>
             </div>
             <button
               type="button"
               onClick={toggleAdminLang}
-              className="text-[11px] font-mono uppercase tracking-wider text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] border border-[var(--line)] rounded-md px-1.5 py-0.5 transition-colors cursor-pointer"
+              className="min-h-[32px] px-2 text-[11px] font-mono uppercase tracking-wider text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] border border-[var(--line)] rounded-md transition-colors cursor-pointer"
             >
               {adminLang === 'ru' ? 'EN' : 'RU'}
             </button>
           </div>
 
-          <p className="text-xs text-[var(--ink-soft)] mb-6 font-sans lowercase leading-relaxed">
-            {adminLang === 'ru'
-              ? 'приватный дашборд платформы. доступ защищен httpOnly сессией и rate-limiting.'
-              : 'private platform dashboard. access secured by httpOnly session and rate-limiting.'}
+          <p className="text-xs text-[var(--ink-soft)] mb-6 lowercase leading-relaxed">
+            {str.login.subtitle}
           </p>
 
-          <form onSubmit={handleLogin} className="space-y-3.5">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-[11px] text-[var(--ink-soft)] uppercase tracking-wider mb-1">
-                {adminLang === 'ru' ? 'email администратора' : 'admin email'}
+              <label
+                htmlFor="admin-email"
+                className="block text-[11px] text-[var(--ink-soft)] uppercase tracking-wider mb-1.5"
+              >
+                {str.login.emailLabel}
               </label>
               <input
+                id="admin-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
-                className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--line)] bg-transparent text-[var(--highlight-ink)] focus:outline-none focus:border-[var(--highlight-ink)] transition-colors"
+                placeholder={str.login.emailPlaceholder}
+                className="w-full min-h-[40px] px-3 py-2 text-xs rounded-lg border border-[var(--line)] bg-[var(--bg)] text-[var(--highlight-ink)] focus:outline-none focus:border-[var(--highlight-ink)] transition-colors"
                 autoComplete="email"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] text-[var(--ink-soft)] uppercase tracking-wider mb-1">
-                {adminLang === 'ru' ? 'пароль администратора' : 'admin password'}
+              <label
+                htmlFor="admin-password"
+                className="block text-[11px] text-[var(--ink-soft)] uppercase tracking-wider mb-1.5"
+              >
+                {str.login.passwordLabel}
               </label>
               <input
+                id="admin-password"
                 type="password"
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   setAuthError(null);
                 }}
-                placeholder={adminLang === 'ru' ? 'пароль' : 'password'}
-                className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--line)] bg-transparent text-[var(--highlight-ink)] focus:outline-none focus:border-[var(--highlight-ink)] transition-colors"
+                placeholder={str.login.passwordPlaceholder}
+                className="w-full min-h-[40px] px-3 py-2 text-xs rounded-lg border border-[var(--line)] bg-[var(--bg)] text-[var(--highlight-ink)] focus:outline-none focus:border-[var(--highlight-ink)] transition-colors"
                 autoFocus
                 autoComplete="current-password"
               />
             </div>
 
             {authError && (
-              <p className="text-[11px] text-rose-500 font-medium lowercase animate-shake">
+              <p
+                role="alert"
+                className="text-[11px] text-rose-600 dark:text-rose-400 font-medium lowercase px-2.5 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20"
+              >
                 {authError}
               </p>
             )}
@@ -275,24 +329,18 @@ export function AdminDashboardClient({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2.5 px-3 rounded-lg bg-[var(--highlight-ink)] text-[var(--bg)] text-xs font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 mt-1"
+              className="w-full min-h-[42px] py-2.5 px-3 rounded-lg bg-[var(--highlight-ink)] text-[var(--bg)] text-xs font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
             >
-              {isSubmitting
-                ? adminLang === 'ru'
-                  ? 'авторизация…'
-                  : 'authenticating…'
-                : adminLang === 'ru'
-                ? 'войти в панель'
-                : 'sign in'}
+              {isSubmitting ? str.login.submitting : str.login.submit}
             </button>
 
             <div className="pt-2 flex items-center justify-between text-xs text-[var(--ink-mute)]">
               <a
-                href="https://ttt.temr.dev"
+                href={gameUrl}
                 className="hover:text-[var(--highlight-ink)] hairline-link transition-colors flex items-center gap-1"
               >
                 <ArrowLeft size={12} />
-                <span>{adminLang === 'ru' ? 'вернуться к игре' : 'return to game'}</span>
+                <span>{str.login.returnToGame}</span>
               </a>
               <button
                 type="button"
@@ -300,15 +348,7 @@ export function AdminDashboardClient({
                 className="hover:text-[var(--highlight-ink)] hairline-link flex items-center gap-1 cursor-pointer"
               >
                 {isDark ? <Sun size={12} /> : <Moon size={12} />}
-                <span>
-                  {isDark
-                    ? adminLang === 'ru'
-                      ? 'светлая'
-                      : 'light'
-                    : adminLang === 'ru'
-                    ? 'тёмная'
-                    : 'dark'}
-                </span>
+                <span>{isDark ? str.login.lightTheme : str.login.darkTheme}</span>
               </button>
             </div>
           </form>
@@ -317,1014 +357,1406 @@ export function AdminDashboardClient({
     );
   }
 
-  // 3. Authenticated Dashboard View
+  // 2. Authenticated Dashboard View
   const s = summary;
+  const showTraffic = activeTab === 'all' || activeTab === 'traffic';
+  const showGameplay = activeTab === 'all' || activeTab === 'gameplay';
+  const showEvents = activeTab === 'all' || activeTab === 'events';
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--ink)] font-sans antialiased p-4 md:p-8 max-w-6xl mx-auto selection:bg-[var(--selection-bg)]">
+    <div className="min-h-screen w-full min-w-0 bg-[var(--bg)] text-[var(--ink)] font-sans antialiased px-3.5 py-5 sm:px-6 md:px-8 max-w-6xl mx-auto overflow-x-hidden selection:bg-[var(--selection-bg)]">
       {/* Top Header Bar */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-[var(--line)] gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <a
-              href="https://ttt.temr.dev"
-              className="p-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--line)]/30 text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
-              title="вернуться к игре"
+      <header className="pb-4 border-b border-[var(--line)] mb-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <a
+                href={gameUrl}
+                className="min-h-[36px] px-2.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--ink)] hover:text-[var(--highlight-ink)] text-xs lowercase inline-flex items-center gap-1.5 transition-colors"
+                title={str.header.returnToGame}
+              >
+                <ArrowLeft size={13} />
+                <span>{str.header.returnToGame}</span>
+              </a>
+              <h1 className="font-serif text-xl sm:text-2xl font-medium tracking-tight text-[var(--highlight-ink)] lowercase">
+                {str.header.title}
+              </h1>
+              {s && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium tabular-nums bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {s.visitorsNow} {str.header.onlineNow}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-[var(--ink-soft)] mt-1.5 lowercase">
+              {str.header.subtitle}
+            </p>
+          </div>
+
+          {/* Primary Action & Range Controls */}
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            {/* Time range selector */}
+            <div
+              role="group"
+              aria-label="time range"
+              className="inline-flex items-center rounded-lg border border-[var(--line)] bg-[var(--surface)] p-0.5 text-xs lowercase"
             >
-              <ArrowLeft size={15} />
-            </a>
-            <h1 className="font-serif text-xl md:text-2xl font-medium tracking-tight text-[var(--highlight-ink)] lowercase">
-              tic³ · telemetry & analytics
-            </h1>
-            {s && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                {s.visitorsNow} online now
+              {(['24h', '7d', '30d', 'all'] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => {
+                    setRange(r);
+                    setHoveredTimeIdx(null);
+                    startTransition(() => {
+                      fetchStats(r);
+                    });
+                  }}
+                  className={`min-h-[32px] px-2.5 py-1 rounded-md transition-colors cursor-pointer text-xs tabular-nums ${
+                    range === r
+                      ? 'bg-[var(--highlight-ink)] text-[var(--bg)] font-medium shadow-xs'
+                      : 'text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
+                  }`}
+                >
+                  {str.header.ranges[r]}
+                </button>
+              ))}
+            </div>
+
+            {/* Auto-refresh pill */}
+            <button
+              type="button"
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className={`min-h-[34px] px-2.5 rounded-lg border text-[11px] font-medium lowercase inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                autoRefresh
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                  : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-soft)]'
+              }`}
+              title={lastRefreshedAt ? `${str.header.updatedAt} ${lastRefreshedAt}` : undefined}
+            >
+              <Radio size={12} className={autoRefresh ? 'animate-pulse' : 'opacity-50'} />
+              <span>{autoRefresh ? str.header.autoRefreshOn : str.header.autoRefreshOff}</span>
+            </button>
+
+            {/* Manual refresh */}
+            <button
+              type="button"
+              onClick={() => fetchStats(range)}
+              disabled={isLoadingStats}
+              className="min-h-[34px] min-w-[34px] inline-flex items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+              title={str.header.refresh}
+              aria-label={str.header.refresh}
+            >
+              <RefreshCw size={13} className={isLoadingStats ? 'animate-spin' : ''} />
+            </button>
+
+            {/* Export CSV */}
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={isExporting}
+              className="min-h-[34px] inline-flex items-center gap-1.5 px-2.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--ink)] hover:text-[var(--highlight-ink)] text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+              title={str.header.exportCsv}
+            >
+              <Download size={12} />
+              <span>{isExporting ? str.header.exportingCsv : str.header.exportCsv}</span>
+            </button>
+
+            {/* Reset Data (inline 2-step confirmation) */}
+            {!isConfirmingClear ? (
+              <button
+                type="button"
+                onClick={() => setIsConfirmingClear(true)}
+                className="min-h-[34px] min-w-[34px] inline-flex items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] hover:border-rose-400 hover:text-rose-600 text-[var(--ink-soft)] transition-colors cursor-pointer"
+                title={str.header.resetData}
+                aria-label={str.header.resetData}
+              >
+                <Trash2 size={13} />
+              </button>
+            ) : (
+              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-rose-500/40 bg-rose-500/10 text-xs">
+                <span className="text-[11px] text-rose-700 dark:text-rose-300 lowercase mr-1">
+                  {str.header.resetConfirmPrompt}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleConfirmClearData}
+                  className="px-2 py-0.5 rounded bg-rose-600 text-white text-[11px] font-medium lowercase hover:opacity-90 cursor-pointer inline-flex items-center gap-0.5"
+                >
+                  <Check size={11} />
+                  <span>{str.header.resetConfirmYes}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingClear(false)}
+                  className="px-1.5 py-0.5 rounded text-[11px] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] lowercase cursor-pointer inline-flex items-center"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            )}
+
+            {/* Lang toggle */}
+            <button
+              type="button"
+              onClick={toggleAdminLang}
+              className="min-h-[34px] px-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[11px] font-mono uppercase text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+            >
+              {adminLang === 'ru' ? 'EN' : 'RU'}
+            </button>
+
+            {/* Theme toggle */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="min-h-[34px] min-w-[34px] inline-flex items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+              aria-label="toggle theme"
+            >
+              {isDark ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+
+            {/* Logout */}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="min-h-[34px] inline-flex items-center gap-1 px-2.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] hover:border-rose-400 hover:text-rose-600 text-[var(--ink-soft)] text-xs font-medium lowercase transition-colors cursor-pointer"
+              title={str.header.logout}
+            >
+              <LogOut size={13} />
+              <span className="hidden sm:inline">{str.header.logout}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* View Tabs + Updated Stamp */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+          <nav
+            aria-label="dashboard sections"
+            className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0"
+          >
+            {(['all', 'traffic', 'gameplay', 'events'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs lowercase whitespace-nowrap transition-colors cursor-pointer ${
+                  activeTab === tab
+                    ? 'bg-[var(--highlight-ink)] text-[var(--bg)] font-medium'
+                    : 'text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] hover:bg-[var(--surface)]'
+                }`}
+              >
+                {str.header.tabs[tab]}
+              </button>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-3 text-[11px] text-[var(--ink-mute)] tabular-nums">
+            {clearFeedback && (
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium lowercase">
+                {clearFeedback}
+              </span>
+            )}
+            {lastRefreshedAt && (
+              <span className="lowercase">
+                {str.header.updatedAt}: {lastRefreshedAt}
               </span>
             )}
           </div>
-          <p className="text-xs text-[var(--ink-soft)] mt-1 lowercase">
-            приватная телеметрия платформы · визитеры, география, поведение, боты и конверсии
-          </p>
-        </div>
-
-        {/* Header Controls */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Time range selector */}
-          <div className="flex items-center rounded-lg border border-[var(--line)] p-0.5 text-xs lowercase bg-[var(--bg)]">
-            {(
-              [
-                { id: '24h', label: '24h' },
-                { id: '7d', label: '7d' },
-                { id: '30d', label: '30d' },
-                { id: 'all', label: 'all' },
-              ] as const
-            ).map((t) => (
-              <button
-                key={t.id}
-                onClick={() => {
-                  setRange(t.id);
-                  startTransition(() => {
-                    fetchStats(t.id);
-                  });
-                }}
-                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer text-xs ${
-                  range === t.id
-                    ? 'bg-[var(--highlight-ink)] text-[var(--bg)] font-medium shadow-xs'
-                    : 'text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Refresh button */}
-          <button
-            onClick={() => fetchStats(range)}
-            disabled={isLoadingStats}
-            className="p-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--line)]/30 text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
-            title="обновить данные"
-          >
-            <RefreshCw size={14} className={isLoadingStats ? 'animate-spin' : ''} />
-          </button>
-
-          {/* Export CSV button */}
-          <button
-            onClick={handleExportCsv}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--line)]/30 text-[var(--ink)] hover:text-[var(--highlight-ink)] text-xs font-medium lowercase transition-colors cursor-pointer"
-            title="экспорт данных в CSV"
-          >
-            <Download size={13} />
-            <span>CSV</span>
-          </button>
-
-          {/* Reset / Clear Data button */}
-          <button
-            onClick={handleClearData}
-            className="p-1.5 rounded-lg border border-[var(--line)] hover:border-rose-400 hover:text-rose-600 text-[var(--ink-soft)] transition-colors cursor-pointer"
-            title="сбросить аналитику (начать с чистого листа)"
-          >
-            <Trash2 size={13} />
-          </button>
-
-          {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            className="p-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--line)]/30 text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
-            title="сменить тему"
-          >
-            {isDark ? <Sun size={14} /> : <Moon size={14} />}
-          </button>
-
-          {/* Logout button */}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[var(--line)] hover:border-rose-300 hover:text-rose-600 text-[var(--ink-soft)] text-xs font-medium lowercase transition-colors cursor-pointer"
-            title="выйти из системы"
-          >
-            <LogOut size={13} />
-            <span className="hidden sm:inline">выйти</span>
-          </button>
         </div>
       </header>
 
-      {/* KPI Overview Grid */}
+      {/* Loading skeleton when authenticated and waiting for initial payload */}
+      {!s && isLoadingStats && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 animate-pulse">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-28 rounded-2xl border border-[var(--line)] bg-[var(--surface)]"
+            />
+          ))}
+        </div>
+      )}
+
       {s && (
-        <>
-          <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-            {/* 1. Visitors Now */}
-            <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
-                <span>сейчас</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        <div className="space-y-6">
+          {/* ===================================================================== */}
+          {/* BAND 1: PRIMARY KPI CARDS + TRAFFIC BALANCE STRIP */}
+          {/* ===================================================================== */}
+          <section aria-label="key metrics">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* 1. Online Now */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs lowercase mb-2">
+                  <span>{str.kpi.onlineTitle}</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                </div>
+                <div className="text-3xl font-serif font-medium text-[var(--highlight-ink)] tabular-nums">
+                  {s.visitorsNow}
+                </div>
+                <div className="text-[11px] text-[var(--ink-soft)] lowercase mt-1.5 leading-snug">
+                  {str.kpi.onlineDesc}
+                </div>
               </div>
-              <div className="text-2xl font-serif font-medium text-[var(--highlight-ink)]">
-                {s.visitorsNow}
+
+              {/* 2. Unique Players & Visits */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs lowercase mb-2">
+                  <span>{str.kpi.uniquesTitle}</span>
+                  <Users size={14} />
+                </div>
+                <div className="text-3xl font-serif font-medium text-[var(--highlight-ink)] tabular-nums">
+                  {s.uniqueVisitors}
+                </div>
+                <div className="text-[11px] text-[var(--ink-soft)] lowercase mt-1.5 leading-snug tabular-nums">
+                  {str.kpi.uniquesDesc(s.totalVisits, s.today.uniques)}
+                </div>
               </div>
-              <div className="text-[11px] text-[var(--ink-mute)] lowercase mt-1">
-                онлайн (последние 5м)
+
+              {/* 3. Returning Rate */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs lowercase mb-2">
+                  <span>{str.kpi.retentionTitle}</span>
+                  <Repeat size={14} />
+                </div>
+                <div className="text-3xl font-serif font-medium text-[var(--highlight-ink)] tabular-nums">
+                  {s.returningVsNew.returningPercentage}%
+                </div>
+                <div className="text-[11px] text-[var(--ink-soft)] lowercase mt-1.5 leading-snug tabular-nums">
+                  {str.kpi.retentionDesc(
+                    s.returningVsNew.returning,
+                    s.returningVsNew.newVisitors
+                  )}
+                </div>
+              </div>
+
+              {/* 4. Matches & Engagement */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs lowercase mb-2">
+                  <span>{str.kpi.matchesTitle}</span>
+                  <Gamepad2 size={14} />
+                </div>
+                <div className="text-3xl font-serif font-medium text-[var(--highlight-ink)] tabular-nums">
+                  {s.gameBehavior.totalStarts}
+                </div>
+                <div className="text-[11px] text-[var(--ink-soft)] lowercase mt-1.5 leading-snug tabular-nums">
+                  {str.kpi.matchesDesc(
+                    s.gameBehavior.completionRate,
+                    formatDuration(s.gameBehavior.averageSessionSeconds, adminLang)
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* 2. Total Visits */}
-            <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
-                <span>всего визитеров</span>
-                <Eye size={13} />
+            {/* Slim Humans vs Bots Split Bar */}
+            <div className="mt-3 px-4 py-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-3 tabular-nums lowercase">
+                <span className="text-[var(--ink-soft)] font-medium">
+                  {str.kpi.trafficBalance}:
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-[var(--highlight-ink)]">
+                  <span className="w-2 h-2 rounded-xs bg-[var(--highlight-ink)]" />
+                  {str.kpi.humansLabel}: <strong>{s.humansVsBots.humanVisits}</strong>
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
+                  <span className="w-2 h-2 rounded-xs bg-rose-500/80" />
+                  {str.kpi.botsLabel}: <strong>{s.humansVsBots.botVisits}</strong> (
+                  {s.humansVsBots.botPercentage}%)
+                </span>
               </div>
-              <div className="text-2xl font-serif font-medium text-[var(--highlight-ink)]">
-                {s.totalVisits}
-              </div>
-              <div className="text-[11px] text-[var(--ink-mute)] lowercase mt-1">
-                за период {range}
-              </div>
-            </div>
-
-            {/* 3. Unique Human Visitors */}
-            <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
-                <span>уникальные</span>
-                <Users size={13} />
-              </div>
-              <div className="text-2xl font-serif font-medium text-[var(--highlight-ink)]">
-                {s.uniqueVisitors}
-              </div>
-              <div className="text-[11px] text-[var(--ink-mute)] lowercase mt-1">
-                реальных людей
-              </div>
-            </div>
-
-            {/* 4. Bots & Crawlers */}
-            <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
-                <span>боты</span>
-                <Bot size={13} className="text-rose-500" />
-              </div>
-              <div className="text-2xl font-serif font-medium text-rose-600 dark:text-rose-400">
-                {s.totalBots}
-              </div>
-              <div className="text-[11px] text-[var(--ink-mute)] lowercase mt-1">
-                {s.botPercentage}% от всего трафика
-              </div>
-            </div>
-
-            {/* 5. Today */}
-            <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
-                <span>сегодня</span>
-                <Clock size={13} />
-              </div>
-              <div className="text-2xl font-serif font-medium text-[var(--highlight-ink)]">
-                {s.today.visits}
-              </div>
-              <div className="text-[11px] text-[var(--ink-mute)] lowercase mt-1">
-                {s.today.uniques} уникальных
-              </div>
-            </div>
-
-            {/* 6. Retention Rate */}
-            <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
-                <span>возвращаемость</span>
-                <CheckCircle2 size={13} />
-              </div>
-              <div className="text-2xl font-serif font-medium text-[var(--highlight-ink)]">
-                {s.returningVsNew.returningPercentage}%
-              </div>
-              <div className="text-[11px] text-[var(--ink-mute)] lowercase mt-1">
-                {s.returningVsNew.returning} повт. · {s.returningVsNew.newVisitors} новых
-              </div>
+              <span className="text-[11px] text-[var(--ink-mute)] lowercase">
+                {str.kpi.botsExcluded}
+              </span>
             </div>
           </section>
 
-          {/* Timeline Chart Over Time */}
-          <section className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
-              <div>
-                <h2 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase">
-                  динамика визитов во времени
-                </h2>
-                <p className="text-xs text-[var(--ink-soft)] lowercase">
-                  {range === '24h' ? 'почасовая активность (24ч)' : `ежедневная динамика (${range})`} · люди и боты разделены
-                </p>
-              </div>
-
-              <div className="flex items-center gap-4 text-xs text-[var(--ink-soft)]">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-[var(--highlight-ink)]" />
-                  <span>люди (визиты)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-[var(--ink-soft)] opacity-60" />
-                  <span>уникальные</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-rose-400 dark:bg-rose-500 opacity-60" />
-                  <span>боты</span>
-                </div>
-              </div>
-            </div>
-
-            {/* SVG Minimalist Bar Chart */}
-            <div className="h-44 w-full flex items-end gap-1 sm:gap-2 pt-4 px-1 border-b border-[var(--line)] pb-2 overflow-x-auto">
+          {/* ===================================================================== */}
+          {/* BAND 2: VISITS TIMELINE */}
+          {/* ===================================================================== */}
+          {showTraffic && (
+            <section className="p-4 sm:p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] min-w-0 overflow-hidden">
               {(() => {
                 const points: TimePoint[] = range === '24h' ? s.timeline : s.dailyTimeline;
-                const maxVal = Math.max(...points.map((p) => Math.max(p.count, p.bots)), 1);
+                const maxVal = Math.max(
+                  ...points.map((p) => Math.max(p.count, p.bots)),
+                  1
+                );
+                const hasAnyData = points.some((p) => p.count > 0 || p.bots > 0);
+                const activePoint =
+                  hoveredTimeIdx !== null ? points[hoveredTimeIdx] : null;
+                const tickStep = Math.max(1, Math.ceil(points.length / 8));
 
-                return points.map((p, idx) => {
-                  const humanH = Math.round((p.count / maxVal) * 100);
-                  const botH = Math.round((p.bots / maxVal) * 100);
+                return (
+                  <>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-3">
+                      <div>
+                        <h2 className="font-serif text-lg font-medium text-[var(--highlight-ink)] lowercase">
+                          {str.timeline.title}
+                        </h2>
+                        <p className="text-xs text-[var(--ink-soft)] lowercase">
+                          {range === '24h'
+                            ? str.timeline.subtitle24h
+                            : str.timeline.subtitleDays(str.header.ranges[range])}
+                        </p>
+                      </div>
 
-                  return (
-                    <div
-                      key={idx}
-                      className="flex-1 min-w-[14px] flex flex-col items-center justify-end h-full group relative"
-                    >
-                      {/* Tooltip */}
-                      <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none">
-                        <div className="px-2 py-1 rounded bg-[var(--highlight-ink)] text-[var(--bg)] text-[10px] whitespace-nowrap shadow-md">
-                          <p className="font-medium">{p.label}</p>
-                          <p>люди: {p.count} (уник: {p.uniques})</p>
-                          <p>боты: {p.bots}</p>
+                      {/* Live Readout + Legend */}
+                      <div className="flex flex-wrap items-center justify-between md:justify-end gap-2 sm:gap-3 min-w-0">
+                        <div className="px-2.5 py-1 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-[11px] font-mono tabular-nums text-[var(--ink)] max-w-full break-words">
+                          {activePoint ? (
+                            <span>
+                              <strong className="text-[var(--highlight-ink)]">
+                                {activePoint.label}
+                              </strong>{' '}
+                              · {str.timeline.visits}: {activePoint.count} ·{' '}
+                              {str.timeline.uniques}: {activePoint.uniques} ·{' '}
+                              {str.timeline.bots}: {activePoint.bots}
+                            </span>
+                          ) : (
+                            <span className="text-[var(--ink-mute)] font-sans lowercase">
+                              {str.timeline.hoverHint}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3 text-[11px] text-[var(--ink-soft)] lowercase">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-xs bg-[var(--highlight-ink)]" />
+                            {str.timeline.legendVisits}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-xs bg-rose-500/75" />
+                            {str.timeline.legendBots}
+                          </span>
                         </div>
                       </div>
-
-                      {/* Stacked/Parallel bars */}
-                      <div className="w-full flex items-end justify-center gap-0.5 h-full">
-                        <div
-                          style={{ height: `${Math.max(humanH, 3)}%` }}
-                          className="w-full max-w-[10px] bg-[var(--highlight-ink)] rounded-t-xs transition-all duration-300"
-                        />
-                        {p.bots > 0 && (
-                          <div
-                            style={{ height: `${Math.max(botH, 3)}%` }}
-                            className="w-full max-w-[6px] bg-rose-400 dark:bg-rose-500/70 rounded-t-xs transition-all duration-300"
-                          />
-                        )}
-                      </div>
-
-                      <span className="text-[9px] text-[var(--ink-mute)] mt-1.5 tracking-tighter truncate w-full text-center">
-                        {idx % (range === '24h' ? 3 : 2) === 0 ? p.label : ''}
-                      </span>
                     </div>
-                  );
-                });
+
+                    {!hasAnyData ? (
+                      <div className="h-36 flex items-center justify-center border border-dashed border-[var(--line)] rounded-xl text-xs text-[var(--ink-mute)] lowercase">
+                        {str.timeline.noData}
+                      </div>
+                    ) : (
+                      <div
+                        className="h-44 w-full flex items-end gap-1 sm:gap-1.5 pt-2 px-1 border-b border-[var(--line)] pb-1.5 overflow-x-auto"
+                        onMouseLeave={() => setHoveredTimeIdx(null)}
+                      >
+                        {points.map((p, idx) => {
+                          const humanH =
+                            p.count > 0
+                              ? Math.max(Math.round((p.count / maxVal) * 100), 6)
+                              : 0;
+                          const botH =
+                            p.bots > 0
+                              ? Math.max(Math.round((p.bots / maxVal) * 100), 6)
+                              : 0;
+                          const isSelected = hoveredTimeIdx === idx;
+
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onMouseEnter={() => setHoveredTimeIdx(idx)}
+                              onFocus={() => setHoveredTimeIdx(idx)}
+                              onClick={() =>
+                                setHoveredTimeIdx(isSelected ? null : idx)
+                              }
+                              aria-label={`${p.label}: ${p.count} ${str.timeline.visits}, ${p.bots} ${str.timeline.bots}`}
+                              className={`flex-1 min-w-[24px] sm:min-w-[16px] flex flex-col items-center justify-end h-full rounded-t-md transition-colors cursor-pointer px-0.5 ${
+                                isSelected ? 'bg-[var(--line)]/30' : 'hover:bg-[var(--line)]/15'
+                              }`}
+                            >
+                              <div className="w-full flex items-end justify-center gap-0.5 h-full">
+                                {p.count > 0 ? (
+                                  <div
+                                    style={{ height: `${humanH}%` }}
+                                    className="w-full max-w-[12px] bg-[var(--highlight-ink)] rounded-t-xs transition-all duration-200"
+                                  />
+                                ) : (
+                                  <div className="w-full max-w-[10px] h-[2px] bg-[var(--line)] rounded-full" />
+                                )}
+                                {p.bots > 0 && (
+                                  <div
+                                    style={{ height: `${botH}%` }}
+                                    className="w-full max-w-[6px] bg-rose-500/75 rounded-t-xs transition-all duration-200"
+                                  />
+                                )}
+                              </div>
+
+                              <span className="text-[9px] text-[var(--ink-mute)] mt-1.5 tracking-tight tabular-nums whitespace-nowrap text-center h-3">
+                                {idx % tickStep === 0 || idx === points.length - 1
+                                  ? p.label
+                                  : ''}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                );
               })()}
-            </div>
-          </section>
+            </section>
+          )}
 
-          {/* 1. Board Sectors Click Scheme & Frequently Used Features */}
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            {/* 1.1 3x3 Board Click Heatmap Scheme */}
-            {(() => {
-              const sectorClicks = s.featureStats?.sectorsClicked || [0, 0, 0, 0, 0, 0, 0, 0, 0];
-              const actualSectorClicks = sectorClicks.reduce((a, b) => a + b, 0);
-              const maxSectorClicks = Math.max(...sectorClicks, 1);
-              let topSectorIndex = 4;
-              sectorClicks.forEach((val, idx) => {
-                if (val > (sectorClicks[topSectorIndex] || 0)) topSectorIndex = idx;
-              });
+          {/* ===================================================================== */}
+          {/* BAND 3: AUDIENCE, DEVICES & GEOGRAPHY */}
+          {/* ===================================================================== */}
+          {showTraffic && (
+            <section className="space-y-4">
+              <h2 className="text-[11px] uppercase tracking-[0.14em] text-[var(--ink-soft)] font-medium">
+                {str.sections.trafficGeoHeading}
+              </h2>
 
-              return (
-                <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* 3.1 Countries & Cities */}
+                <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] flex flex-col justify-between min-w-0">
                   <div>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-1">
                       <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5">
-                        <Grid3X3 size={16} />
-                        <span>схема кликов по секторам доски</span>
+                        <Globe size={15} />
+                        <span>{str.countries.title}</span>
                       </h3>
-                      <span className="text-xs text-[var(--ink-soft)] font-mono">
-                        {actualSectorClicks} кликов
+                      <span className="text-xs text-[var(--ink-soft)] font-mono tabular-nums">
+                        {str.countries.countLabel(s.countries.length)}
                       </span>
                     </div>
                     <p className="text-xs text-[var(--ink-soft)] lowercase mb-4">
-                      тепловая карта 9 малых секторов большой доски (0–8)
+                      {str.countries.subtitle}
                     </p>
 
-                    {/* Visual 3x3 Grid of the SuperBoard */}
-                    <div className="grid grid-cols-3 gap-2.5 aspect-square max-w-[260px] mx-auto p-2.5 bg-[var(--line)]/20 rounded-xl border border-[var(--line)]">
-                      {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((sectorIdx) => {
-                        const clicks = sectorClicks[sectorIdx] || 0;
-                        const pct = actualSectorClicks > 0 ? Math.round((clicks / actualSectorClicks) * 100) : 0;
-                        const isTop = clicks === maxSectorClicks && clicks > 0;
-                        const intensity = actualSectorClicks > 0 ? Math.min(Math.max(clicks / maxSectorClicks, 0.08), 1) : 0;
+                    <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                      {s.countries.length === 0 ? (
+                        <p className="text-xs text-[var(--ink-mute)] lowercase py-6 text-center border border-dashed border-[var(--line)] rounded-xl">
+                          {str.countries.empty}
+                        </p>
+                      ) : (
+                        s.countries.slice(0, 10).map((c) => (
+                          <div key={c.code} className="text-xs">
+                            <div className="flex items-center justify-between mb-1 gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-base shrink-0">{c.flag}</span>
+                                <span className="text-[var(--highlight-ink)] font-medium lowercase truncate">
+                                  {c.name}
+                                </span>
+                                {c.cities.length > 0 && (
+                                  <span className="text-[10px] text-[var(--ink-mute)] truncate hidden sm:inline">
+                                    ({c.cities.map((ci) => ci.city).join(', ')})
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 font-mono text-[11px] tabular-nums shrink-0">
+                                <span className="text-[var(--highlight-ink)]">
+                                  {c.count} {str.countries.visitsShort}
+                                </span>
+                                <span className="text-[var(--ink-mute)]">
+                                  ({c.uniques} {str.countries.uniquesShort})
+                                </span>
+                                <span className="text-[var(--ink-soft)] w-8 text-right">
+                                  {c.percentage}%
+                                </span>
+                              </div>
+                            </div>
+                            <div className="h-1.5 w-full bg-[var(--line)] rounded-full overflow-hidden">
+                              <div
+                                style={{ width: `${Math.min(Math.max(c.percentage, 2), 100)}%` }}
+                                className="h-full bg-[var(--highlight-ink)] rounded-full"
+                              />
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-                        return (
-                          <div
-                            key={sectorIdx}
-                            style={{
-                              backgroundColor: `rgba(78, 84, 90, ${intensity * 0.38 + 0.05})`,
-                            }}
-                            className={`relative flex flex-col items-center justify-center p-2 rounded-lg border transition-all text-center cursor-default ${
-                              isTop
-                                ? 'border-[var(--highlight-ink)] shadow-xs ring-1 ring-[var(--highlight-ink)]/40'
-                                : 'border-[var(--line)]'
-                            }`}
-                            title={`${SECTOR_NAMES[sectorIdx]}: ${clicks} кликов (${pct}%)`}
-                          >
-                            {isTop && (
-                              <span className="absolute -top-1.5 -right-1.5 px-1 py-0.2 rounded-full text-[8px] font-bold bg-[var(--highlight-ink)] text-[var(--bg)] uppercase">
-                                топ
+                {/* 3.2 Devices, Browsers & OS */}
+                <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] flex flex-col justify-between min-w-0">
+                  <div>
+                    <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5 mb-1">
+                      <Laptop size={15} />
+                      <span>{str.devices.title}</span>
+                    </h3>
+                    <p className="text-xs text-[var(--ink-soft)] lowercase mb-4">
+                      {str.devices.subtitle}
+                    </p>
+
+                    {s.devices.every((d) => d.count === 0) ? (
+                      <p className="text-xs text-[var(--ink-mute)] lowercase py-6 text-center border border-dashed border-[var(--line)] rounded-xl">
+                        {str.devices.empty}
+                      </p>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="space-y-2.5">
+                          {s.devices.map((d) => {
+                            const Icon =
+                              d.device === 'mobile'
+                                ? Smartphone
+                                : d.device === 'tablet'
+                                ? Tablet
+                                : Laptop;
+                            const label =
+                              d.device === 'mobile'
+                                ? str.devices.mobile
+                                : d.device === 'tablet'
+                                ? str.devices.tablet
+                                : str.devices.desktop;
+
+                            return (
+                              <div key={d.device} className="text-xs">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="inline-flex items-center gap-1.5 text-[var(--highlight-ink)] lowercase">
+                                    <Icon size={13} className="text-[var(--ink-soft)]" />
+                                    {label}
+                                  </span>
+                                  <span className="font-mono text-[11px] tabular-nums text-[var(--ink-soft)]">
+                                    {d.count} ({d.percentage}%)
+                                  </span>
+                                </div>
+                                <div className="h-1.5 w-full bg-[var(--line)] rounded-full overflow-hidden">
+                                  <div
+                                    style={{ width: `${d.count > 0 ? Math.max(d.percentage, 3) : 0}%` }}
+                                    className="h-full bg-[var(--highlight-ink)] rounded-full"
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Browsers & OS Badges */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-[var(--line)]">
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wider text-[var(--ink-soft)] block mb-1.5">
+                              {str.devices.browsersTitle}
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(s.browsers || []).map((b) => (
+                                <span
+                                  key={b.name}
+                                  className="px-2 py-0.5 rounded-md border border-[var(--line)] bg-[var(--bg)] text-[11px] font-mono tabular-nums text-[var(--highlight-ink)]"
+                                >
+                                  {b.name} <span className="text-[var(--ink-soft)]">{b.percentage}%</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wider text-[var(--ink-soft)] block mb-1.5">
+                              {str.devices.osTitle}
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(s.osBreakdown || []).map((o) => (
+                                <span
+                                  key={o.name}
+                                  className="px-2 py-0.5 rounded-md border border-[var(--line)] bg-[var(--bg)] text-[11px] font-mono tabular-nums text-[var(--highlight-ink)]"
+                                >
+                                  {o.name} <span className="text-[var(--ink-soft)]">{o.percentage}%</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3.3 24-Hour Arrival Rhythm */}
+                <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] flex flex-col justify-between min-w-0">
+                  {(() => {
+                    const arrivals: HourlyArrivalStat[] = s.hourlyArrivals || [];
+                    const hasAnyArrivals = arrivals.some((a) => a.count > 0);
+                    const maxH = Math.max(...arrivals.map((a) => a.count), 1);
+                    let peakHour = 0;
+                    arrivals.forEach((a) => {
+                      if (a.count > (arrivals[peakHour]?.count || 0)) peakHour = a.hour;
+                    });
+                    const activeHour =
+                      hoveredHourIdx !== null ? arrivals[hoveredHourIdx] : null;
+
+                    return (
+                      <div>
+                        <div className="flex items-center justify-between mb-1 gap-2">
+                          <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5">
+                            <Clock size={15} />
+                            <span>{str.arrivals.title}</span>
+                          </h3>
+                          <span className="text-[11px] text-[var(--ink-soft)] font-mono">
+                            {activeHour
+                              ? `${activeHour.label} · ${activeHour.count} (${activeHour.percentage}%)`
+                              : str.arrivals.hoursBadge}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[var(--ink-soft)] lowercase mb-4">
+                          {str.arrivals.subtitle}
+                        </p>
+
+                        {!hasAnyArrivals ? (
+                          <div className="h-32 flex items-center justify-center border border-dashed border-[var(--line)] rounded-xl text-xs text-[var(--ink-mute)] lowercase">
+                            {str.arrivals.empty}
+                          </div>
+                        ) : (
+                          <>
+                            <div
+                              className="h-32 w-full flex items-end gap-0.5 sm:gap-1 pt-2 border-b border-[var(--line)] pb-1.5"
+                              onMouseLeave={() => setHoveredHourIdx(null)}
+                            >
+                              {arrivals.map((a) => {
+                                const hPct =
+                                  a.count > 0
+                                    ? Math.max(Math.round((a.count / maxH) * 100), 6)
+                                    : 0;
+                                const isPeak = a.hour === peakHour && a.count > 0;
+                                const isSelected = hoveredHourIdx === a.hour;
+
+                                return (
+                                  <button
+                                    key={a.hour}
+                                    type="button"
+                                    onMouseEnter={() => setHoveredHourIdx(a.hour)}
+                                    onFocus={() => setHoveredHourIdx(a.hour)}
+                                    onClick={() =>
+                                      setHoveredHourIdx(isSelected ? null : a.hour)
+                                    }
+                                    aria-label={`${a.label}: ${a.count}`}
+                                    className="flex-1 flex flex-col items-center justify-end h-full cursor-pointer"
+                                  >
+                                    {a.count > 0 ? (
+                                      <div
+                                        style={{ height: `${hPct}%` }}
+                                        className={`w-full max-w-[9px] rounded-t-xs transition-all ${
+                                          isSelected || isPeak
+                                            ? 'bg-[var(--highlight-ink)]'
+                                            : 'bg-[var(--ink-soft)]/50 hover:bg-[var(--highlight-ink)]'
+                                        }`}
+                                      />
+                                    ) : (
+                                      <div className="w-full max-w-[7px] h-[2px] bg-[var(--line)] rounded-full" />
+                                    )}
+                                    <span className="text-[8px] text-[var(--ink-mute)] mt-1 tabular-nums h-3">
+                                      {a.hour % 4 === 0
+                                        ? String(a.hour).padStart(2, '0')
+                                        : ''}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            <div className="pt-3 mt-2 text-xs text-[var(--ink-soft)] lowercase flex items-center justify-between gap-2">
+                              <span>
+                                {str.arrivals.peakLabel}:{' '}
+                                <strong className="text-[var(--highlight-ink)] font-mono tabular-nums">
+                                  {String(peakHour).padStart(2, '0')}:00–
+                                  {String((peakHour + 1) % 24).padStart(2, '0')}:00
+                                </strong>
                               </span>
+                              <span className="font-mono text-[11px] tabular-nums text-[var(--ink-mute)]">
+                                {str.arrivals.peakVisits(arrivals[peakHour]?.count || 0)}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* 3.4 Traffic Sources (Referrers) */}
+                <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] flex flex-col justify-between min-w-0">
+                  <div>
+                    <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5 mb-1">
+                      <Compass size={15} />
+                      <span>{str.referrers.title}</span>
+                    </h3>
+                    <p className="text-xs text-[var(--ink-soft)] lowercase mb-4">
+                      {str.referrers.subtitle}
+                    </p>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
+                      {s.referrersCategorized.map((cat) => (
+                        <div
+                          key={cat.category}
+                          className="p-2.5 rounded-xl border border-[var(--line)] bg-[var(--bg)] text-center"
+                        >
+                          <span className="text-[10px] text-[var(--ink-soft)] block lowercase tracking-wide">
+                            {str.referrers.categories[cat.category]}
+                          </span>
+                          <span className="text-base font-serif font-medium text-[var(--highlight-ink)] tabular-nums block mt-0.5">
+                            {cat.count}
+                          </span>
+                          <span className="text-[10px] text-[var(--ink-mute)] font-mono tabular-nums">
+                            {cat.percentage}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                      {s.topReferrers.length === 0 ? (
+                        <p className="text-xs text-[var(--ink-mute)] lowercase">
+                          {str.referrers.allDirect}
+                        </p>
+                      ) : (
+                        s.topReferrers.map((ref) => (
+                          <div
+                            key={ref.referrer}
+                            className="flex items-center justify-between text-xs py-1.5 border-b border-[var(--line)]/50 last:border-none"
+                          >
+                            <span
+                              className="text-[var(--highlight-ink)] font-mono text-[11px] truncate max-w-[230px]"
+                              title={ref.referrer}
+                            >
+                              {ref.referrer}
+                            </span>
+                            <span className="text-[var(--ink-soft)] font-mono text-[11px] tabular-nums">
+                              {ref.count} {str.countries.visitsShort}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* ===================================================================== */}
+          {/* BAND 4: GAMEPLAY, FUNNEL, 3x3 SECTORS & UI CLICKS */}
+          {/* ===================================================================== */}
+          {showGameplay && (
+            <section className="space-y-4">
+              <h2 className="text-[11px] uppercase tracking-[0.14em] text-[var(--ink-soft)] font-medium">
+                {str.sections.gameplayHeading}
+              </h2>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* 4.1 Conversion Funnel */}
+                <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] flex flex-col justify-between min-w-0">
+                  <div>
+                    <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5 mb-1">
+                      <TrendingUp size={15} />
+                      <span>{str.funnel.title}</span>
+                    </h3>
+                    <p className="text-xs text-[var(--ink-soft)] lowercase mb-4">
+                      {str.funnel.subtitle}
+                    </p>
+
+                    {(() => {
+                      const f = s.funnel;
+                      const base = Math.max(f.visits, 1);
+                      const steps = [
+                        {
+                          label: str.funnel.steps[0],
+                          count: f.visits,
+                          pct: f.visits > 0 ? 100 : 0,
+                        },
+                        {
+                          label: str.funnel.steps[1],
+                          count: f.gameStarts,
+                          pct: f.visits > 0 ? Math.round((f.gameStarts / base) * 100) : 0,
+                        },
+                        {
+                          label: str.funnel.steps[2],
+                          count: f.gameFinishes,
+                          pct: f.visits > 0 ? Math.round((f.gameFinishes / base) * 100) : 0,
+                        },
+                        {
+                          label: str.funnel.steps[3],
+                          count: f.roomsOrShares,
+                          pct: f.visits > 0 ? Math.round((f.roomsOrShares / base) * 100) : 0,
+                        },
+                      ];
+
+                      return (
+                        <div className="space-y-3">
+                          {steps.map((st) => (
+                            <div key={st.label} className="text-xs">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-[var(--highlight-ink)] lowercase">
+                                  {st.label}
+                                </span>
+                                <span className="text-[var(--ink-soft)] font-mono tabular-nums">
+                                  {st.count} ({st.pct}%)
+                                </span>
+                              </div>
+                              <div className="h-2 w-full bg-[var(--line)] rounded-full overflow-hidden">
+                                <div
+                                  style={{
+                                    width: `${st.count > 0 ? Math.min(Math.max(st.pct, 3), 100) : 0}%`,
+                                  }}
+                                  className="h-full bg-[var(--highlight-ink)] rounded-full transition-all"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="pt-4 mt-4 border-t border-[var(--line)] grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <span className="text-[10px] text-[var(--ink-soft)] block lowercase">
+                        {str.funnel.completionLabel}
+                      </span>
+                      <span className="text-base font-serif font-medium text-[var(--highlight-ink)] tabular-nums">
+                        {s.gameBehavior.completionRate}%
+                      </span>
+                      <span className="text-[10px] text-[var(--ink-mute)] block lowercase tabular-nums">
+                        {str.funnel.finishedLabel(s.gameBehavior.totalFinishes)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-[var(--ink-soft)] block lowercase">
+                        {str.funnel.avgSessionLabel}
+                      </span>
+                      <span className="text-base font-serif font-medium text-[var(--highlight-ink)] tabular-nums">
+                        {formatDuration(s.gameBehavior.averageSessionSeconds, adminLang)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-[var(--ink-soft)] block lowercase">
+                        {str.funnel.viralityLabel}
+                      </span>
+                      <span className="text-base font-serif font-medium text-[var(--highlight-ink)] tabular-nums">
+                        {s.funnel.visits > 0
+                          ? Math.round((s.funnel.roomsOrShares / s.funnel.visits) * 100)
+                          : 0}
+                        %
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4.2 3x3 SuperBoard Sector Click Heatmap */}
+                {(() => {
+                  const sectorClicks =
+                    s.featureStats?.sectorsClicked || [0, 0, 0, 0, 0, 0, 0, 0, 0];
+                  const totalMoves = sectorClicks.reduce((a, b) => a + b, 0);
+                  const maxMoves = Math.max(...sectorClicks, 1);
+                  let topIdx = 4;
+                  sectorClicks.forEach((val, idx) => {
+                    if (val > (sectorClicks[topIdx] || 0)) topIdx = idx;
+                  });
+
+                  return (
+                    <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] flex flex-col justify-between min-w-0">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5">
+                            <Grid3X3 size={15} />
+                            <span>{str.sectors.title}</span>
+                          </h3>
+                          <span className="text-xs text-[var(--ink-soft)] font-mono tabular-nums">
+                            {str.sectors.clicksLabel(totalMoves)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[var(--ink-soft)] lowercase mb-4">
+                          {str.sectors.subtitle}
+                        </p>
+
+                        <div className="grid grid-cols-3 gap-2 aspect-square max-w-[236px] mx-auto p-2.5 bg-[var(--bg)] rounded-xl border border-[var(--line)]">
+                          {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((sectorIdx) => {
+                            const clicks = sectorClicks[sectorIdx] || 0;
+                            const pct =
+                              totalMoves > 0
+                                ? Math.round((clicks / totalMoves) * 100)
+                                : 0;
+                            const isTop = clicks === maxMoves && clicks > 0;
+                            const intensity =
+                              totalMoves > 0
+                                ? Math.min(Math.max(clicks / maxMoves, 0.1), 1)
+                                : 0;
+
+                            return (
+                              <div
+                                key={sectorIdx}
+                                style={{
+                                  backgroundColor:
+                                    clicks > 0
+                                      ? isDark
+                                        ? `rgba(245, 247, 249, ${intensity * 0.24 + 0.04})`
+                                        : `rgba(46, 51, 56, ${intensity * 0.26 + 0.04})`
+                                      : undefined,
+                                }}
+                                className={`relative flex flex-col items-center justify-center p-1.5 rounded-lg border text-center transition-colors ${
+                                  isTop
+                                    ? 'border-[var(--highlight-ink)] ring-1 ring-[var(--highlight-ink)]/30'
+                                    : 'border-[var(--line)]'
+                                }`}
+                                title={`${str.sectors.names[sectorIdx]}: ${clicks} (${pct}%)`}
+                              >
+                                {isTop && (
+                                  <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.2 rounded-full text-[8px] font-bold bg-[var(--highlight-ink)] text-[var(--bg)] uppercase">
+                                    {str.sectors.topBadge}
+                                  </span>
+                                )}
+                                <span className="text-[10px] text-[var(--ink-soft)] font-mono">
+                                  #{sectorIdx}
+                                </span>
+                                <span className="text-sm font-serif font-medium text-[var(--highlight-ink)] tabular-nums">
+                                  {clicks}
+                                </span>
+                                <span className="text-[9px] text-[var(--ink-mute)] font-mono tabular-nums">
+                                  {pct}%
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="pt-3 mt-4 border-t border-[var(--line)] text-[11px] text-[var(--ink-soft)] lowercase">
+                        {totalMoves > 0
+                          ? str.sectors.topInsight(
+                              topIdx,
+                              str.sectors.names[topIdx] || '',
+                              maxMoves
+                            )
+                          : str.sectors.empty}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 4.3 Modes, Difficulty, Clocks & Modifiers */}
+                <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] min-w-0">
+                  <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5 mb-1">
+                    <Sliders size={15} />
+                    <span>{str.features.title}</span>
+                  </h3>
+                  <p className="text-xs text-[var(--ink-soft)] lowercase mb-4">
+                    {str.features.subtitle}
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Game Modes */}
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-[var(--ink-soft)] block mb-2">
+                        {str.features.modesTitle}
+                      </span>
+                      {Object.keys(s.gameBehavior.startsByMode).length === 0 ? (
+                        <span className="text-xs text-[var(--ink-mute)] lowercase">
+                          {str.features.empty}
+                        </span>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {Object.entries(s.gameBehavior.startsByMode)
+                            .sort(([, a], [, b]) => b - a)
+                            .map(([rawMode, count]) => {
+                              const [baseMode, diffPart] = rawMode.split(' (');
+                              const cleanMode =
+                                str.features.modeLabels[baseMode] || baseMode;
+                              const cleanDiff = diffPart
+                                ? ` · ${
+                                    str.features.difficultyLabels[
+                                      diffPart.replace(')', '')
+                                    ] || diffPart.replace(')', '')
+                                  }`
+                                : '';
+                              return (
+                                <div
+                                  key={rawMode}
+                                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-xs"
+                                >
+                                  <span className="text-[var(--highlight-ink)] lowercase truncate">
+                                    {cleanMode}
+                                    {cleanDiff}
+                                  </span>
+                                  <span className="font-mono font-medium tabular-nums text-[var(--ink-soft)]">
+                                    {count}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* AI Difficulties + Clocks + Modifiers */}
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-[10px] uppercase tracking-wider text-[var(--ink-soft)] block mb-1.5">
+                          {str.features.difficultyTitle}
+                        </span>
+                        {Object.keys(s.featureStats.difficulties || {}).length === 0 ? (
+                          <span className="text-xs text-[var(--ink-mute)] lowercase">
+                            {str.features.empty}
+                          </span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {Object.entries(s.featureStats.difficulties).map(
+                              ([diff, count]) => (
+                                <span
+                                  key={diff}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-xs"
+                                >
+                                  <span className="text-[var(--highlight-ink)] lowercase">
+                                    {str.features.difficultyLabels[diff] || diff}
+                                  </span>
+                                  <span className="font-mono text-[var(--ink-soft)] tabular-nums">
+                                    {count}
+                                  </span>
+                                </span>
+                              )
                             )}
-                            <span className="text-[10px] text-[var(--ink-soft)] font-mono">
-                              #{sectorIdx}
-                            </span>
-                            <span className="text-sm sm:text-base font-serif font-medium text-[var(--highlight-ink)]">
-                              {clicks}
-                            </span>
-                            <span className="text-[9px] text-[var(--ink-mute)] font-mono">
-                              {pct}%
-                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] uppercase tracking-wider text-[var(--ink-soft)] block mb-1.5">
+                          {str.features.timersTitle}
+                        </span>
+                        {Object.keys(s.featureStats.timeControls || {}).length === 0 ? (
+                          <span className="text-xs text-[var(--ink-mute)] lowercase">
+                            {str.features.empty}
+                          </span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {Object.entries(s.featureStats.timeControls).map(
+                              ([tc, count]) => (
+                                <span
+                                  key={tc}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-xs"
+                                >
+                                  <span className="text-[var(--highlight-ink)] lowercase">
+                                    {str.features.timerLabels[tc] || tc}
+                                  </span>
+                                  <span className="font-mono text-[var(--ink-soft)] tabular-nums">
+                                    {count}
+                                  </span>
+                                </span>
+                              )
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] uppercase tracking-wider text-[var(--ink-soft)] block mb-1.5">
+                          {str.features.modifiersTitle}
+                        </span>
+                        {Object.keys(s.featureStats.modifiers || {}).length === 0 ? (
+                          <span className="text-xs text-[var(--ink-mute)] lowercase">
+                            {str.features.empty}
+                          </span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {Object.entries(s.featureStats.modifiers).map(
+                              ([mod, count]) => (
+                                <span
+                                  key={mod}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-xs"
+                                >
+                                  <span className="text-[var(--highlight-ink)] lowercase">
+                                    {str.features.modifierLabels[mod] || mod}
+                                  </span>
+                                  <span className="font-mono text-[var(--ink-soft)] tabular-nums">
+                                    {count}
+                                  </span>
+                                </span>
+                              )
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4.4 UI Interactions */}
+                <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] min-w-0">
+                  <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5 mb-1">
+                    <MousePointerClick size={15} />
+                    <span>{str.buttons.title}</span>
+                  </h3>
+                  <p className="text-xs text-[var(--ink-soft)] lowercase mb-4">
+                    {str.buttons.subtitle}
+                  </p>
+
+                  {s.buttonClicks.length === 0 ? (
+                    <p className="text-xs text-[var(--ink-mute)] lowercase py-6 text-center border border-dashed border-[var(--line)] rounded-xl">
+                      {str.buttons.empty}
+                    </p>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {s.buttonClicks.slice(0, 8).map((btn) => {
+                        const friendly = str.buttons.labels[btn.target] || btn.target;
+                        return (
+                          <div key={btn.target} className="text-xs">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="min-w-0 flex items-center gap-2">
+                                <span className="text-[var(--highlight-ink)] lowercase truncate">
+                                  {friendly}
+                                </span>
+                                {friendly !== btn.target && (
+                                  <span className="text-[10px] font-mono text-[var(--ink-mute)] hidden sm:inline">
+                                    {btn.target}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="font-mono text-[11px] tabular-nums text-[var(--ink-soft)] shrink-0">
+                                {btn.count} ({btn.percentage}%)
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-[var(--line)] rounded-full overflow-hidden">
+                              <div
+                                style={{
+                                  width: `${Math.min(Math.max(btn.percentage, 3), 100)}%`,
+                                }}
+                                className="h-full bg-[var(--highlight-ink)] rounded-full"
+                              />
+                            </div>
                           </div>
                         );
                       })}
                     </div>
-                  </div>
-
-                  <div className="pt-3 mt-4 border-t border-[var(--line)] text-[11px] text-[var(--ink-soft)] lowercase">
-                    {actualSectorClicks > 0 ? (
-                      <>
-                        чаще всего игроки ходят в сектор <strong className="text-[var(--highlight-ink)] font-mono">#{topSectorIndex}</strong> ({SECTOR_NAMES[topSectorIndex] || ''}) · {maxSectorClicks} кликов
-                      </>
-                    ) : (
-                      <>кликов по доске пока не зафиксировано</>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* 1.2 Frequently Used Features (Difficulty, Time Controls, Modifiers) */}
-            <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div>
-                <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5 mb-1">
-                  <Zap size={16} />
-                  <span>что чаще всего используют</span>
-                </h3>
-                <p className="text-xs text-[var(--ink-soft)] lowercase mb-3">
-                  выбор уровня сложности, таймера и модификаторов
-                </p>
-
-                <div className="space-y-3.5">
-                  {/* AI Difficulties */}
-                  <div>
-                    <span className="text-[10px] text-[var(--ink-soft)] block uppercase tracking-wider mb-1">
-                      уровень сложности ии
-                    </span>
-                    {Object.entries(s.featureStats.difficulties || {}).length === 0 ? (
-                      <span className="text-xs text-[var(--ink-mute)] lowercase">нет данных</span>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {Object.entries(s.featureStats.difficulties || {}).map(([diff, count]) => (
-                          <div key={diff} className="flex items-center justify-between px-2.5 py-1 rounded-md border border-[var(--line)]/60 text-xs bg-[var(--line)]/10">
-                            <span className="text-[var(--highlight-ink)] lowercase font-mono">{diff}</span>
-                            <span className="text-[var(--ink-soft)] font-mono font-medium">{String(count)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Time controls */}
-                  <div>
-                    <span className="text-[10px] text-[var(--ink-soft)] block uppercase tracking-wider mb-1">
-                      контроль времени (таймер)
-                    </span>
-                    {Object.entries(s.featureStats.timeControls || {}).length === 0 ? (
-                      <span className="text-xs text-[var(--ink-mute)] lowercase">нет данных</span>
-                    ) : (
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {Object.entries(s.featureStats.timeControls || {}).map(([tc, count]) => (
-                          <div key={tc} className="flex items-center justify-between px-2 py-1 rounded-md border border-[var(--line)]/60 text-xs bg-[var(--line)]/10">
-                            <span className="text-[var(--highlight-ink)] lowercase font-mono">{tc}</span>
-                            <span className="text-[var(--ink-soft)] font-mono font-medium">{String(count)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Modifiers */}
-                  <div>
-                    <span className="text-[10px] text-[var(--ink-soft)] block uppercase tracking-wider mb-1">
-                      модификаторы партий
-                    </span>
-                    {Object.entries(s.featureStats.modifiers || {}).length === 0 ? (
-                      <span className="text-xs text-[var(--ink-mute)] lowercase">нет данных</span>
-                    ) : (
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {Object.entries(s.featureStats.modifiers || {}).map(([mod, count]) => {
-                          const label = mod === 'fogOfWar' ? 'туман' : mod === 'fadingInk' ? 'чернила' : mod === 'speedBlitz' ? 'блиц' : mod;
-                          return (
-                            <div key={mod} className="flex items-center justify-between px-2 py-1 rounded-md border border-[var(--line)]/60 text-xs bg-[var(--line)]/10">
-                              <span className="text-[var(--highlight-ink)] lowercase">{label}</span>
-                              <span className="text-[var(--ink-soft)] font-mono font-medium">{String(count)}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-3 mt-3 border-t border-[var(--line)] text-[10px] text-[var(--ink-mute)] lowercase">
-                учитывается реальное использование настроек игроками
-              </div>
-            </div>
-
-            {/* 1.3 Most Clicked UI Buttons */}
-            <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div>
-                <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5 mb-1">
-                  <MousePointerClick size={16} />
-                  <span>популярные клики UI</span>
-                </h3>
-                <p className="text-xs text-[var(--ink-soft)] lowercase mb-3">
-                  нажатия на кнопки интерфейса и диалоги
-                </p>
-
-                <div className="space-y-2">
-                  {s.buttonClicks.length === 0 ? (
-                    <p className="text-xs text-[var(--ink-soft)] lowercase">нет зафиксированных кликов</p>
-                  ) : (
-                    s.buttonClicks.slice(0, 7).map((btn) => (
-                      <div key={btn.target} className="flex items-center justify-between text-xs py-1 border-b border-[var(--line)]/50 last:border-none">
-                        <span className="text-[var(--highlight-ink)] font-mono text-[11px] truncate max-w-[170px]" title={btn.target}>
-                          {btn.target}
-                        </span>
-                        <div className="flex items-center gap-2 font-mono text-[11px]">
-                          <span className="text-[var(--ink-soft)]">{btn.count}</span>
-                          <span className="text-[10px] text-[var(--ink-mute)] w-7 text-right">{btn.percentage}%</span>
-                        </div>
-                      </div>
-                    ))
                   )}
                 </div>
               </div>
+            </section>
+          )}
 
-              <div className="pt-3 mt-2 text-[10px] text-[var(--ink-mute)] lowercase">
-                тема, смена языка, правила, шеринг, никнейм и вызовы
-              </div>
-            </div>
-          </section>
+          {/* ===================================================================== */}
+          {/* BAND 5: BOTS & UNIFIED FILTERABLE EVENT LOG */}
+          {/* ===================================================================== */}
+          {showEvents && (
+            <section className="space-y-4">
+              <h2 className="text-[11px] uppercase tracking-[0.14em] text-[var(--ink-soft)] font-medium">
+                {str.sections.logsHeading}
+              </h2>
 
-          {/* 2. Geography & Diurnal Arrival Times (С какой страны и в какое время пришли) */}
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* 2.1 Countries Table & Bars */}
-            <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)]">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5">
-                  <Globe size={16} />
-                  <span>с какой страны пришли (география)</span>
-                </h3>
-                <span className="text-xs text-[var(--ink-soft)] font-mono">
-                  {s.countries.length} стран
-                </span>
-              </div>
+              {/* Bots Breakdown */}
+              <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-1">
+                  <div className="flex items-center gap-2">
+                    <Bot size={15} className="text-rose-500" />
+                    <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase">
+                      {str.bots.title} ({s.humansVsBots.botVisits} ·{' '}
+                      {s.humansVsBots.botPercentage}%)
+                    </h3>
+                  </div>
+                  <span className="text-[11px] text-[var(--ink-mute)] lowercase">
+                    {str.bots.subtitle}
+                  </span>
+                </div>
 
-              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-                {s.countries.length === 0 ? (
-                  <p className="text-xs text-[var(--ink-soft)] lowercase">нет данных о странах</p>
+                {s.botBreakdown.length === 0 ? (
+                  <p className="text-xs text-[var(--ink-mute)] lowercase">
+                    {str.bots.empty}
+                  </p>
                 ) : (
-                  s.countries.slice(0, 8).map((c) => (
-                    <div key={c.code} className="text-xs">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-base">{c.flag}</span>
-                          <span className="text-[var(--highlight-ink)] font-medium lowercase">
-                            {c.name}
-                          </span>
-                          {c.cities.length > 0 && (
-                            <span className="text-[10px] text-[var(--ink-mute)] hidden sm:inline">
-                              ({c.cities.map((ci) => ci.city).join(', ')})
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 font-mono text-[11px]">
-                          <span className="text-[var(--highlight-ink)]">{c.count} виз.</span>
-                          <span className="text-[var(--ink-mute)] w-8 text-right">{c.percentage}%</span>
-                        </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {s.botBreakdown.map((b) => (
+                      <div
+                        key={b.name}
+                        className="p-2.5 rounded-xl border border-rose-500/20 bg-rose-500/5 dark:bg-rose-500/10 flex flex-col justify-between"
+                      >
+                        <span
+                          className="text-[11px] font-medium text-[var(--highlight-ink)] truncate"
+                          title={b.name}
+                        >
+                          {b.name}
+                        </span>
+                        <span className="text-xs font-mono text-rose-600 dark:text-rose-400 font-semibold mt-1 tabular-nums">
+                          {b.count} {str.bots.hits}
+                        </span>
                       </div>
-                      <div className="h-1.5 w-full bg-[var(--line)] rounded-full overflow-hidden">
-                        <div
-                          style={{ width: `${Math.max(c.percentage, 2)}%` }}
-                          className="h-full bg-[var(--highlight-ink)] rounded-full"
-                        />
-                      </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
 
-            {/* 2.2 Diurnal Arrival Distribution (В какое время пришли) */}
-            <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5">
-                    <Clock size={16} />
-                    <span>в какое время пришли (суточный цикл)</span>
-                  </h3>
-                  <span className="text-xs text-[var(--ink-soft)] font-mono">
-                    24 часа (00:00 - 23:00)
-                  </span>
+              {/* Unified Event Stream & Arrival Log */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] min-w-0 overflow-hidden">
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Activity size={15} className="text-emerald-500" />
+                      <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase">
+                        {str.stream.title}
+                      </h3>
+                    </div>
+                    <p className="text-xs text-[var(--ink-soft)] lowercase mt-0.5">
+                      {str.stream.subtitle} ·{' '}
+                      <span className="font-mono tabular-nums">
+                        {str.stream.showingCount(
+                          Math.min(filteredEvents.length, 40),
+                          s.recentEvents.length
+                        )}
+                      </span>
+                    </p>
+                  </div>
+
+                  {/* Filter pills */}
+                  <div
+                    role="group"
+                    aria-label="filter events"
+                    className="flex flex-wrap items-center gap-1"
+                  >
+                    {(
+                      ['all', 'humans', 'pageviews', 'games', 'bots'] as const
+                    ).map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setEventFilter(f)}
+                        className={`min-h-[32px] px-2.5 py-1 rounded-lg text-xs lowercase transition-colors cursor-pointer ${
+                          eventFilter === f
+                            ? 'bg-[var(--highlight-ink)] text-[var(--bg)] font-medium'
+                            : 'border border-[var(--line)] bg-[var(--bg)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
+                        }`}
+                      >
+                        {str.stream.filters[f]}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <p className="text-xs text-[var(--ink-soft)] lowercase mb-4">
-                  распределение времени прихода посетителей в течение суток
-                </p>
 
-                {/* 24-hour bar distribution */}
-                {(() => {
-                  const arrivals = s.hourlyArrivals || [];
-                  const maxH = Math.max(...arrivals.map((a) => a.count), 1);
-                  let peakHour = 19;
-                  arrivals.forEach((a) => {
-                    if (a.count > (arrivals[peakHour]?.count || 0)) peakHour = a.hour;
-                  });
-
-                  return (
-                    <div>
-                      <div className="h-36 w-full flex items-end gap-1 pt-2 border-b border-[var(--line)] pb-2">
-                        {arrivals.map((a) => {
-                          const hPct = Math.round((a.count / maxH) * 100);
-                          const isPeak = a.hour === peakHour;
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-[var(--line)] text-[var(--ink-soft)] uppercase text-[10px] tracking-wider">
+                        <th className="py-2 px-2">{str.stream.columns.time}</th>
+                        <th className="py-2 px-2">{str.stream.columns.event}</th>
+                        <th className="py-2 px-2">{str.stream.columns.visitor}</th>
+                        <th className="py-2 px-2">{str.stream.columns.location}</th>
+                        <th className="py-2 px-2">{str.stream.columns.client}</th>
+                        <th className="py-2 px-2">{str.stream.columns.details}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--line)]/50">
+                      {filteredEvents.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="py-8 text-center text-xs text-[var(--ink-mute)] lowercase"
+                          >
+                            {str.stream.empty}
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredEvents.slice(0, 40).map((ev) => {
+                          const d = new Date(ev.timestamp);
+                          const clockStr = d.toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          });
+                          const dateStr = d.toLocaleDateString([], {
+                            day: '2-digit',
+                            month: '2-digit',
+                          });
+                          const timeAgoSec = Math.max(
+                            0,
+                            Math.round((Date.now() - ev.timestamp) / 1000)
+                          );
+                          const agoStr =
+                            timeAgoSec < 60
+                              ? str.stream.agoSec(timeAgoSec)
+                              : timeAgoSec < 3600
+                              ? str.stream.agoMin(Math.round(timeAgoSec / 60))
+                              : str.stream.agoHour(Math.round(timeAgoSec / 3600));
 
                           return (
-                            <div
-                              key={a.hour}
-                              className="flex-1 flex flex-col items-center justify-end h-full group relative"
+                            <tr
+                              key={ev.id}
+                              className="hover:bg-[var(--line)]/20 transition-colors"
                             >
-                              {/* Tooltip */}
-                              <div className="absolute bottom-full mb-1.5 hidden group-hover:flex flex-col items-center z-20 pointer-events-none">
-                                <div className="px-2 py-1 rounded bg-[var(--highlight-ink)] text-[var(--bg)] text-[10px] whitespace-nowrap shadow-md">
-                                  <p className="font-medium">{a.label}</p>
-                                  <p>{a.count} визитов ({a.percentage}%)</p>
-                                  <p>{a.uniques} уникальных</p>
+                              <td className="py-2.5 px-2 font-mono whitespace-nowrap tabular-nums">
+                                <span className="text-[var(--highlight-ink)]">
+                                  {clockStr}
+                                </span>
+                                <span className="text-[var(--ink-mute)] ml-1.5 text-[10px]">
+                                  {dateStr} · {agoStr}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-2">
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-mono font-medium ${
+                                      ev.type === 'game'
+                                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                                        : ev.type === 'click'
+                                        ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
+                                        : ev.type === 'feature'
+                                        ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300'
+                                        : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                    }`}
+                                  >
+                                    {ev.type}
+                                  </span>
+                                  <span className="font-mono text-[var(--highlight-ink)] truncate max-w-[160px]">
+                                    {str.buttons.labels[ev.target] || ev.target}
+                                  </span>
                                 </div>
-                              </div>
-
-                              <div
-                                style={{ height: `${Math.max(hPct, 4)}%` }}
-                                className={`w-full max-w-[8px] rounded-t-xs transition-all ${
-                                  isPeak
-                                    ? 'bg-[var(--highlight-ink)] ring-1 ring-[var(--highlight-ink)]/50'
-                                    : 'bg-[var(--ink-soft)]/50 group-hover:bg-[var(--highlight-ink)]'
-                                }`}
-                              />
-
-                              <span className="text-[8px] text-[var(--ink-mute)] mt-1 tracking-tighter">
-                                {a.hour % 4 === 0 ? String(a.hour).padStart(2, '0') : ''}
-                              </span>
-                            </div>
+                              </td>
+                              <td className="py-2.5 px-2 whitespace-nowrap">
+                                {ev.isBot ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                                    {str.stream.visitorBadges.bot}:{' '}
+                                    {ev.botName || 'Bot'}
+                                  </span>
+                                ) : (
+                                  <div className="flex items-center gap-1.5">
+                                    <span
+                                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                        ev.isReturning
+                                          ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                                          : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                                      }`}
+                                    >
+                                      {ev.isReturning
+                                        ? str.stream.visitorBadges.returning
+                                        : str.stream.visitorBadges.new}
+                                    </span>
+                                    <span
+                                      className="font-mono text-[11px] text-[var(--ink-soft)]"
+                                      title={ev.visitorId}
+                                    >
+                                      {ev.visitorId.slice(0, 8)}
+                                    </span>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-2 whitespace-nowrap">
+                                <span className="mr-1.5">
+                                  {ev.country ? countryCodeToFlag(ev.country) : '🌐'}
+                                </span>
+                                <span className="text-[var(--highlight-ink)]">
+                                  {ev.countryName || ev.country || 'Unknown'}
+                                </span>
+                                {ev.city && (
+                                  <span className="text-[var(--ink-mute)] ml-1 text-[11px]">
+                                    ({ev.city})
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-2 text-[var(--ink-soft)] whitespace-nowrap">
+                                {ev.device} · {ev.browser}
+                                {ev.os ? ` · ${ev.os}` : ''}
+                              </td>
+                              <td className="py-2.5 px-2 text-[10px] font-mono text-[var(--ink-mute)] truncate max-w-[200px]">
+                                {ev.referrer
+                                  ? ev.referrer
+                                  : ev.metadata
+                                  ? JSON.stringify(ev.metadata)
+                                  : 'direct'}
+                              </td>
+                            </tr>
                           );
-                        })}
-                      </div>
-
-                      <div className="pt-3 mt-3 text-xs text-[var(--ink-soft)] lowercase flex items-center justify-between">
-                        {arrivals.some((a) => a.count > 0) ? (
-                          <>
-                            <span>
-                              наибольший наплыв: <strong className="text-[var(--highlight-ink)] font-mono">{String(peakHour).padStart(2, '0')}:00 – {String((peakHour + 2) % 24).padStart(2, '0')}:00</strong>
-                            </span>
-                            <span className="font-mono text-[11px] text-[var(--ink-mute)]">
-                              {arrivals[peakHour]?.count || 0} визитов в пик
-                            </span>
-                          </>
-                        ) : (
-                          <span>визитов за выбранный период пока не зафиксировано</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              <div className="pt-3 mt-3 border-t border-[var(--line)] text-[10px] text-[var(--ink-mute)] lowercase">
-                показывает оптимальное время онлайна для организации турниров и игр
-              </div>
-            </div>
-          </section>
-
-          {/* 3. Detailed Arrival Log: Country & Exact Arrival Time */}
-          <section className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <MapPin size={16} className="text-[var(--highlight-ink)]" />
-                <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase">
-                  журнал визитов · страна и точное время прибытия
-                </h3>
-              </div>
-              <span className="text-xs text-[var(--ink-soft)] font-mono">
-                последние прибывшие визитеры
-              </span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-[var(--line)] text-[var(--ink-soft)] uppercase text-[10px] tracking-wider">
-                    <th className="py-2 px-2">точное время</th>
-                    <th className="py-2 px-2">страна и город</th>
-                    <th className="py-2 px-2">тип визитера</th>
-                    <th className="py-2 px-2">устройство / браузер</th>
-                    <th className="py-2 px-2">источник (referrer)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--line)]/50">
-                  {(() => {
-                    const visitors = s.recentEvents.filter(
-                      (e) => e.type === 'pageview' || e.category === 'navigation' || !e.isBot
-                    );
-                    if (visitors.length === 0) {
-                      return (
-                        <tr>
-                          <td colSpan={5} className="py-8 text-center text-xs text-[var(--ink-mute)] lowercase">
-                            пока нет зафиксированных визитов реальных пользователей
-                          </td>
-                        </tr>
-                      );
-                    }
-                    return visitors.slice(0, 10).map((ev) => {
-                      const d = new Date(ev.timestamp);
-                      const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                      const dateStr = d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
-
-                      return (
-                        <tr key={ev.id} className="hover:bg-[var(--line)]/20 transition-colors">
-                          <td className="py-2.5 px-2 font-mono text-[var(--highlight-ink)] whitespace-nowrap">
-                            <span className="text-[var(--ink-soft)] mr-1.5">{dateStr}</span>
-                            <span>{timeStr}</span>
-                          </td>
-                          <td className="py-2.5 px-2 whitespace-nowrap">
-                            <span className="mr-1.5 text-base">{ev.country ? countryCodeToFlag(ev.country) : '🌐'}</span>
-                            <span className="text-[var(--highlight-ink)] font-medium">{ev.countryName || ev.country || 'Unknown'}</span>
-                            {ev.city && (
-                              <span className="text-[var(--ink-mute)] ml-1 text-[11px]">({ev.city})</span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-2">
-                            {ev.isBot ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400">
-                                бот: {ev.botName || 'Bot'}
-                              </span>
-                            ) : ev.isReturning ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                                вернулся
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                                новый
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-2 text-[var(--ink-soft)] whitespace-nowrap">
-                            {ev.device} · {ev.browser} {ev.os ? `(${ev.os})` : ''}
-                          </td>
-                          <td className="py-2.5 px-2 font-mono text-[11px] text-[var(--ink-mute)] truncate max-w-[200px]">
-                            {ev.referrer || 'direct'}
-                          </td>
-                        </tr>
-                      );
-                    });
-                  })()}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          {/* 4. Behavior & Conversion Funnel */}
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* 4.1 Behavior & Modes */}
-            <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5">
-                    <Gamepad2 size={16} />
-                    <span>режимы игры</span>
-                  </h3>
-                  <span className="text-xs text-[var(--ink-soft)] font-mono">
-                    {s.gameBehavior.totalStarts} стартов
-                  </span>
-                </div>
-
-                <div className="space-y-2.5">
-                  {Object.entries(s.gameBehavior.startsByMode).length === 0 ? (
-                    <p className="text-xs text-[var(--ink-soft)] lowercase">нет данных о сыгранных партиях</p>
-                  ) : (
-                    Object.entries(s.gameBehavior.startsByMode).map(([mode, count]) => {
-                      const pct = Math.round((count / (s.gameBehavior.totalStarts || 1)) * 100);
-                      return (
-                        <div key={mode} className="text-xs">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[var(--highlight-ink)] lowercase">{mode}</span>
-                            <span className="text-[var(--ink-soft)] font-mono">
-                              {count} ({pct}%)
-                            </span>
-                          </div>
-                          <div className="h-1.5 w-full bg-[var(--line)] rounded-full overflow-hidden">
-                            <div
-                              style={{ width: `${pct}%` }}
-                              className="h-full bg-[var(--highlight-ink)] rounded-full"
-                            />
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
+                        })
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-
-              {/* Completion & Session Length */}
-              <div className="pt-4 mt-4 border-t border-[var(--line)] grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <span className="text-[var(--ink-soft)] block lowercase">доходимость партий</span>
-                  <span className="text-base font-serif font-medium text-[var(--highlight-ink)]">
-                    {s.gameBehavior.completionRate}%
-                  </span>
-                  <span className="text-[10px] text-[var(--ink-mute)] block lowercase">
-                    {s.gameBehavior.totalFinishes} завершено
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[var(--ink-soft)] block lowercase">средняя сессия</span>
-                  <span className="text-base font-serif font-medium text-[var(--highlight-ink)]">
-                    {Math.floor(s.gameBehavior.averageSessionSeconds / 60)}m {s.gameBehavior.averageSessionSeconds % 60}s
-                  </span>
-                  <span className="text-[10px] text-[var(--ink-mute)] block lowercase">активного времени</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 4.2 Conversion Funnel */}
-            <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div>
-                <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5 mb-1">
-                  <TrendingUp size={16} />
-                  <span>воронка конверсии</span>
-                </h3>
-                <p className="text-xs text-[var(--ink-soft)] lowercase mb-4">
-                  визит → старт игры → финиш → создание / шеринг
-                </p>
-
-                {(() => {
-                  const f = s.funnel;
-                  const v100 = Math.max(f.visits, 1);
-                  const steps = [
-                    { label: '1. Визит страницы', count: f.visits, pct: 100 },
-                    { label: '2. Начало партии', count: f.gameStarts, pct: Math.round((f.gameStarts / v100) * 100) },
-                    { label: '3. Завершение партии', count: f.gameFinishes, pct: Math.round((f.gameFinishes / v100) * 100) },
-                    { label: '4. Шеринг / Создание комнаты', count: f.roomsOrShares, pct: Math.round((f.roomsOrShares / v100) * 100) },
-                  ];
-
-                  return (
-                    <div className="space-y-3">
-                      {steps.map((st) => (
-                        <div key={st.label} className="text-xs">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[var(--highlight-ink)] lowercase">{st.label}</span>
-                            <span className="text-[var(--ink-soft)] font-mono">
-                              {st.count} ({st.pct}%)
-                            </span>
-                          </div>
-                          <div className="h-2 w-full bg-[var(--line)] rounded-full overflow-hidden">
-                            <div
-                              style={{ width: `${Math.max(st.pct, 4)}%` }}
-                              className="h-full bg-[var(--highlight-ink)] rounded-full transition-all"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              <div className="pt-3 mt-4 border-t border-[var(--line)] text-[11px] text-[var(--ink-soft)] lowercase">
-                коэффициент виральности (шеринг на визит):{' '}
-                <strong className="text-[var(--highlight-ink)] font-mono">
-                  {Math.round((s.funnel.roomsOrShares / Math.max(s.funnel.visits, 1)) * 100)}%
-                </strong>
-              </div>
-            </div>
-          </section>
-
-          {/* 5. Traffic Sources (Referrers) */}
-          <section className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5">
-                <Compass size={16} />
-                <span>источники трафика (referrers)</span>
-              </h3>
-              <span className="text-xs text-[var(--ink-soft)] font-mono">
-                reddit, search, direct, social
-              </span>
-            </div>
-
-            {/* Categories Breakdown */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
-              {s.referrersCategorized.map((cat) => (
-                <div key={cat.category} className="p-2 rounded-lg border border-[var(--line)] text-center">
-                  <span className="text-[10px] text-[var(--ink-soft)] block uppercase tracking-wider">
-                    {cat.category}
-                  </span>
-                  <span className="text-sm font-serif font-medium text-[var(--highlight-ink)]">
-                    {cat.count}
-                  </span>
-                  <span className="text-[9px] text-[var(--ink-mute)] block">
-                    {cat.percentage}%
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Detailed Referrer Domains */}
-            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-              {s.topReferrers.length === 0 ? (
-                <p className="text-xs text-[var(--ink-soft)] lowercase">все визиты были прямыми (direct)</p>
-              ) : (
-                s.topReferrers.map((ref) => (
-                  <div
-                    key={ref.referrer}
-                    className="flex items-center justify-between text-xs py-1 border-b border-[var(--line)]/40 last:border-none"
-                  >
-                    <span className="text-[var(--highlight-ink)] font-mono text-[11px] truncate max-w-[240px]">
-                      {ref.referrer}
-                    </span>
-                    <span className="text-[var(--ink-soft)] font-mono text-[11px]">
-                      {ref.count} виз.
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
-
-          {/* Bots & Crawlers Section */}
-          <section className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Bot size={16} className="text-rose-500" />
-                <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase">
-                  боты и краулеры ({s.humansVsBots.botVisits} запросов · {s.humansVsBots.botPercentage}% трафика)
-                </h3>
-              </div>
-              <span className="text-[11px] text-[var(--ink-mute)] lowercase">
-                исключены из человеческой статистики
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-              {s.botBreakdown.length === 0 ? (
-                <p className="text-xs text-[var(--ink-soft)] lowercase col-span-full">
-                  ботов в выбранный период не зафиксировано
-                </p>
-              ) : (
-                s.botBreakdown.map((b) => (
-                  <div
-                    key={b.name}
-                    className="p-2.5 rounded-xl border border-[var(--line)] bg-rose-500/5 dark:bg-rose-500/10 flex flex-col justify-between"
-                  >
-                    <span className="text-[11px] font-medium text-[var(--highlight-ink)] truncate" title={b.name}>
-                      {b.name}
-                    </span>
-                    <span className="text-xs font-mono text-rose-600 dark:text-rose-400 font-semibold mt-1">
-                      {b.count} hits
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
-
-          {/* Live Recent Events Stream */}
-          <section className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)]">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Activity size={16} className="text-emerald-500" />
-                <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase">
-                  live stream · последние события платформы
-                </h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setAutoRefresh(!autoRefresh)}
-                  className={`text-[11px] px-2 py-0.5 rounded cursor-pointer transition-colors ${
-                    autoRefresh ? 'bg-emerald-500/10 text-emerald-600' : 'text-[var(--ink-mute)]'
-                  }`}
-                >
-                  {autoRefresh ? 'auto-refresh on' : 'auto-refresh off'}
-                </button>
-                {lastRefreshedAt && (
-                  <span className="text-[10px] text-[var(--ink-mute)]">обновлено {lastRefreshedAt}</span>
-                )}
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-[var(--line)] text-[var(--ink-soft)] uppercase text-[10px] tracking-wider">
-                    <th className="py-2 px-2">время</th>
-                    <th className="py-2 px-2">тип / таргет</th>
-                    <th className="py-2 px-2">посетитель</th>
-                    <th className="py-2 px-2">страна</th>
-                    <th className="py-2 px-2">устройство / браузер</th>
-                    <th className="py-2 px-2">свойства</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--line)]/50">
-                  {s.recentEvents.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-xs text-[var(--ink-mute)] lowercase">
-                        событий пока нет · они появятся в реальном времени при действиях пользователей
-                      </td>
-                    </tr>
-                  ) : (
-                    s.recentEvents.slice(0, 30).map((ev) => {
-                    const timeAgoSec = Math.round((Date.now() - ev.timestamp) / 1000);
-                    const timeStr =
-                      timeAgoSec < 60
-                        ? `${timeAgoSec}s ago`
-                        : timeAgoSec < 3600
-                        ? `${Math.round(timeAgoSec / 60)}m ago`
-                        : `${Math.round(timeAgoSec / 3600)}h ago`;
-
-                    return (
-                      <tr key={ev.id} className="hover:bg-[var(--line)]/20 transition-colors">
-                        <td className="py-2 px-2 text-[var(--ink-mute)] font-mono whitespace-nowrap">
-                          {timeStr}
-                        </td>
-                        <td className="py-2 px-2">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={`px-1.5 py-0.2 rounded text-[9px] uppercase font-mono font-medium ${
-                                ev.type === 'game'
-                                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-                                  : ev.type === 'click'
-                                  ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
-                                  : ev.type === 'feature'
-                                  ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300'
-                                  : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                              }`}
-                            >
-                              {ev.type}
-                            </span>
-                            <span className="font-mono text-[var(--highlight-ink)] truncate max-w-[160px]">
-                              {ev.target}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-2 px-2 font-mono text-[11px] text-[var(--ink-soft)]">
-                          {ev.isBot ? (
-                            <span className="text-rose-500 font-semibold">{ev.botName || 'Bot'}</span>
-                          ) : (
-                            <span title={ev.visitorId}>
-                              {ev.visitorId.slice(0, 10)}… {ev.isReturning && '(возвр)'}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2 px-2 whitespace-nowrap">
-                          <span className="mr-1">{ev.country ? countryCodeToFlag(ev.country) : '🌐'}</span>
-                          <span className="text-[var(--highlight-ink)]">{ev.countryName || ev.country}</span>
-                        </td>
-                        <td className="py-2 px-2 text-[var(--ink-soft)] whitespace-nowrap">
-                          {ev.device} · {ev.browser}
-                        </td>
-                        <td className="py-2 px-2 text-[10px] font-mono text-[var(--ink-mute)] truncate max-w-[200px]">
-                          {ev.metadata ? JSON.stringify(ev.metadata) : '-'}
-                        </td>
-                      </tr>
-                    );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </>
+            </section>
+          )}
+        </div>
       )}
     </div>
   );

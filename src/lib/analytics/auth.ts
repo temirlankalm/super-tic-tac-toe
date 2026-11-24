@@ -1,8 +1,20 @@
 import crypto from 'crypto';
 import { NextRequest } from 'next/server';
-import { ADMIN_COOKIE_NAME, isAdminHost, getAdminCookieDomain } from './constants';
+import {
+  ADMIN_COOKIE_NAME,
+  ADMIN_BADGE_COOKIE_NAME,
+  isAdminHost,
+  getAdminCookieDomain,
+  getAdminBadgeCookieDomain,
+} from './constants';
 
-export { ADMIN_COOKIE_NAME, isAdminHost, getAdminCookieDomain };
+export {
+  ADMIN_COOKIE_NAME,
+  ADMIN_BADGE_COOKIE_NAME,
+  isAdminHost,
+  getAdminCookieDomain,
+  getAdminBadgeCookieDomain,
+};
 
 /**
  * ==============================================================================
@@ -182,6 +194,49 @@ export function verifySessionToken(token: string | null | undefined): boolean {
 
     const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf-8'));
     if (!payload.exp || Date.now() > payload.exp) {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function createAdminBadgeToken(): string {
+  const now = Date.now();
+  const exp = now + 90 * 24 * 3600 * 1000; // 90 days visibility badge
+  const payloadStr = JSON.stringify({ iat: now, exp, badge: 'admin' });
+  const payloadB64 = Buffer.from(payloadStr).toString('base64url');
+
+  const signature = crypto
+    .createHmac('sha256', getSessionSecret())
+    .update(`badge:${payloadB64}`)
+    .digest('base64url');
+
+  return `${payloadB64}.${signature}`;
+}
+
+export function verifyAdminBadgeToken(token: string | null | undefined): boolean {
+  if (!token || typeof token !== 'string') return false;
+  const parts = token.split('.');
+  if (parts.length !== 2) return false;
+
+  const [payloadB64, signature] = parts;
+  try {
+    const expectedSig = crypto
+      .createHmac('sha256', getSessionSecret())
+      .update(`badge:${payloadB64}`)
+      .digest('base64url');
+
+    const sigBuf = Buffer.from(signature);
+    const expectedSigBuf = Buffer.from(expectedSig);
+    if (!safeTimingCompare(sigBuf, expectedSigBuf)) {
+      return false;
+    }
+
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf-8'));
+    if (payload.badge !== 'admin' || !payload.exp || Date.now() > payload.exp) {
       return false;
     }
 

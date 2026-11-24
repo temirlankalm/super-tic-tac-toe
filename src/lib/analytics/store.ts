@@ -4,7 +4,6 @@ import {
   AnalyticsSummary,
   CountryStat,
   DeviceType,
-  EventType,
   FunnelStats,
   GameBehaviorStats,
   HourlyArrivalStat,
@@ -26,9 +25,83 @@ const MAX_STORED_EVENTS = 5000;
 class AnalyticsStore {
   private events: VisitorEvent[] = [];
   private isLoaded = false;
+  private isKvHydrated = false;
 
   constructor() {
     this.loadFromDisk();
+  }
+
+  public async ensureHydratedFromKv(): Promise<void> {
+    this.loadFromDisk();
+    if (this.isKvHydrated && this.events.length > 0) return;
+
+    const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (!kvUrl || !kvToken) return;
+
+    try {
+      const res = await fetch(`${kvUrl}/lrange/sttt_live_events/-${MAX_STORED_EVENTS}/-1`, {
+        headers: { Authorization: `Bearer ${kvToken}` },
+        cache: 'no-store',
+      });
+      if (!res.ok) return;
+      const json = (await res.json()) as { result?: string[] };
+      if (!Array.isArray(json.result)) return;
+
+      const parsed: VisitorEvent[] = [];
+      for (const item of json.result) {
+        try {
+          const ev = typeof item === 'string' ? JSON.parse(item) : item;
+          if (
+            ev &&
+            typeof ev.id === 'string' &&
+            !ev.id.includes('seed') &&
+            !ev.id.includes('active_') &&
+            !ev.visitorId?.includes('seed_') &&
+            !ev.visitorId?.startsWith('v_kz_') &&
+            !ev.visitorId?.startsWith('v_live_')
+          ) {
+            parsed.push(ev);
+          }
+        } catch {}
+      }
+
+      if (parsed.length > 0) {
+        const existingIds = new Set(this.events.map((e) => e.id));
+        for (const ev of parsed) {
+          if (!existingIds.has(ev.id)) {
+            this.events.push(ev);
+          }
+        }
+        this.events.sort((a, b) => a.timestamp - b.timestamp);
+        if (this.events.length > MAX_STORED_EVENTS) {
+          this.events = this.events.slice(-MAX_STORED_EVENTS);
+        }
+        this.persistToDisk();
+      }
+      this.isKvHydrated = true;
+    } catch {
+      // Ignore KV errors
+    }
+  }
+
+  /**
+   * Returns canonical visit-level events (all pageviews + 1 representative event
+   * for any session that only sent gameplay/interaction events without a pageview).
+   * Prevents 60+ board cell clicks in one match from inflating visit/country/device metrics.
+   */
+  private getHumanVisitEvents(humanEvents: VisitorEvent[]): VisitorEvent[] {
+    const pageviews = humanEvents.filter((e) => e.type === 'pageview');
+    const seenSessions = new Set(pageviews.map((e) => e.sessionId));
+    const result = [...pageviews];
+
+    for (const e of humanEvents) {
+      if (!seenSessions.has(e.sessionId)) {
+        seenSessions.add(e.sessionId);
+        result.push(e);
+      }
+    }
+    return result;
   }
 
   private loadFromDisk() {
@@ -118,8 +191,9 @@ class AnalyticsStore {
       const humans = evs.filter((e) => !e.isBot);
       const uniques = new Set(humans.map((e) => e.visitorId)).size;
       const bots = evs.filter((e) => e.isBot).length;
+      const visits = this.getHumanVisitEvents(humans).length;
       return {
-        visits: humans.filter((e) => e.type === 'pageview').length || humans.length,
+        visits,
         uniques,
         bots,
       };
@@ -133,13 +207,14 @@ class AnalyticsStore {
     // 2. Humans vs Bots
     const humanEvents = filtered.filter((e) => !e.isBot);
     const botEvents = filtered.filter((e) => e.isBot);
+    const humanVisitEvents = this.getHumanVisitEvents(humanEvents);
 
-    const humanVisits = humanEvents.filter((e) => e.type === 'pageview').length || humanEvents.length;
+    const humanVisits = humanVisitEvents.length;
     const humanUniques = new Set(humanEvents.map((e) => e.visitorId)).size;
     const botVisits = botEvents.length;
     const botUniques = new Set(botEvents.map((e) => e.visitorId)).size;
-    const totalEvents = filtered.length;
-    const botPercentage = totalEvents > 0 ? Math.round((botVisits / totalEvents) * 100) : 0;
+    const totalTrafficUnits = humanVisits + botVisits;
+    const botPercentage = totalTrafficUnits > 0 ? Math.round((botVisits / totalTrafficUnits) * 100) : 0;
 
     const humansVsBots = {
       humanVisits,
@@ -153,12 +228,12 @@ class AnalyticsStore {
     const uniqueVisitors = humanUniques;
     const totalBots = botVisits;
 
-    // 3. Returning vs New (human only)
+    // 3. Returning vs New (human only, deduplicated by visitorId)
     let returningCount = 0;
     let newCount = 0;
     const seenHumanVids = new Set<string>();
 
-    for (const e of humanEvents) {
+    for (const e of humanVisitEvents) {
       if (seenHumanVids.has(e.visitorId)) continue;
       seenHumanVids.add(e.visitorId);
       if (e.isReturning) {
@@ -177,29 +252,52 @@ class AnalyticsStore {
       returningPercentage,
     };
 
-    // 4. Devices (human only)
+    // 4. Devices, Browsers, OS (visit-level, human only)
     const deviceCounts: Record<DeviceType, number> = {
       desktop: 0,
       mobile: 0,
       tablet: 0,
       bot: 0,
     };
-    for (const e of humanEvents) {
+    const browserMap = new Map<string, number>();
+    const osMap = new Map<string, number>();
+    for (const e of humanVisitEvents) {
       deviceCounts[e.device] = (deviceCounts[e.device] || 0) + 1;
+      const b = e.browser || 'Other';
+      browserMap.set(b, (browserMap.get(b) || 0) + 1);
+      const o = e.os || 'Other';
+      osMap.set(o, (osMap.get(o) || 0) + 1);
     }
+    const visitTotal = humanVisitEvents.length;
     const devices = (['desktop', 'mobile', 'tablet'] as DeviceType[]).map((d) => ({
       device: d,
       count: deviceCounts[d],
-      percentage: humanEvents.length > 0 ? Math.round((deviceCounts[d] / humanEvents.length) * 100) : 0,
+      percentage: visitTotal > 0 ? Math.round((deviceCounts[d] / visitTotal) * 100) : 0,
     }));
+    const browsers = Array.from(browserMap.entries())
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: visitTotal > 0 ? Math.round((count / visitTotal) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+    const osBreakdown = Array.from(osMap.entries())
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: visitTotal > 0 ? Math.round((count / visitTotal) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
 
-    // 5. Countries (human only)
+    // 5. Countries (visit-level, human only)
     const countryMap = new Map<
       string,
       { code: string; name: string; count: number; uniques: Set<string>; cities: Map<string, number> }
     >();
 
-    for (const e of humanEvents) {
+    for (const e of humanVisitEvents) {
       const code = (e.country || 'UNKNOWN').toUpperCase();
       let record = countryMap.get(code);
       if (!record) {
@@ -226,7 +324,7 @@ class AnalyticsStore {
         flag: countryCodeToFlag(item.code),
         count: item.count,
         uniques: item.uniques.size,
-        percentage: humanEvents.length > 0 ? Math.round((item.count / humanEvents.length) * 100) : 0,
+        percentage: visitTotal > 0 ? Math.round((item.count / visitTotal) * 100) : 0,
         cities: Array.from(item.cities.entries())
           .map(([city, count]) => ({ city, count }))
           .sort((a, b) => b.count - a.count)
@@ -234,7 +332,7 @@ class AnalyticsStore {
       }))
       .sort((a, b) => b.count - a.count);
 
-    // 6. Referrers & Categorization
+    // 6. Referrers & Categorization (visit-level, human only)
     const rawRefMap = new Map<string, number>();
     const categoryMap: Record<'Direct' | 'Search' | 'Social' | 'Reddit' | 'Other', Map<string, number>> = {
       Direct: new Map(),
@@ -244,7 +342,7 @@ class AnalyticsStore {
       Other: new Map(),
     };
 
-    for (const e of humanEvents) {
+    for (const e of humanVisitEvents) {
       const ref = e.referrer?.trim();
       if (!ref) {
         categoryMap.Direct.set('direct', (categoryMap.Direct.get('direct') || 0) + 1);
@@ -275,7 +373,7 @@ class AnalyticsStore {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    const totalReferrersCount = humanEvents.length || 1;
+    const totalReferrersCount = visitTotal || 1;
     const referrersCategorized: ReferrerCategoryStat[] = (
       ['Direct', 'Search', 'Social', 'Reddit', 'Other'] as const
     ).map((cat) => {
@@ -365,7 +463,7 @@ class AnalyticsStore {
       averageSessionSeconds,
     };
 
-    const visitsCount = humanEvents.filter((e) => e.type === 'pageview').length || humanEvents.length;
+    const visitsCount = humanVisitEvents.length;
     const funnel: FunnelStats = {
       visits: visitsCount,
       gameStarts: totalStarts,
@@ -472,7 +570,7 @@ class AnalyticsStore {
       dailyMap.set(dayKey, { count: 0, uniques: new Set(), bots: 0 });
     }
 
-    for (const e of filtered) {
+    for (const e of [...humanVisitEvents, ...botEvents]) {
       if (e.timestamp >= now - 24 * 3600 * 1000) {
         const d = new Date(e.timestamp);
         const hourKey = `${String(d.getHours()).padStart(2, '0')}:00`;
@@ -516,13 +614,13 @@ class AnalyticsStore {
       bots: data.bots,
     }));
 
-    // 12. Hourly Arrival Distribution (00:00 - 23:00)
+    // 12. Hourly Arrival Distribution (00:00 - 23:00, visit-level)
     const hourlyArrivalBuckets: { count: number; uniques: Set<string> }[] = Array.from(
       { length: 24 },
       () => ({ count: 0, uniques: new Set<string>() })
     );
 
-    for (const e of humanEvents) {
+    for (const e of humanVisitEvents) {
       const h = new Date(e.timestamp).getHours();
       if (h >= 0 && h < 24) {
         hourlyArrivalBuckets[h].count += 1;
@@ -540,8 +638,8 @@ class AnalyticsStore {
       percentage: Math.round((b.count / totalHourlyArrivals) * 100),
     }));
 
-    // 13. Recent events (latest 60, human & bot, newest first)
-    const recentEvents = [...filtered].reverse().slice(0, 60);
+    // 13. Recent events (latest 100, human & bot, newest first)
+    const recentEvents = [...filtered].reverse().slice(0, 100);
 
     return {
       visitorsNow,
@@ -558,6 +656,8 @@ class AnalyticsStore {
       topReferrers,
       referrersCategorized,
       devices,
+      browsers,
+      osBreakdown,
       gameBehavior,
       funnel,
       buttonClicks,
@@ -648,7 +748,16 @@ class AnalyticsStore {
 
   public clearAll(): void {
     this.events = [];
+    this.isKvHydrated = true;
     this.persistToDisk();
+
+    const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (kvUrl && kvToken) {
+      fetch(`${kvUrl}/del/sttt_live_events`, {
+        headers: { Authorization: `Bearer ${kvToken}` },
+      }).catch(() => {});
+    }
   }
 }
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
-import { X } from 'lucide-react';
+import { BarChart3, Lock, X } from 'lucide-react';
 import { analytics } from '@/lib/analytics/client';
 import { MoveEvent, useSuperTicTacToe } from '@/hooks/useSuperTicTacToe';
 import { useTheme } from '@/hooks/useTheme';
@@ -38,10 +38,18 @@ import { useTranslation } from '@/i18n/LanguageContext';
 
 interface GameClientProps {
   initialRoomId?: string;
+  initialIsAdmin?: boolean;
 }
 
-export function GameClient({ initialRoomId }: GameClientProps) {
+export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClientProps) {
   const { t, language } = useTranslation();
+  const [isAdminViewer, setIsAdminViewer] = useState(initialIsAdmin);
+  const [adminUrl, setAdminUrl] = useState('https://admin.ttt.temr.dev');
+  const [isAdminUnlockOpen, setIsAdminUnlockOpen] = useState(false);
+  const [adminUnlockPass, setAdminUnlockPass] = useState('');
+  const [adminUnlockErr, setAdminUnlockErr] = useState<string | null>(null);
+  const [isAdminUnlockLoading, setIsAdminUnlockLoading] = useState(false);
+  const footerTapRef = useRef<{ count: number; lastTime: number }>({ count: 0, lastTime: 0 });
   const [isRulesOpen, setIsRulesOpen] = useState(false);
   const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -74,7 +82,78 @@ export function GameClient({ initialRoomId }: GameClientProps) {
   useEffect(() => {
     setDailyStats(getDailyStats());
     analytics.pageview('/');
+    if (
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ) {
+      setAdminUrl('/admin');
+    }
   }, []);
+
+  // Secret keyboard shortcut (Alt+Shift+A) to unlock personal admin analytics button
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.shiftKey && e.code === 'KeyA') {
+        e.preventDefault();
+        if (isAdminViewer) {
+          window.location.href = adminUrl;
+        } else {
+          setIsAdminUnlockOpen(true);
+        }
+      }
+      if (e.key === 'Escape' && isAdminUnlockOpen) {
+        setIsAdminUnlockOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isAdminViewer, adminUrl, isAdminUnlockOpen]);
+
+  const handleFooterBrandClick = () => {
+    const now = Date.now();
+    if (now - footerTapRef.current.lastTime > 900) {
+      footerTapRef.current = { count: 1, lastTime: now };
+      return;
+    }
+    footerTapRef.current.count += 1;
+    footerTapRef.current.lastTime = now;
+    if (footerTapRef.current.count >= 3) {
+      footerTapRef.current.count = 0;
+      if (isAdminViewer) {
+        window.location.href = adminUrl;
+      } else {
+        setIsAdminUnlockOpen(true);
+      }
+    }
+  };
+
+  const handleAdminUnlockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminUnlockPass.trim()) return;
+    setIsAdminUnlockLoading(true);
+    setAdminUnlockErr(null);
+    try {
+      const res = await fetch('/api/admin/badge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: adminUnlockPass.trim() }),
+      });
+      if (res.ok) {
+        setIsAdminViewer(true);
+        setAdminUnlockPass('');
+        setIsAdminUnlockOpen(false);
+      } else {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setAdminUnlockErr(
+          data.error || (language === 'ru' ? 'неверный пароль' : 'invalid password')
+        );
+      }
+    } catch {
+      setAdminUnlockErr(language === 'ru' ? 'ошибка сети' : 'network error');
+    } finally {
+      setIsAdminUnlockLoading(false);
+    }
+  };
 
   const { theme, toggleTheme } = useTheme();
 
@@ -1082,7 +1161,12 @@ export function GameClient({ initialRoomId }: GameClientProps) {
       {/* Subtle Minimalist Footer */}
       <footer className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mt-5 md:mt-6 text-center text-xs text-[var(--ink-mute)] font-light tracking-wide lowercase">
         <div className="flex flex-wrap items-center justify-center">
-          <span>Tic³ · super tic-tac-toe</span>
+          <span
+            onClick={handleFooterBrandClick}
+            className="select-none cursor-default"
+          >
+            Tic³ · super tic-tac-toe
+          </span>
           <span className="mx-2 opacity-40">·</span>
           <Link
             href="/leaderboard"
@@ -1112,10 +1196,82 @@ export function GameClient({ initialRoomId }: GameClientProps) {
             temr.dev
           </a>
         </div>
+        {isAdminViewer && (
+          <div className="mt-2.5 flex justify-center">
+            <a
+              href={adminUrl}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-[var(--line-strong)] text-[11px] font-medium text-[var(--ink)] hover:text-[var(--highlight-ink)] transition-all"
+              style={{ borderBottomStyle: 'solid' }}
+            >
+              <BarChart3 size={12} />
+              <span>{language === 'ru' ? 'аналитика · админ' : 'analytics · admin'}</span>
+            </a>
+          </div>
+        )}
         <div className="mt-2 text-[10px] text-[var(--ink-mute)] opacity-70">
           {t.common.privacyNotice}
         </div>
       </footer>
+
+      {/* Hidden Admin Unlock Dialog (triggered only by owner shortcut Alt+Shift+A or triple-tap) */}
+      {isAdminUnlockOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--scrim)] backdrop-blur-xs"
+          onClick={() => setIsAdminUnlockOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-unlock-title"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-xs rounded-2xl p-5 border border-[var(--line)] bg-[var(--bg)] shadow-xl"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-1.5 text-[var(--highlight-ink)]">
+                <Lock size={13} />
+                <h2 id="admin-unlock-title" className="font-serif text-base font-medium lowercase">
+                  {language === 'ru' ? 'режим владельца' : 'owner access'}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAdminUnlockOpen(false)}
+                aria-label="close"
+                className="p-1 text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <form onSubmit={handleAdminUnlockSubmit} className="space-y-2.5">
+              <input
+                type="password"
+                value={adminUnlockPass}
+                onChange={(e) => {
+                  setAdminUnlockPass(e.target.value);
+                  setAdminUnlockErr(null);
+                }}
+                placeholder={language === 'ru' ? 'пароль администратора' : 'admin password'}
+                autoFocus
+                className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--line)] bg-transparent text-[var(--highlight-ink)] focus:outline-none focus:border-[var(--highlight-ink)]"
+              />
+              {adminUnlockErr && (
+                <p className="text-[11px] text-rose-500 lowercase">{adminUnlockErr}</p>
+              )}
+              <button
+                type="submit"
+                disabled={isAdminUnlockLoading}
+                className="w-full py-2 rounded-lg bg-[var(--highlight-ink)] text-[var(--bg)] text-xs font-medium lowercase hover:opacity-90 disabled:opacity-50 cursor-pointer"
+              >
+                {isAdminUnlockLoading
+                  ? '...'
+                  : language === 'ru'
+                  ? 'показать аналитику'
+                  : 'show analytics'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Rules Modal */}
       <RulesModal
