@@ -18,6 +18,8 @@ import { SettingsModal } from '@/components/SettingsModal';
 import { DailyChallengeModal } from '@/components/DailyChallengeModal';
 import { NicknameModal } from '@/components/NicknameModal';
 import { useNickname } from '@/hooks/useNickname';
+import { useElo } from '@/hooks/useElo';
+import { MoveStep } from '@/lib/elo/types';
 import { evaluateStaticState } from '@/lib/ai';
 import {
   DailyStats,
@@ -61,6 +63,8 @@ export function GameClient({ initialRoomId }: GameClientProps) {
     skipPrompt: skipNicknamePrompt,
   } = useNickname();
 
+  const elo = useElo(nickname);
+
   useEffect(() => {
     setDailyStats(getDailyStats());
     analytics.pageview('/');
@@ -83,6 +87,8 @@ export function GameClient({ initialRoomId }: GameClientProps) {
   const timeControlRef = useRef<any>(null);
   const timeXRef = useRef<number>(180);
   const timeORef = useRef<number>(180);
+  const gameStartTimeRef = useRef<number>(Date.now());
+  const recordedMatchIdRef = useRef<string | null>(null);
 
   // Handle sound & haptic response for every move
   const handleMoveEvent = useCallback(
@@ -115,6 +121,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
   // Setup PeerJS online multiplayer hook
   const peerOnline = usePeerOnline({
     myNickname: nickname,
+    myPlayerId: elo.playerId,
     isGameActive:
       Boolean(gameStateRef.current?.history?.length > 0) &&
       gameStateRef.current?.winner === null,
@@ -142,6 +149,8 @@ export function GameClient({ initialRoomId }: GameClientProps) {
       syncClocks(newTimeX, newTimeO);
     },
     onRematchAccepted: (tc) => {
+      elo.resetLastDelta();
+      recordedMatchIdRef.current = null;
       resetGame();
       resetClocks(tc);
       haptic('win');
@@ -167,6 +176,24 @@ export function GameClient({ initialRoomId }: GameClientProps) {
       rawHandleTimeout(timedOutOpponent);
       playGameVictory(false);
       haptic('win');
+
+      if (peerOnline.roomId) {
+        const matchId = peerOnline.currentMatchId || `${peerOnline.roomId}_m1`;
+        recordedMatchIdRef.current = matchId;
+        const oppId = peerOnline.opponentPlayerId || `opp_${peerOnline.roomId}`;
+        const oppNick = peerOnline.opponentNickname || (language === 'ru' ? 'Соперник' : 'Opponent');
+        elo.recordRoomGame(
+          matchId,
+          peerOnline.roomId,
+          oppId,
+          oppNick,
+          peerOnline.role || 'host',
+          myPlayer,
+          'win',
+          'forfeit',
+          gameStateRef.current?.history?.length || 0
+        );
+      }
     },
     onConnected: () => {
       if (peerOnline.role === 'host') {
@@ -182,6 +209,9 @@ export function GameClient({ initialRoomId }: GameClientProps) {
           timeO: timeORef.current,
           modifiers: gameStateRef.current.modifiers,
           hostPlayer: peerOnline.myPlayer || 'X',
+          hostNickname: nickname,
+          hostPlayerId: elo.playerId,
+          matchNumber: 1,
         });
       }
     },
@@ -320,6 +350,9 @@ export function GameClient({ initialRoomId }: GameClientProps) {
   useEffect(() => {
     // Game start: first move placed
     if (gameState.history.length === 1 && prevHistoryLenRef.current === 0) {
+      gameStartTimeRef.current = Date.now();
+      recordedMatchIdRef.current = null;
+      elo.resetLastDelta();
       analytics.gameStart(
         gameState.gameMode,
         gameState.gameMode === 'ai' ? gameState.difficulty : undefined,
@@ -330,18 +363,92 @@ export function GameClient({ initialRoomId }: GameClientProps) {
 
     // Game end: winner changed from null
     if (gameState.winner !== null && prevWinnerRef.current === null) {
+      const myPlayer: Player =
+        gameState.gameMode === 'ai' || gameState.gameMode === 'daily'
+          ? (gameState.humanPlayer || 'X')
+          : (peerOnline.myPlayer || (peerOnline.role === 'host' ? 'X' : 'O'));
+
       const result: 'win' | 'loss' | 'draw' =
         gameState.winner === 'TIE'
           ? 'draw'
-          : gameState.gameMode === 'ai'
-          ? gameState.winner === 'X'
-            ? 'win'
-            : 'loss'
-          : 'win';
+          : gameState.winner === myPlayer
+          ? 'win'
+          : 'loss';
+
       analytics.gameEnd(result, gameState.gameMode, gameState.history.length);
+
+      // Elo Rating Updates
+      if (gameState.gameMode === 'ai') {
+        // AI Games: only count normal finishes (not timed-out games)
+        if (gameState.winReason !== 'timeout') {
+          const moves: MoveStep[] = [];
+          for (let i = 1; i < gameState.history.length; i++) {
+            const m = gameState.history[i].lastMove;
+            if (m) moves.push({ boardIdx: m.boardIdx, cellIdx: m.cellIdx, player: m.player });
+          }
+          if (gameState.lastMove) {
+            moves.push({
+              boardIdx: gameState.lastMove.boardIdx,
+              cellIdx: gameState.lastMove.cellIdx,
+              player: gameState.lastMove.player,
+            });
+          }
+          const durationMs = Math.max(1000, Date.now() - gameStartTimeRef.current);
+          elo.recordAiGame(
+            gameState.difficulty,
+            result,
+            moves,
+            durationMs,
+            gameState.humanPlayer
+          );
+        }
+      } else if (gameState.gameMode === 'online' && peerOnline.roomId) {
+        const matchId = peerOnline.currentMatchId || `${peerOnline.roomId}_m1`;
+        if (recordedMatchIdRef.current !== matchId) {
+          recordedMatchIdRef.current = matchId;
+          const reason =
+            gameState.winReason === 'timeout'
+              ? 'timeout'
+              : gameState.winReason === 'resignation'
+              ? 'resignation'
+              : gameState.winReason === 'agreement'
+              ? 'agreement'
+              : 'normal';
+          const oppId = peerOnline.opponentPlayerId || `opp_${peerOnline.roomId}`;
+          const oppNick = peerOnline.opponentNickname || (language === 'ru' ? 'Соперник' : 'Opponent');
+
+          elo.recordRoomGame(
+            matchId,
+            peerOnline.roomId,
+            oppId,
+            oppNick,
+            peerOnline.role || 'host',
+            myPlayer,
+            result,
+            reason,
+            gameState.history.length
+          );
+        }
+      }
     }
     prevWinnerRef.current = gameState.winner;
-  }, [gameState.winner, gameState.history.length, gameState.gameMode, gameState.difficulty, peerOnline.roomId]);
+  }, [
+    gameState.winner,
+    gameState.history,
+    gameState.lastMove,
+    gameState.gameMode,
+    gameState.difficulty,
+    gameState.humanPlayer,
+    gameState.winReason,
+    peerOnline.roomId,
+    peerOnline.currentMatchId,
+    peerOnline.myPlayer,
+    peerOnline.role,
+    peerOnline.opponentPlayerId,
+    peerOnline.opponentNickname,
+    language,
+    elo,
+  ]);
 
   // Detect ?room=xxxx query param or initialRoomId on mount to join room
   useEffect(() => {
@@ -356,6 +463,8 @@ export function GameClient({ initialRoomId }: GameClientProps) {
   }, [initialRoomId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleReset = () => {
+    elo.resetLastDelta();
+    recordedMatchIdRef.current = null;
     if (gameState.gameMode === 'online') {
       if (gameState.history.length > 0 || gameState.winner !== null) {
         peerOnline.requestRematch();
@@ -391,6 +500,8 @@ export function GameClient({ initialRoomId }: GameClientProps) {
   const handleSelectMode = (targetMode: GameMode) => {
     if (gameState.gameMode === targetMode) return;
     analytics.gameMode(targetMode);
+    elo.resetLastDelta();
+    recordedMatchIdRef.current = null;
 
     if (
       gameState.gameMode === 'daily' &&
@@ -497,6 +608,8 @@ export function GameClient({ initialRoomId }: GameClientProps) {
   };
 
   const handleAcceptRematch = () => {
+    elo.resetLastDelta();
+    recordedMatchIdRef.current = null;
     peerOnline.acceptRematch(timeControl);
     resetGame();
     resetClocks(timeControl);
@@ -614,6 +727,8 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         disconnectGraceSeconds={peerOnline.disconnectGraceSeconds}
         nickname={nickname}
         opponentNickname={peerOnline.opponentNickname}
+        rating={elo.rating}
+        isProvisional={elo.isProvisional}
         onSelectMode={handleSelectMode}
         onToggleMode={handleToggleMode}
         onSetDifficulty={(d) => { analytics.difficulty(d); setDifficulty(d); }}
@@ -681,6 +796,10 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         myNickname={nickname}
         opponentNickname={peerOnline.opponentNickname}
         difficulty={gameState.difficulty}
+        lastDelta={elo.lastDelta}
+        newRating={elo.rating}
+        isRatedGame={gameState.gameMode === 'ai' || gameState.gameMode === 'online'}
+        isProvisional={elo.isProvisional}
         onUndo={handleUndo}
         onReset={handleReset}
         onResign={handleResign}
@@ -693,6 +812,13 @@ export function GameClient({ initialRoomId }: GameClientProps) {
       {/* Subtle Minimalist Footer */}
       <footer className="mt-5 md:mt-6 text-center text-xs text-[var(--ink-mute)] font-light tracking-wide lowercase">
         <span>Tic³ · super tic-tac-toe</span>
+        <span className="mx-2 opacity-40">·</span>
+        <Link
+          href="/leaderboard"
+          className="hover:text-[var(--highlight-ink)] hairline-link cursor-pointer"
+        >
+          {t.common.leaderboard}
+        </Link>
         <span className="mx-2 opacity-40">·</span>
         <button
           type="button"
@@ -773,7 +899,14 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         isOpen={isNicknameModalOpen}
         isFirstVisit={isFirstVisit}
         currentNickname={nickname}
-        onSave={(name) => {
+        onSave={async (name) => {
+          const syncRes = await elo.syncNickname(name);
+          if (!syncRes.ok) {
+            return {
+              ok: false,
+              errorKey: syncRes.error === 'nickname_taken' ? 'nicknameTaken' : 'invalidChars',
+            };
+          }
           const res = saveNickname(name);
           if (res.ok) {
             peerOnline.sendNickname(name);

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Undo2, RotateCcw, Flag, Handshake, Zap, Share2 } from 'lucide-react';
+import { Undo2, RotateCcw, Flag, Handshake, Zap, Share2, Trophy } from 'lucide-react';
 import { BoardWinner, GameMode, OnlineRole, Player, WinReason } from '@/types/game';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
 import { useTranslation } from '@/i18n/LanguageContext';
@@ -25,6 +25,10 @@ interface GameActionsBarProps {
   myNickname?: string;
   opponentNickname?: string | null;
   difficulty?: string;
+  lastDelta?: number | null;
+  newRating?: number;
+  isRatedGame?: boolean;
+  isProvisional?: boolean;
   onUndo: () => void;
   onReset: () => void;
   onResign: () => void;
@@ -51,6 +55,10 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
   myNickname,
   opponentNickname,
   difficulty,
+  lastDelta,
+  newRating,
+  isRatedGame,
+  isProvisional,
   onUndo,
   onReset,
   onResign,
@@ -123,6 +131,33 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
           <p className="text-xs text-[var(--ink-mute)] font-light lowercase mb-3">
             {subtitle}
           </p>
+        )}
+
+        {/* Rating Delta Badge */}
+        {isRatedGame && typeof newRating === 'number' && (
+          <div className="my-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--line-strong)] bg-[var(--bg)] text-xs font-mono shadow-2xs">
+            <Trophy size={12} className="text-amber-500" />
+            <span className="text-[var(--ink-soft)]">{language === 'ru' ? 'рейтинг:' : 'rating:'}</span>
+            <span className="font-semibold text-[var(--highlight-ink)]">{newRating} ELO</span>
+            {typeof lastDelta === 'number' && (
+              <span
+                className={`font-semibold ml-0.5 ${
+                  lastDelta > 0
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : lastDelta < 0
+                    ? 'text-rose-500'
+                    : 'text-[var(--ink-mute)]'
+                }`}
+              >
+                {lastDelta > 0 ? `+${lastDelta}` : String(lastDelta)}
+              </span>
+            )}
+            {isProvisional && (
+              <span className="text-[10px] text-amber-600 dark:text-amber-400 lowercase font-sans ml-0.5">
+                ({language === 'ru' ? 'калибровка' : 'provisional'})
+              </span>
+            )}
+          </div>
         )}
 
         <div className="flex flex-wrap items-center justify-center gap-2 pt-1">

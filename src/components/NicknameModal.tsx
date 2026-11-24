@@ -9,7 +9,7 @@ interface NicknameModalProps {
   isOpen: boolean;
   isFirstVisit?: boolean;
   currentNickname: string;
-  onSave: (newNickname: string) => { ok: boolean; errorKey?: string };
+  onSave: (newNickname: string) => { ok: boolean; errorKey?: string } | Promise<{ ok: boolean; errorKey?: string }>;
   onSkip: () => void;
   onClose: () => void;
 }
@@ -56,7 +56,7 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
     setError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
 
@@ -76,10 +76,12 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
       return;
     }
 
-    const result = onSave(validation.sanitized);
+    const result = await onSave(validation.sanitized);
     if (!result.ok) {
       if (result.errorKey === 'profanityError') {
         setError(t.nicknameModal.profanityError);
+      } else if (result.errorKey === 'nicknameTaken') {
+        setError(t.nicknameModal.nicknameTaken);
       } else {
         setError(t.nicknameModal.invalidChars);
       }
@@ -163,6 +165,10 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
 
           <div className="text-[10px] text-[var(--ink-mute)] lowercase">
             {t.nicknameModal.rulesHint}
+          </div>
+
+          <div className="pt-2 text-[10px] text-[var(--ink-mute)] font-light lowercase border-t border-[var(--line)]/50 leading-relaxed">
+            {t.nicknameModal.eloNote}
           </div>
 
           {/* Action buttons */}

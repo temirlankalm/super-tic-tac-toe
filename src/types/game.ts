@@ -50,10 +50,13 @@ export type PeerMessage =
       modifiers?: GameModifiers;
       hostPlayer?: Player;
       hostNickname?: string;
+      hostPlayerId?: string;
+      matchNumber?: number;
     }
   | {
       type: 'NICKNAME';
       nickname: string;
+      playerId?: string;
     }
   | {
       type: 'MOVE';

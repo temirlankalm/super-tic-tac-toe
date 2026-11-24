@@ -5,6 +5,7 @@ export interface Translations {
     brandTag: string;
     rules: string;
     analytics: string;
+    leaderboard: string;
     close: string;
     copied: string;
     linkCopied: string;
@@ -39,6 +40,7 @@ export interface Translations {
     rulesTitle: string;
     langToggle: string;
     nicknameTitle: string;
+    leaderboardTitle: string;
     timeLabels: {
       off: string;
       60: string;
@@ -56,6 +58,8 @@ export interface Translations {
   };
   modes: {
     chooseMode: string;
+    rated: string;
+    notRated: string;
     ai: {
       label: string;
       desc: string;
@@ -223,5 +227,7 @@ export interface Translations {
     tooLong: string;
     invalidChars: string;
     profanityError: string;
+    nicknameTaken: string;
+    eloNote: string;
   };
 }

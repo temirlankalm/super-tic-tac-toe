@@ -5,6 +5,7 @@ export const ru: Translations = {
     brandTag: '· super',
     rules: 'правила игры',
     analytics: 'аналитика',
+    leaderboard: 'рейтинг',
     close: 'закрыть',
     copied: 'скопировано в буфер!',
     linkCopied: 'ссылка скопирована!',
@@ -39,6 +40,7 @@ export const ru: Translations = {
     rulesTitle: 'правила игры',
     langToggle: 'переключить на английский язык',
     nicknameTitle: 'никнейм игрока',
+    leaderboardTitle: 'глобальный рейтинг',
     timeLabels: {
       off: 'выкл',
       60: '1m',
@@ -56,6 +58,8 @@ export const ru: Translations = {
   },
   modes: {
     chooseMode: 'выберите режим',
+    rated: 'рейтинговый',
+    notRated: 'без рейтинга',
     ai: {
       label: 'против ии',
       desc: 'одиночная игра с ботом',
@@ -228,5 +232,7 @@ export const ru: Translations = {
     tooLong: 'максимум 16 символов',
     invalidChars: 'разрешены только буквы, цифры, пробелы, _ и -',
     profanityError: 'никнейм содержит недопустимые слова',
+    nicknameTaken: 'этот никнейм уже занят в рейтинге',
+    eloNote: 'рейтинг Elo и никнейм сохраняются в браузере. очистка данных сбросит ваш рейтинг.',
   },
 };

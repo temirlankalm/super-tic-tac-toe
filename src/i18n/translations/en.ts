@@ -5,6 +5,7 @@ export const en: Translations = {
     brandTag: '· super',
     rules: 'rules',
     analytics: 'analytics',
+    leaderboard: 'leaderboard',
     close: 'close',
     copied: 'copied to clipboard!',
     linkCopied: 'link copied!',
@@ -39,6 +40,7 @@ export const en: Translations = {
     rulesTitle: 'game rules',
     langToggle: 'switch to russian language',
     nicknameTitle: 'player nickname',
+    leaderboardTitle: 'global leaderboard',
     timeLabels: {
       off: 'off',
       60: '1m',
@@ -56,6 +58,8 @@ export const en: Translations = {
   },
   modes: {
     chooseMode: 'select mode',
+    rated: 'rated',
+    notRated: 'not rated',
     ai: {
       label: 'vs ai',
       desc: 'single-player vs engine',
@@ -228,5 +232,7 @@ export const en: Translations = {
     tooLong: 'maximum 16 characters',
     invalidChars: 'only letters, numbers, spaces, _ and - allowed',
     profanityError: 'nickname contains forbidden words',
+    nicknameTaken: 'this nickname is already taken on the leaderboard',
+    eloNote: 'Elo rating and nickname are stored in your browser. clearing browser data will reset your rating.',
   },
 };

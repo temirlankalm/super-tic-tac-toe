@@ -7,6 +7,7 @@ import { sanitizeNickname } from '@/lib/nickname';
 
 interface UsePeerOnlineOptions {
   myNickname?: string;
+  myPlayerId?: string;
   onRemoteMove?: (boardIdx: number, cellIdx: number, player: Player, timeX?: number, timeO?: number) => void;
   onInitSync?: (msg: Extract<PeerMessage, { type: 'INIT' }>) => void;
   onTimeSync?: (timeX: number, timeO: number) => void;
@@ -35,6 +36,8 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
   const [myDrawOffered, setMyDrawOffered] = useState(false);
   const [drawDeclinedNotice, setDrawDeclinedNotice] = useState(false);
   const [opponentNickname, setOpponentNickname] = useState<string | null>(null);
+  const [opponentPlayerId, setOpponentPlayerId] = useState<string | null>(null);
+  const [matchCount, setMatchCount] = useState<number>(1);
 
   // Disconnect grace state
   const [disconnectGraceSeconds, setDisconnectGraceSeconds] = useState<number | null>(null);
@@ -87,6 +90,8 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     setMyDrawOffered(false);
     setDrawDeclinedNotice(false);
     setOpponentNickname(null);
+    setOpponentPlayerId(null);
+    setMatchCount(1);
   }, [clearDisconnectGrace]);
 
   // Start 30s disconnect grace period
@@ -131,12 +136,13 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
         clearDisconnectGrace();
         setStatus('connected');
 
-        // Exchange nickname on open
+        // Exchange nickname and player ID on open
         if (optionsRef.current?.myNickname) {
           try {
             conn.send({
               type: 'NICKNAME',
               nickname: sanitizeNickname(optionsRef.current.myNickname),
+              playerId: optionsRef.current?.myPlayerId,
             });
           } catch {}
         }
@@ -157,11 +163,18 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
             if (msg.hostNickname) {
               setOpponentNickname(sanitizeNickname(msg.hostNickname));
             }
+            if (msg.hostPlayerId) {
+              setOpponentPlayerId(msg.hostPlayerId);
+            }
+            if (msg.matchNumber) {
+              setMatchCount(msg.matchNumber);
+            }
             if (optionsRef.current?.myNickname) {
               try {
                 conn.send({
                   type: 'NICKNAME',
                   nickname: sanitizeNickname(optionsRef.current.myNickname),
+                  playerId: optionsRef.current?.myPlayerId,
                 });
               } catch {}
             }
@@ -170,6 +183,9 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
           case 'NICKNAME':
             if (msg.nickname) {
               setOpponentNickname(sanitizeNickname(msg.nickname));
+            }
+            if (msg.playerId) {
+              setOpponentPlayerId(msg.playerId);
             }
             break;
           case 'MOVE':
@@ -191,6 +207,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
           case 'REMATCH_ACCEPT':
             setRematchRequestedByOpponent(false);
             setMyRematchSent(false);
+            setMatchCount((prev) => prev + 1);
             optionsRef.current?.onRematchAccepted?.(msg.timeControl);
             break;
           case 'RESIGN':
@@ -351,6 +368,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     (currentTc: TimeControl) => {
       setRematchRequestedByOpponent(false);
       setMyRematchSent(false);
+      setMatchCount((prev) => prev + 1);
       sendMessage({
         type: 'REMATCH_ACCEPT',
         timeControl: currentTc,
@@ -404,6 +422,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
       sendMessage({
         type: 'NICKNAME',
         nickname: sanitizeNickname(name),
+        playerId: optionsRef.current?.myPlayerId,
       });
     },
     [sendMessage]
@@ -416,6 +435,8 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     myPlayer,
     roomId,
     opponentNickname,
+    opponentPlayerId,
+    currentMatchId: roomId ? `${roomId}_m${matchCount}` : null,
     rematchRequestedByOpponent,
     myRematchSent,
     drawOfferedByOpponent,

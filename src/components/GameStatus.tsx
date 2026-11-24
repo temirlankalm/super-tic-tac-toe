@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import {
   HelpCircle,
   Bot,
@@ -15,6 +16,7 @@ import {
   Sliders,
   ChevronDown,
   User,
+  Trophy,
 } from 'lucide-react';
 import {
   AiDifficulty,
@@ -48,6 +50,8 @@ interface GameStatusProps {
   disconnectGraceSeconds?: number | null;
   nickname?: string;
   opponentNickname?: string | null;
+  rating?: number;
+  isProvisional?: boolean;
   onSelectMode: (mode: GameMode) => void;
   onToggleMode?: () => void;
   onSetDifficulty: (difficulty: AiDifficulty) => void;
@@ -93,6 +97,8 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   disconnectGraceSeconds,
   nickname,
   opponentNickname,
+  rating,
+  isProvisional,
   onSelectMode,
   onToggleMode,
   onSetDifficulty,
@@ -193,6 +199,23 @@ export const GameStatus: React.FC<GameStatusProps> = ({
               <span className="truncate">{nickname || 'player'}</span>
             </button>
           )}
+
+          {/* Elo Rating & Global Leaderboard Link */}
+          <Link
+            href="/leaderboard"
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-[11px]"
+            title={t.header.leaderboardTitle}
+          >
+            <Trophy size={11} className="shrink-0 text-amber-500" />
+            <span className="font-mono font-medium text-[var(--highlight-ink)]">
+              {rating ?? 1000}
+            </span>
+            {isProvisional && (
+              <span className="text-[9px] text-amber-600 dark:text-amber-400 font-mono">
+                ?
+              </span>
+            )}
+          </Link>
 
           {onOpenSettingsModal && (
             <button
@@ -361,6 +384,16 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             />
           </button>
 
+          <span
+            className={`text-[10px] font-mono px-1.5 py-0.5 rounded border lowercase hidden xs:inline-flex ${
+              gameMode === 'ai' || gameMode === 'online'
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                : 'bg-[var(--line)]/20 text-[var(--ink-mute)] border-[var(--line)]'
+            }`}
+          >
+            {gameMode === 'ai' || gameMode === 'online' ? t.modes.rated : t.modes.notRated}
+          </span>
+
           {isModeMenuOpen && (
             <div className="absolute left-0 top-full mt-1.5 z-40 py-1 px-1 min-w-[210px] rounded-lg bg-[var(--bg)] border border-[var(--line-strong)] shadow-lg animate-fade-up text-xs font-sans">
               <div className="px-2.5 py-1 text-[10px] uppercase tracking-wider text-[var(--ink-mute)] font-medium border-b border-[var(--line)] mb-1">
@@ -372,20 +405,23 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                   label: t.modes.ai.label,
                   desc: t.modes.ai.desc,
                   icon: Bot,
+                  isRated: true,
                 },
                 {
                   mode: 'pvp' as const,
                   label: t.modes.pvp.label,
                   desc: t.modes.pvp.desc,
                   icon: Users,
+                  isRated: false,
                 },
                 {
                   mode: 'online' as const,
                   label: t.modes.online.label,
                   desc: t.modes.online.desc,
                   icon: Globe,
+                  isRated: true,
                 },
-              ].map(({ mode, label, desc, icon: Icon }) => (
+              ].map(({ mode, label, desc, icon: Icon, isRated }) => (
                 <button
                   key={mode}
                   type="button"
@@ -402,7 +438,18 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                   <div className="flex items-center gap-2.5">
                     <Icon size={14} className="shrink-0" />
                     <div className="flex flex-col">
-                      <span className="lowercase font-medium">{label}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="lowercase font-medium">{label}</span>
+                        <span
+                          className={`text-[9px] font-mono px-1 py-0.2 rounded uppercase ${
+                            isRated
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                              : 'bg-[var(--line)]/40 text-[var(--ink-mute)]'
+                          }`}
+                        >
+                          {isRated ? t.modes.rated : t.modes.notRated}
+                        </span>
+                      </div>
                       <span className="text-[10px] text-[var(--ink-mute)] font-normal leading-tight">
                         {desc}
                       </span>
