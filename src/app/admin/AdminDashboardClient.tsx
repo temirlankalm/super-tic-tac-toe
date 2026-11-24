@@ -30,6 +30,7 @@ import {
   Layers,
   Zap,
   MapPin,
+  Trash2,
 } from 'lucide-react';
 import { AnalyticsSummary, VisitorEvent, CountryStat, TimePoint, HourlyArrivalStat } from '@/lib/analytics/types';
 import { countryCodeToFlag } from '@/lib/analytics/botDetector';
@@ -54,7 +55,7 @@ export function AdminDashboardClient({
   initialAuthenticated = false,
 }: AdminDashboardClientProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(initialAuthenticated);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('temirlan122110@gmail.com');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -180,6 +181,17 @@ export function AdminDashboardClient({
   // Handle CSV Download
   const handleExportCsv = () => {
     window.location.href = `/api/admin/export?range=${range}`;
+  };
+
+  // Handle Clear All Data (Reset to 0)
+  const handleClearData = async () => {
+    if (!window.confirm('Сбросить все накопленные данные аналитики и начать строго с нуля?')) return;
+    try {
+      const res = await fetch('/api/admin/stats', { method: 'DELETE' });
+      if (res.ok) {
+        fetchStats(range);
+      }
+    } catch {}
   };
 
   // 1. Loading Initial Auth Check
@@ -387,6 +399,15 @@ export function AdminDashboardClient({
             <span>CSV</span>
           </button>
 
+          {/* Reset / Clear Data button */}
+          <button
+            onClick={handleClearData}
+            className="p-1.5 rounded-lg border border-[var(--line)] hover:border-rose-400 hover:text-rose-600 text-[var(--ink-soft)] transition-colors cursor-pointer"
+            title="сбросить аналитику (начать с чистого листа)"
+          >
+            <Trash2 size={13} />
+          </button>
+
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
@@ -578,7 +599,7 @@ export function AdminDashboardClient({
             {/* 1.1 3x3 Board Click Heatmap Scheme */}
             {(() => {
               const sectorClicks = s.featureStats?.sectorsClicked || [0, 0, 0, 0, 0, 0, 0, 0, 0];
-              const totalSectorClicks = sectorClicks.reduce((a, b) => a + b, 0) || 1;
+              const actualSectorClicks = sectorClicks.reduce((a, b) => a + b, 0);
               const maxSectorClicks = Math.max(...sectorClicks, 1);
               let topSectorIndex = 4;
               sectorClicks.forEach((val, idx) => {
@@ -594,7 +615,7 @@ export function AdminDashboardClient({
                         <span>схема кликов по секторам доски</span>
                       </h3>
                       <span className="text-xs text-[var(--ink-soft)] font-mono">
-                        {totalSectorClicks} кликов
+                        {actualSectorClicks} кликов
                       </span>
                     </div>
                     <p className="text-xs text-[var(--ink-soft)] lowercase mb-4">
@@ -605,9 +626,9 @@ export function AdminDashboardClient({
                     <div className="grid grid-cols-3 gap-2.5 aspect-square max-w-[260px] mx-auto p-2.5 bg-[var(--line)]/20 rounded-xl border border-[var(--line)]">
                       {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((sectorIdx) => {
                         const clicks = sectorClicks[sectorIdx] || 0;
-                        const pct = Math.round((clicks / totalSectorClicks) * 100);
+                        const pct = actualSectorClicks > 0 ? Math.round((clicks / actualSectorClicks) * 100) : 0;
                         const isTop = clicks === maxSectorClicks && clicks > 0;
-                        const intensity = Math.min(Math.max(clicks / maxSectorClicks, 0.08), 1);
+                        const intensity = actualSectorClicks > 0 ? Math.min(Math.max(clicks / maxSectorClicks, 0.08), 1) : 0;
 
                         return (
                           <div
@@ -643,7 +664,13 @@ export function AdminDashboardClient({
                   </div>
 
                   <div className="pt-3 mt-4 border-t border-[var(--line)] text-[11px] text-[var(--ink-soft)] lowercase">
-                    чаще всего игроки ходят в сектор <strong className="text-[var(--highlight-ink)] font-mono">#{topSectorIndex}</strong> ({SECTOR_NAMES[topSectorIndex] || ''}) · {maxSectorClicks} кликов
+                    {actualSectorClicks > 0 ? (
+                      <>
+                        чаще всего игроки ходят в сектор <strong className="text-[var(--highlight-ink)] font-mono">#{topSectorIndex}</strong> ({SECTOR_NAMES[topSectorIndex] || ''}) · {maxSectorClicks} кликов
+                      </>
+                    ) : (
+                      <>кликов по доске пока не зафиксировано</>
+                    )}
                   </div>
                 </div>
               );
@@ -865,12 +892,18 @@ export function AdminDashboardClient({
                       </div>
 
                       <div className="pt-3 mt-3 text-xs text-[var(--ink-soft)] lowercase flex items-center justify-between">
-                        <span>
-                          наибольший наплыв: <strong className="text-[var(--highlight-ink)] font-mono">{String(peakHour).padStart(2, '0')}:00 – {String((peakHour + 2) % 24).padStart(2, '0')}:00</strong>
-                        </span>
-                        <span className="font-mono text-[11px] text-[var(--ink-mute)]">
-                          {arrivals[peakHour]?.count || 0} визитов в пик
-                        </span>
+                        {arrivals.some((a) => a.count > 0) ? (
+                          <>
+                            <span>
+                              наибольший наплыв: <strong className="text-[var(--highlight-ink)] font-mono">{String(peakHour).padStart(2, '0')}:00 – {String((peakHour + 2) % 24).padStart(2, '0')}:00</strong>
+                            </span>
+                            <span className="font-mono text-[11px] text-[var(--ink-mute)]">
+                              {arrivals[peakHour]?.count || 0} визитов в пик
+                            </span>
+                          </>
+                        ) : (
+                          <span>визитов за выбранный период пока не зафиксировано</span>
+                        )}
                       </div>
                     </div>
                   );

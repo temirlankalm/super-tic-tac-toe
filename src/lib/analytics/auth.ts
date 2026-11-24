@@ -76,56 +76,48 @@ function safeTimingCompare(bufA: Buffer, bufB: Buffer): boolean {
 
 /**
  * Checks whether admin credentials are configured in the environment.
- * Requires at least ADMIN_PASSWORD or ADMIN_PASSWORD_HASH.
+ * Always returns true to allow login with configured/owner credentials.
  */
 export function areAdminAuthEnvVarsConfigured(): boolean {
-  const password = process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD_HASH;
-  return Boolean(password && password.trim());
+  return true;
 }
 
 /**
- * Verifies admin credentials against environment variables ADMIN_EMAIL and ADMIN_PASSWORD / ADMIN_PASSWORD_HASH.
+ * Verifies admin credentials against environment variables ADMIN_EMAIL and ADMIN_PASSWORD / ADMIN_PASSWORD_HASH,
+ * falling back to the owner's credentials (temirlan122110@gmail.com / Temirlan2010!).
  * Uses constant-time cryptographic comparison (timingSafeEqual) on SHA-256 hashes.
  */
 export function verifyAdminCredentials(inputPassword: string, inputEmail?: string): boolean {
-  if (!areAdminAuthEnvVarsConfigured()) {
-    console.error('[Admin Auth] Authentication disabled: ADMIN_PASSWORD is not set.');
-    return false;
-  }
-
-  const envEmail = process.env.ADMIN_EMAIL?.trim();
-  const envPassword = process.env.ADMIN_PASSWORD?.trim();
-  const envPasswordHash = process.env.ADMIN_PASSWORD_HASH?.trim();
-
   if (!inputPassword || typeof inputPassword !== 'string') {
     return false;
   }
 
-  // 1. Email check: if ADMIN_EMAIL is set, compare in constant time
+  const envEmail = (process.env.ADMIN_EMAIL || 'temirlan122110@gmail.com').trim().toLowerCase();
+  const envPassword = process.env.ADMIN_PASSWORD?.trim() || 'Temirlan2010!';
+  const envPasswordHash =
+    process.env.ADMIN_PASSWORD_HASH?.trim().toLowerCase() ||
+    crypto.createHash('sha256').update(envPassword).digest('hex');
+
+  // 1. Email check: if email is provided, compare in constant time; if empty/omitted, allow password login
   let emailValid = true;
-  if (envEmail) {
-    const inputEmailClean = (inputEmail || '').trim().toLowerCase();
+  if (inputEmail && inputEmail.trim()) {
+    const inputEmailClean = inputEmail.trim().toLowerCase();
     const inputEmailHash = crypto.createHash('sha256').update(inputEmailClean).digest();
-    const targetEmailHash = crypto.createHash('sha256').update(envEmail.toLowerCase()).digest();
+    const targetEmailHash = crypto.createHash('sha256').update(envEmail).digest();
     emailValid = safeTimingCompare(inputEmailHash, targetEmailHash);
   }
 
   // 2. Password check using SHA-256 hash comparison with crypto.timingSafeEqual
-  const inputHash = crypto.createHash('sha256').update(inputPassword).digest();
-
+  const inputHash = crypto.createHash('sha256').update(inputPassword.trim()).digest();
   let passwordValid = false;
-  if (envPasswordHash) {
-    try {
-      const targetHash = Buffer.from(envPasswordHash.toLowerCase(), 'hex');
-      if (targetHash.length === inputHash.length) {
-        passwordValid = safeTimingCompare(inputHash, targetHash);
-      }
-    } catch {
-      passwordValid = false;
+
+  try {
+    const targetHashBuf = Buffer.from(envPasswordHash, 'hex');
+    if (targetHashBuf.length === inputHash.length) {
+      passwordValid = safeTimingCompare(inputHash, targetHashBuf);
     }
-  } else if (envPassword) {
-    const targetHash = crypto.createHash('sha256').update(envPassword).digest();
-    passwordValid = safeTimingCompare(inputHash, targetHash);
+  } catch {
+    passwordValid = false;
   }
 
   return emailValid && passwordValid;
@@ -139,11 +131,8 @@ export function getSessionSecret(): string {
   if (process.env.ADMIN_SESSION_SECRET?.trim()) {
     return process.env.ADMIN_SESSION_SECRET.trim();
   }
-  const pass = process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD_HASH || '';
-  if (pass) {
-    return crypto.createHmac('sha256', pass).update('tic3_session_secret_derivation_salt_v1').digest('hex');
-  }
-  return 'tic3_default_secure_session_signing_secret_do_not_rely_in_prod';
+  const pass = process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD_HASH || 'Temirlan2010!';
+  return crypto.createHmac('sha256', pass).update('tic3_session_secret_derivation_salt_v1').digest('hex');
 }
 
 /**
@@ -155,11 +144,8 @@ export function getIpSaltSecret(): string {
   if (salt?.trim()) {
     return salt.trim();
   }
-  const pass = process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD_HASH || '';
-  if (pass) {
-    return crypto.createHmac('sha256', pass).update('tic3_ip_salt_derivation_salt_v1').digest('hex');
-  }
-  return 'tic3_default_ip_salt_secret_v1';
+  const pass = process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD_HASH || 'Temirlan2010!';
+  return crypto.createHmac('sha256', pass).update('tic3_ip_salt_derivation_salt_v1').digest('hex');
 }
 
 export function createSessionToken(): string {
