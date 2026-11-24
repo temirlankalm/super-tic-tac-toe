@@ -4,7 +4,20 @@ import { ADMIN_COOKIE_NAME, isAdminHost, getAdminCookieDomain } from './constant
 
 export { ADMIN_COOKIE_NAME, isAdminHost, getAdminCookieDomain };
 
-// In-memory rate limiting for login attempts per hashed IP (max 5 failed attempts / 15 minutes)
+/**
+ * ==============================================================================
+ * Rate Limiting & Cold Starts Architecture Note:
+ * ==============================================================================
+ * This in-memory Map provides rapid rate-limiting per hashed IP (max 5 failed attempts / 15 min).
+ *
+ * SERVERLESS LIMITATION:
+ * In serverless environments (such as Vercel Edge / Lambda functions), in-memory
+ * state does not persist across isolated microVM cold starts or concurrent instances.
+ * To provide persistent, globally synchronized rate limiting across cold starts without
+ * relying on in-process memory, integrate an external distributed key-value store such
+ * as Upstash Redis (@upstash/ratelimit) or Vercel KV (@vercel/kv).
+ * ==============================================================================
+ */
 interface LoginAttempt {
   count: number;
   firstAttempt: number;
@@ -62,72 +75,106 @@ function safeTimingCompare(bufA: Buffer, bufB: Buffer): boolean {
 }
 
 /**
+ * Checks whether all mandatory environment variables for admin authentication
+ * and privacy-safe analytics are configured.
+ *
+ * Mandatory env vars:
+ * - ADMIN_EMAIL
+ * - ADMIN_PASSWORD
+ * - ADMIN_SESSION_SECRET
+ * - ANALYTICS_SALT_SECRET (or IP_SALT_SECRET)
+ *
+ * If ANY of these is missing, admin login must be completely disabled (return 404)
+ * and never fall back to default credentials.
+ */
+export function areAdminAuthEnvVarsConfigured(): boolean {
+  const email = process.env.ADMIN_EMAIL;
+  const password = process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD_HASH;
+  const sessionSecret = process.env.ADMIN_SESSION_SECRET;
+  const ipSalt = process.env.ANALYTICS_SALT_SECRET || process.env.IP_SALT_SECRET;
+
+  return Boolean(
+    email &&
+      email.trim() &&
+      password &&
+      password.trim() &&
+      sessionSecret &&
+      sessionSecret.trim() &&
+      ipSalt &&
+      ipSalt.trim()
+  );
+}
+
+/**
  * Verifies admin credentials against environment variables ADMIN_EMAIL and ADMIN_PASSWORD / ADMIN_PASSWORD_HASH.
  * Uses constant-time cryptographic comparison (timingSafeEqual) on SHA-256 hashes.
- * Never allows login if no password environment variable is set.
+ * Returns false immediately if environment variables are not fully configured.
  */
 export function verifyAdminCredentials(inputPassword: string, inputEmail?: string): boolean {
-  const envEmail = process.env.ADMIN_EMAIL;
-  const envPassword = process.env.ADMIN_PASSWORD;
-  const envPasswordHash = process.env.ADMIN_PASSWORD_HASH;
-
-  // Never allow login if neither password nor password hash is configured in environment
-  if (!envPassword && !envPasswordHash) {
-    console.error('[Admin Auth] Authentication blocked: neither ADMIN_PASSWORD nor ADMIN_PASSWORD_HASH is set.');
+  if (!areAdminAuthEnvVarsConfigured()) {
+    console.error(
+      '[Admin Auth] Authentication disabled: required environment variables (ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_SESSION_SECRET, ANALYTICS_SALT_SECRET) are missing.'
+    );
     return false;
   }
+
+  const envEmail = process.env.ADMIN_EMAIL!.trim();
+  const envPassword = process.env.ADMIN_PASSWORD?.trim();
+  const envPasswordHash = process.env.ADMIN_PASSWORD_HASH?.trim();
 
   if (!inputPassword || typeof inputPassword !== 'string') {
     return false;
   }
 
-  // 1. Email check: if ADMIN_EMAIL is configured, enforce exact match
-  if (envEmail && envEmail.trim()) {
-    if (!inputEmail || typeof inputEmail !== 'string') {
-      return false;
-    }
-    const inputEmailHash = crypto
-      .createHash('sha256')
-      .update(inputEmail.trim().toLowerCase())
-      .digest();
-    const targetEmailHash = crypto
-      .createHash('sha256')
-      .update(envEmail.trim().toLowerCase())
-      .digest();
-
-    if (!safeTimingCompare(inputEmailHash, targetEmailHash)) {
-      return false;
-    }
-  }
+  // 1. Email check: constant-time comparison on SHA-256 hash
+  const inputEmailClean = (inputEmail || '').trim().toLowerCase();
+  const inputEmailHash = crypto.createHash('sha256').update(inputEmailClean).digest();
+  const targetEmailHash = crypto.createHash('sha256').update(envEmail.toLowerCase()).digest();
+  const emailValid = safeTimingCompare(inputEmailHash, targetEmailHash);
 
   // 2. Password check using SHA-256 hash comparison with crypto.timingSafeEqual
   const inputHash = crypto.createHash('sha256').update(inputPassword).digest();
 
-  if (envPasswordHash && envPasswordHash.trim()) {
+  let passwordValid = false;
+  if (envPasswordHash) {
     try {
-      const targetHash = Buffer.from(envPasswordHash.trim().toLowerCase(), 'hex');
-      if (targetHash.length === inputHash.length && safeTimingCompare(inputHash, targetHash)) {
-        return true;
+      const targetHash = Buffer.from(envPasswordHash.toLowerCase(), 'hex');
+      if (targetHash.length === inputHash.length) {
+        passwordValid = safeTimingCompare(inputHash, targetHash);
       }
     } catch {
-      return false;
+      passwordValid = false;
     }
-  }
-
-  if (envPassword) {
+  } else if (envPassword) {
     const targetHash = crypto.createHash('sha256').update(envPassword).digest();
-    return safeTimingCompare(inputHash, targetHash);
+    passwordValid = safeTimingCompare(inputHash, targetHash);
   }
 
-  return false;
+  return emailValid && passwordValid;
 }
 
-function getSessionSecret(): string {
-  return (
-    process.env.ADMIN_SESSION_SECRET ||
-    process.env.ADMIN_PASSWORD ||
-    'tic3_admin_session_secret_please_set_in_production'
-  );
+/**
+ * Retrieves the session signing secret.
+ * Throws an error if ADMIN_SESSION_SECRET is not configured — NO fallback string.
+ */
+export function getSessionSecret(): string {
+  const secret = process.env.ADMIN_SESSION_SECRET;
+  if (!secret || !secret.trim()) {
+    throw new Error('ADMIN_SESSION_SECRET environment variable is missing.');
+  }
+  return secret.trim();
+}
+
+/**
+ * Retrieves the IP salt secret.
+ * Throws an error if ANALYTICS_SALT_SECRET / IP_SALT_SECRET is not configured — NO fallback string.
+ */
+export function getIpSaltSecret(): string {
+  const salt = process.env.ANALYTICS_SALT_SECRET || process.env.IP_SALT_SECRET;
+  if (!salt || !salt.trim()) {
+    throw new Error('ANALYTICS_SALT_SECRET / IP_SALT_SECRET environment variable is missing.');
+  }
+  return salt.trim();
 }
 
 export function createSessionToken(): string {
@@ -174,6 +221,10 @@ export function verifySessionToken(token: string | null | undefined): boolean {
 }
 
 export function verifyAdminRequest(req: NextRequest | Request): boolean {
+  if (!areAdminAuthEnvVarsConfigured()) {
+    return false;
+  }
+
   if (req instanceof NextRequest) {
     const cookie = req.cookies.get(ADMIN_COOKIE_NAME)?.value;
     if (cookie && verifySessionToken(cookie)) {

@@ -46,15 +46,22 @@ pnpm dev
    * Открой проект `super-tic-tac-toe` -> **Settings** -> **Domains**.
    * Добавь домен `admin.ttt.temr.dev` (привязан к ветке `main`).
 
-#### 2. Переменные окружения (Environment Variables)
+#### 2. Обязательные переменные окружения (Environment Variables)
 Укажи в Vercel Dashboard (**Settings** -> **Environment Variables**) для всех окружений (`Production`, `Preview`):
 
 | Переменная | Описание | Пример значения |
 |---|---|---|
-| `ADMIN_EMAIL` | Разрешённый email администратора | `temirlan122110@gmail.com` |
-| `ADMIN_PASSWORD` | Пароль администратора | `Temirlan2010!` |
+| `ADMIN_EMAIL` | Обязательный: email администратора | `temirlan122110@gmail.com` |
+| `ADMIN_PASSWORD` | Обязательный: пароль администратора | надёжный пароль |
 | `ADMIN_PASSWORD_HASH` | (Опционально) SHA-256 хеш пароля | `fffa912e789f...` |
-| `ADMIN_SESSION_SECRET` | 32-байтный ключ подписи сессионных cookie | случайный 64-символьный hex |
+| `ADMIN_SESSION_SECRET` | Обязательный: 32-байтный ключ подписи cookie | случайный 64-символьный hex |
+| `ANALYTICS_SALT_SECRET` | Обязательный: ключ для ежедневного хеширования IP | случайный 64-символьный hex |
+
+> [!IMPORTANT]
+> Если хотя бы одна из обязательных переменных отсутствует, вход в админ-панель полностью отключается (маршруты отдают `404 Not Found`). Хардкодных паролей и секретов по умолчанию в проекте нет. Сравнение пароля производится в константном времени (`crypto.timingSafeEqual`).
+
+#### 3. Ограничение rate-limiting в Serverless
+Встроенный rate-limiting для попыток входа работает in-memory (максимум 5 неудачных попыток за 15 минут на хешированный IP). В serverless-среде (Vercel) состояние памяти сбрасывается при cold start или распределяется по разным изолятам microVM. Для глобальной синхронизации между распределёнными cold-start инстансами рекомендуется подключить Upstash Redis (`@upstash/ratelimit`) или Vercel KV.
 
 Для локальной разработки скопируй `.env.example` в `.env.local`:
 ```bash

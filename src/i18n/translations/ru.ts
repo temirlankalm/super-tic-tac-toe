@@ -40,7 +40,7 @@ export const ru: Translations = {
     langToggle: 'переключить на английский язык',
     nicknameTitle: 'никнейм игрока',
     timeLabels: {
-      off: 'off',
+      off: 'выкл',
       60: '1m',
       120: '2m',
       180: '3m',
@@ -197,6 +197,9 @@ export const ru: Translations = {
     createNewRoom: 'создать новую комнату',
     emptyCodeError: 'введи код комнаты',
     connectFailed: 'не удалось подключиться к комнате',
+    errorTimeout: 'время ожидания истекло, попробуйте снова',
+    errorNotFound: 'комната не найдена, проверьте код',
+    errorConnectionFailed: 'сбой подключения, проверьте сеть',
     youLabel: 'вы',
     opponentLabel: 'соперник',
   },

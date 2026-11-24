@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { X, Copy, Check, QrCode, Globe, LogIn, Share2 } from 'lucide-react';
-import { ConnectionStatus, OnlineRole } from '@/types/game';
+import { ConnectionStatus, OnlineRole, RoomJoinError } from '@/types/game';
 import { useTranslation } from '@/i18n/LanguageContext';
 import { analytics } from '@/lib/analytics/client';
 
@@ -12,6 +12,7 @@ interface OnlineRoomModalProps {
   roomId: string | null;
   role: OnlineRole;
   status: ConnectionStatus;
+  peerJoinError?: RoomJoinError;
   theme: 'light' | 'dark';
   myNickname?: string;
   opponentNickname?: string | null;
@@ -26,6 +27,7 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
   roomId,
   role,
   status,
+  peerJoinError,
   theme,
   myNickname = 'Player',
   opponentNickname,
@@ -65,6 +67,16 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
       .then((url) => setQrDataUrl(url))
       .catch((err) => console.error('Failed to generate QR code', err));
   }, [roomUrl, theme]);
+
+  // Close modal on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const handleCopyLink = async () => {
     if (!roomUrl) return;
@@ -209,7 +221,11 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
                     : status === 'connecting'
                     ? t.onlineModal.statusConnecting
                     : status === 'error'
-                    ? t.onlineModal.connectFailed
+                    ? peerJoinError === 'timeout'
+                      ? t.onlineModal.errorTimeout
+                      : peerJoinError === 'not_found'
+                      ? t.onlineModal.errorNotFound
+                      : t.onlineModal.errorConnectionFailed
                     : language === 'ru' ? 'комната создана' : 'room ready'}
                 </span>
                 <span className="text-[11px] text-[var(--ink-mute)] font-sans lowercase">
@@ -351,9 +367,14 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
                 maxLength={32}
                 className="w-full px-3.5 py-2.5 text-base font-mono tracking-widest rounded-xl border border-[var(--line-strong)] bg-[var(--bg-subtle)] text-[var(--highlight-ink)] focus:outline-none focus:ring-1 focus:ring-[var(--highlight-ink)]"
               />
-              {joinError && (
+              {(joinError || (status === 'error' && peerJoinError)) && (
                 <span className="text-xs text-rose-500 mt-1 block lowercase">
-                  {joinError}
+                  {joinError ||
+                    (peerJoinError === 'timeout'
+                      ? t.onlineModal.errorTimeout
+                      : peerJoinError === 'not_found'
+                      ? t.onlineModal.errorNotFound
+                      : t.onlineModal.errorConnectionFailed)}
                 </span>
               )}
               <p className="text-[11px] text-[var(--ink-mute)] font-light lowercase mt-2">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { DataConnection, Peer } from 'peerjs';
-import { ConnectionStatus, OnlineRole, PeerMessage, Player, TimeControl } from '@/types/game';
+import { ConnectionStatus, OnlineRole, PeerMessage, Player, RoomJoinError, TimeControl } from '@/types/game';
 import { sanitizeNickname } from '@/lib/nickname';
 
 interface UsePeerOnlineOptions {
@@ -25,6 +25,7 @@ interface UsePeerOnlineOptions {
 
 export function usePeerOnline(options?: UsePeerOnlineOptions) {
   const [status, setStatus] = useState<ConnectionStatus>('idle');
+  const [joinError, setJoinError] = useState<RoomJoinError>(null);
   const [role, setRole] = useState<OnlineRole>(null);
   const [myPlayer, setMyPlayer] = useState<Player | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
@@ -76,6 +77,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
       peerRef.current = null;
     }
     setStatus('idle');
+    setJoinError(null);
     setRole(null);
     setMyPlayer(null);
     setRoomId(null);
@@ -271,6 +273,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
       if (err.type === 'unavailable-id') {
         createRoom();
       } else {
+        setJoinError('connection_failed');
         setStatus('error');
       }
     });
@@ -290,13 +293,20 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
       if (!cleanId) return;
 
       setStatus('connecting');
+      setJoinError(null);
       setRole(assignedRole);
       setMyPlayer(assignedPlayer || (assignedRole === 'host' ? 'X' : 'O'));
       setRoomId(cleanId);
 
       if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
       connectTimeoutRef.current = setTimeout(() => {
-        setStatus((curr) => (curr === 'connecting' ? 'error' : curr));
+        setStatus((curr) => {
+          if (curr === 'connecting') {
+            setJoinError('timeout');
+            return 'error';
+          }
+          return curr;
+        });
       }, 12000);
 
       const { Peer } = await import('peerjs');
@@ -309,8 +319,18 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
         attachConnectionHandlers(conn);
       });
 
-      peer.on('error', (err) => {
+      peer.on('error', (err: any) => {
         console.error('Guest peer error:', err);
+        if (connectTimeoutRef.current) {
+          clearTimeout(connectTimeoutRef.current);
+          connectTimeoutRef.current = null;
+        }
+        const isNotFound =
+          err?.type === 'peer-unavailable' ||
+          (typeof err?.message === 'string' &&
+            (err.message.toLowerCase().includes('could not connect to peer') ||
+              err.message.toLowerCase().includes('peer-unavailable')));
+        setJoinError(isNotFound ? 'not_found' : 'connection_failed');
         setStatus('error');
       });
     },
@@ -391,6 +411,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
 
   return {
     status,
+    joinError,
     role,
     myPlayer,
     roomId,

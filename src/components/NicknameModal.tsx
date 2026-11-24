@@ -35,6 +35,19 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
     }
   }, [isOpen, currentNickname]);
 
+  // Close modal on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isFirstVisit) onSkip();
+        else onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isFirstVisit, onSkip, onClose]);
+
   if (!isOpen) return null;
 
   const handleRandomize = () => {

@@ -56,7 +56,7 @@ function generateInitialSeedEvents(): VisitorEvent[] {
     'https://twitter.com/temirlan',
     'https://www.reddit.com/r/webgames/comments/t3_super_tictactoe',
     'https://github.com/temirlankalm/super-tic-tac-toe',
-    'https://temirlan.dev',
+    'https://temr.dev',
     'https://google.com/search?q=ultimate+tic+tac+toe',
   ];
 

@@ -23,6 +23,7 @@ import {
   GameState,
   OnlineRole,
   Player,
+  RoomJoinError,
   TimeControl,
 } from '@/types/game';
 import { HandDrawnLogo } from './hand-drawn/HandDrawnLogo';
@@ -37,6 +38,7 @@ interface GameStatusProps {
   onlineRole?: OnlineRole;
   onlinePlayer?: Player | null;
   connectionStatus?: ConnectionStatus;
+  joinError?: RoomJoinError;
   roomId?: string | null;
   drawOfferedByOpponent?: boolean;
   myDrawOffered?: boolean;
@@ -81,6 +83,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   onlineRole,
   onlinePlayer,
   connectionStatus,
+  joinError,
   roomId,
   drawOfferedByOpponent,
   myDrawOffered,
@@ -561,7 +564,11 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                 )}
                 {connectionStatus === 'error' && (
                   <span className="text-xs text-rose-500 lowercase">
-                    {language === 'ru' ? 'ошибка подключения (комната не найдена)' : 'connection error (room not found)'}
+                    {joinError === 'timeout'
+                      ? t.onlineModal.errorTimeout
+                      : joinError === 'not_found'
+                      ? t.onlineModal.errorNotFound
+                      : t.onlineModal.errorConnectionFailed}
                   </span>
                 )}
               </div>

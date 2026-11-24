@@ -12,7 +12,7 @@ import {
 import { EventType, VisitorEvent } from '@/lib/analytics/types';
 
 function getDailySalt(): string {
-  const secret = process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_PASSWORD || 'tic3_daily_salt_secret';
+  const secret = process.env.ANALYTICS_SALT_SECRET || process.env.IP_SALT_SECRET || '';
   const today = new Date().toISOString().slice(0, 10);
   return crypto.createHash('sha256').update(`${secret}_${today}`).digest('hex');
 }

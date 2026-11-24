@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { cookies } from 'next/headers';
-import { ADMIN_COOKIE_NAME, verifySessionToken } from '@/lib/analytics/auth';
+import { notFound } from 'next/navigation';
+import { ADMIN_COOKIE_NAME, areAdminAuthEnvVarsConfigured, verifySessionToken } from '@/lib/analytics/auth';
 import { AdminDashboardClient } from './AdminDashboardClient';
 
 export const metadata: Metadata = {
@@ -17,6 +18,10 @@ export const metadata: Metadata = {
 };
 
 async function AdminContent() {
+  if (!areAdminAuthEnvVarsConfigured()) {
+    notFound();
+  }
+
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
   const isAuthed = verifySessionToken(sessionToken);

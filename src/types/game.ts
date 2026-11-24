@@ -34,6 +34,8 @@ export type ConnectionStatus =
   | 'disconnected'
   | 'error';
 
+export type RoomJoinError = 'timeout' | 'not_found' | 'connection_failed' | null;
+
 export type PeerMessage =
   | {
       type: 'INIT';

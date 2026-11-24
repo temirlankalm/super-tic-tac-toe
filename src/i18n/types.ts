@@ -192,6 +192,9 @@ export interface Translations {
     createNewRoom: string;
     emptyCodeError: string;
     connectFailed: string;
+    errorTimeout: string;
+    errorNotFound: string;
+    errorConnectionFailed: string;
     youLabel: string;
     opponentLabel: string;
   };

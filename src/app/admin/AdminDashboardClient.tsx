@@ -56,6 +56,24 @@ export function AdminDashboardClient({
     setIsDark(document.documentElement.classList.contains('dark'));
   }, []);
 
+  const [adminLang, setAdminLang] = useState<'ru' | 'en'>('ru');
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('ttt_lang') || (navigator.language?.startsWith('ru') ? 'ru' : 'en');
+      if (stored === 'en' || stored === 'ru') {
+        setAdminLang(stored);
+      }
+    } catch {}
+  }, []);
+
+  const toggleAdminLang = () => {
+    const next = adminLang === 'ru' ? 'en' : 'ru';
+    setAdminLang(next);
+    try {
+      localStorage.setItem('ttt_lang', next);
+    } catch {}
+  };
+
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
@@ -154,7 +172,7 @@ export function AdminDashboardClient({
       <main className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg)] text-[var(--ink-soft)] font-sans">
         <div className="flex items-center gap-2 text-xs">
           <RefreshCw className="animate-spin" size={14} />
-          <span>проверка сессии администратора…</span>
+          <span>{adminLang === 'ru' ? 'проверка сессии администратора…' : 'checking admin session…'}</span>
         </div>
       </main>
     );
@@ -165,21 +183,32 @@ export function AdminDashboardClient({
     return (
       <main className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg)] text-[var(--ink)] font-sans antialiased">
         <div className="w-full max-w-sm rounded-2xl p-7 border border-[var(--line)] bg-[var(--bg)] shadow-xl transition-all">
-          <div className="flex items-center gap-2 mb-2 text-[var(--highlight-ink)]">
-            <Lock size={15} />
-            <h1 className="font-serif text-lg font-medium tracking-tight lowercase">
-              tic³ · admin access
-            </h1>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 text-[var(--highlight-ink)]">
+              <Lock size={15} />
+              <h1 className="font-serif text-lg font-medium tracking-tight lowercase">
+                tic³ · admin access
+              </h1>
+            </div>
+            <button
+              type="button"
+              onClick={toggleAdminLang}
+              className="text-[11px] font-mono uppercase tracking-wider text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] border border-[var(--line)] rounded-md px-1.5 py-0.5 transition-colors cursor-pointer"
+            >
+              {adminLang === 'ru' ? 'EN' : 'RU'}
+            </button>
           </div>
 
           <p className="text-xs text-[var(--ink-soft)] mb-6 font-sans lowercase leading-relaxed">
-            приватный дашборд платформы. доступ защищен httpOnly сессией и rate-limiting.
+            {adminLang === 'ru'
+              ? 'приватный дашборд платформы. доступ защищен httpOnly сессией и rate-limiting.'
+              : 'private platform dashboard. access secured by httpOnly session and rate-limiting.'}
           </p>
 
           <form onSubmit={handleLogin} className="space-y-3.5">
             <div>
               <label className="block text-[11px] text-[var(--ink-soft)] uppercase tracking-wider mb-1">
-                email (если настроен ADMIN_EMAIL)
+                {adminLang === 'ru' ? 'email администратора' : 'admin email'}
               </label>
               <input
                 type="email"
@@ -193,7 +222,7 @@ export function AdminDashboardClient({
 
             <div>
               <label className="block text-[11px] text-[var(--ink-soft)] uppercase tracking-wider mb-1">
-                пароль администратора
+                {adminLang === 'ru' ? 'пароль администратора' : 'admin password'}
               </label>
               <input
                 type="password"
@@ -202,7 +231,7 @@ export function AdminDashboardClient({
                   setPassword(e.target.value);
                   setAuthError(null);
                 }}
-                placeholder="пароль (по умолч. temr)"
+                placeholder={adminLang === 'ru' ? 'пароль' : 'password'}
                 className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--line)] bg-transparent text-[var(--highlight-ink)] focus:outline-none focus:border-[var(--highlight-ink)] transition-colors"
                 autoFocus
                 autoComplete="current-password"
@@ -220,7 +249,13 @@ export function AdminDashboardClient({
               disabled={isSubmitting}
               className="w-full py-2.5 px-3 rounded-lg bg-[var(--highlight-ink)] text-[var(--bg)] text-xs font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 mt-1"
             >
-              {isSubmitting ? 'авторизация…' : 'войти в панель'}
+              {isSubmitting
+                ? adminLang === 'ru'
+                  ? 'авторизация…'
+                  : 'authenticating…'
+                : adminLang === 'ru'
+                ? 'войти в панель'
+                : 'sign in'}
             </button>
 
             <div className="pt-2 flex items-center justify-between text-xs text-[var(--ink-mute)]">
@@ -229,7 +264,7 @@ export function AdminDashboardClient({
                 className="hover:text-[var(--highlight-ink)] hairline-link transition-colors flex items-center gap-1"
               >
                 <ArrowLeft size={12} />
-                <span>вернуться к игре</span>
+                <span>{adminLang === 'ru' ? 'вернуться к игре' : 'return to game'}</span>
               </a>
               <button
                 type="button"
@@ -237,7 +272,15 @@ export function AdminDashboardClient({
                 className="hover:text-[var(--highlight-ink)] hairline-link flex items-center gap-1 cursor-pointer"
               >
                 {isDark ? <Sun size={12} /> : <Moon size={12} />}
-                <span>{isDark ? 'светлая' : 'тёмная'}</span>
+                <span>
+                  {isDark
+                    ? adminLang === 'ru'
+                      ? 'светлая'
+                      : 'light'
+                    : adminLang === 'ru'
+                    ? 'тёмная'
+                    : 'dark'}
+                </span>
               </button>
             </div>
           </form>

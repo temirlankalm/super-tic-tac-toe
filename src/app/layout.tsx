@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   description:
     'Minimalist Ultimate Tic-Tac-Toe game online. Play against the neural engine qnet, challenge a friend via room code, or solve the daily challenge.',
   applicationName: 'Tic³',
-  authors: [{ name: 'Temirlan', url: 'https://temirlan.dev' }],
+  authors: [{ name: 'Temirlan', url: 'https://temr.dev/' }],
   creator: 'Temirlan',
   alternates: {
     canonical: 'https://ttt.temr.dev',
@@ -85,7 +85,6 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#efeeee" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#141719" media="(prefers-color-scheme: dark)" />
-        <link rel="canonical" href="https://ttt.temr.dev" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <script
           dangerouslySetInnerHTML={{

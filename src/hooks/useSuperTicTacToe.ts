@@ -86,8 +86,8 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
           return prev;
         }
 
-        // In AI mode, only allow moves on human turn
-        if (prev.gameMode === 'ai' && prev.currentPlayer !== prev.humanPlayer) {
+        // In AI or Daily mode, only allow moves on human turn
+        if ((prev.gameMode === 'ai' || prev.gameMode === 'daily') && prev.currentPlayer !== prev.humanPlayer) {
           return prev;
         }
 
@@ -222,7 +222,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
   // Effect for AI turn
   useEffect(() => {
     const isAiTurn =
-      gameState.gameMode === 'ai' &&
+      (gameState.gameMode === 'ai' || gameState.gameMode === 'daily') &&
       gameState.winner === null &&
       gameState.currentPlayer !== gameState.humanPlayer;
 
@@ -236,7 +236,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
     const commitAiMove = (preferred: Move | null, expectedCells: GameState['cells'] | null) => {
       setGameState((prev) => {
         const stillAiTurn =
-          prev.gameMode === 'ai' &&
+          (prev.gameMode === 'ai' || prev.gameMode === 'daily') &&
           prev.winner === null &&
           prev.currentPlayer !== prev.humanPlayer &&
           (expectedCells === null || prev.cells === expectedCells);
@@ -309,7 +309,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
   // worker stops pondering as soon as the move request arrives. `ponderKey` changes on every move
   // that hands the turn to the human in a qnet game, and is null otherwise.
   const ponderKey =
-    gameState.gameMode === 'ai' &&
+    (gameState.gameMode === 'ai' || gameState.gameMode === 'daily') &&
     gameState.difficulty === 'qnet' &&
     gameState.winner === null &&
     gameState.currentPlayer === gameState.humanPlayer &&
@@ -327,16 +327,30 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
   }, []);
 
   const undoMove = useCallback(() => {
-    setGameState((prev) => {
-      if (prev.isAiThinking || prev.history.length === 0) return prev;
+    aiThinkingRef.current = false;
+    aiRequestRef.current++;
 
-      // In AI mode, undo 2 steps (AI move + human move) if possible
-      const stepsToUndo =
-        prev.gameMode === 'ai' && prev.history.length >= 2 ? 2 : 1;
+    setGameState((prev) => {
+      if (prev.history.length === 0) return prev;
+
+      const isVsAi = prev.gameMode === 'ai' || prev.gameMode === 'daily';
+      let stepsToUndo = 1;
+
+      if (isVsAi) {
+        // If it's the human's turn against AI and at least 2 moves have been played,
+        // revert both the AI reply and the human's move in one click.
+        if (prev.currentPlayer === prev.humanPlayer && prev.history.length >= 2) {
+          stepsToUndo = 2;
+        } else {
+          // If the AI was thinking (or hadn't replied yet), revert the human's 1 move.
+          stepsToUndo = 1;
+        }
+      }
 
       const targetHistoryIndex = prev.history.length - stepsToUndo;
-      const targetState = prev.history[targetHistoryIndex];
+      if (targetHistoryIndex < 0) return prev;
 
+      const targetState = prev.history[targetHistoryIndex];
       const newHistory = prev.history.slice(0, targetHistoryIndex);
 
       return {

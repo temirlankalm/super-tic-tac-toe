@@ -272,7 +272,10 @@ export function GameClient({ initialRoomId }: GameClientProps) {
       if (gameState.winner !== null && !dailyCompletedRef.current) {
         dailyCompletedRef.current = true;
         clearActiveDaily();
-        const isWon = gameState.winner === 'X';
+        const isWon =
+          gameState.winner !== null &&
+          gameState.winner !== 'TIE' &&
+          gameState.winner === gameState.humanPlayer;
         const updated = recordDailyResult(
           isWon,
           gameState.history.length,
@@ -600,6 +603,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         onlineRole={peerOnline.role}
         onlinePlayer={peerOnline.myPlayer}
         connectionStatus={peerOnline.status}
+        joinError={peerOnline.joinError}
         roomId={peerOnline.roomId}
         drawOfferedByOpponent={peerOnline.drawOfferedByOpponent}
         myDrawOffered={peerOnline.myDrawOffered}
@@ -701,13 +705,13 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         </button>
         <span className="mx-2 opacity-40">·</span>
         <a
-          href="https://temirlan.dev"
+          href="https://temr.dev/"
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => analytics.outboundClick('https://temirlan.dev')}
+          onClick={() => analytics.outboundClick('https://temr.dev/')}
           className="hover:text-[var(--highlight-ink)] hairline-link cursor-pointer"
         >
-          temirlan.dev
+          temr.dev
         </a>
         <span className="mx-2 opacity-40">·</span>
         <a
@@ -733,6 +737,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         roomId={peerOnline.roomId}
         role={peerOnline.role}
         status={peerOnline.status}
+        peerJoinError={peerOnline.joinError}
         theme={theme}
         myNickname={nickname}
         opponentNickname={peerOnline.opponentNickname}

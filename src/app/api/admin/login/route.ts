@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import {
   ADMIN_COOKIE_NAME,
+  areAdminAuthEnvVarsConfigured,
   checkLoginRateLimit,
   createSessionToken,
   getAdminCookieDomain,
@@ -19,6 +20,11 @@ function hashClientIp(req: NextRequest): string {
 }
 
 export async function POST(req: NextRequest) {
+  // If admin environment variables are not configured, admin login is disabled -> 404
+  if (!areAdminAuthEnvVarsConfigured()) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   const clientIpHash = hashClientIp(req);
   const rateLimit = checkLoginRateLimit(clientIpHash);
 
