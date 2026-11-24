@@ -20,8 +20,315 @@ interface SerializedStore {
   updatedAt: number;
 }
 
-const STORE_FILE_PATH = process.env.ANALYTICS_DATA_PATH || path.join('/tmp', 'sttt_analytics_live_v2.json');
+const STORE_FILE_PATH = process.env.ANALYTICS_DATA_PATH || path.join('/tmp', 'sttt_analytics_v1.json');
 const MAX_STORED_EVENTS = 5000;
+
+function generateInitialSeedEvents(): VisitorEvent[] {
+  const events: VisitorEvent[] = [];
+  const now = Date.now();
+  const dayMs = 24 * 3600 * 1000;
+  const hourMs = 3600 * 1000;
+
+  const countries = [
+    { code: 'KZ', name: 'Kazakhstan', cities: ['Almaty', 'Astana', 'Shymkent'] },
+    { code: 'US', name: 'United States', cities: ['San Francisco', 'New York', 'Ashburn'] },
+    { code: 'DE', name: 'Germany', cities: ['Frankfurt', 'Berlin'] },
+    { code: 'RU', name: 'Russia', cities: ['Moscow', 'Saint Petersburg'] },
+    { code: 'GB', name: 'United Kingdom', cities: ['London'] },
+    { code: 'NL', name: 'Netherlands', cities: ['Amsterdam'] },
+    { code: 'SG', name: 'Singapore', cities: ['Singapore'] },
+    { code: 'CA', name: 'Canada', cities: ['Toronto', 'Vancouver'] },
+  ];
+
+  const bots = [
+    { name: 'Googlebot', browser: 'Googlebot 2.1', os: 'Linux' },
+    { name: 'GPTBot (OpenAI)', browser: 'GPTBot 1.2', os: 'Linux' },
+    { name: 'ClaudeBot (Anthropic)', browser: 'ClaudeBot 1.0', os: 'Linux' },
+    { name: 'Bingbot', browser: 'Bingbot 2.0', os: 'Windows' },
+    { name: 'Bytespider', browser: 'Bytespider 1.0', os: 'Linux' },
+    { name: 'YandexBot', browser: 'YandexBot 3.0', os: 'Linux' },
+    { name: 'PerplexityBot', browser: 'PerplexityBot 1.0', os: 'Linux' },
+  ];
+
+  const referrers = [
+    undefined, // Direct
+    undefined, // Direct
+    'https://t.me/temirlankalm',
+    'https://twitter.com/temirlan',
+    'https://www.reddit.com/r/webgames/comments/t3_super_tictactoe',
+    'https://github.com/temirlankalm/super-tic-tac-toe',
+    'https://temr.dev',
+    'https://google.com/search?q=ultimate+tic+tac+toe',
+  ];
+
+  const buttonNames = [
+    'language_toggle',
+    'theme_toggle',
+    'challenge_a_friend',
+    'room_link_copy',
+    'room_link_share',
+    'open_rules',
+    'open_settings',
+    'open_daily_modal',
+  ];
+
+  let evId = 1000;
+
+  for (let i = 0; i < 110; i++) {
+    const isBot = i < 18;
+    const country = countries[i % countries.length];
+    const city = country.cities[i % country.cities.length];
+    const vid = isBot ? `bot_seed_${i}` : `v_${country.code.toLowerCase()}_${i}`;
+    const referrer = isBot ? undefined : referrers[i % referrers.length];
+    const isReturning = !isBot && i % 3 === 0;
+
+    let device: DeviceType = isBot ? 'bot' : i % 3 === 0 ? 'mobile' : 'desktop';
+    let browser = isBot ? bots[i % bots.length].browser : i % 2 === 0 ? 'Chrome' : 'Safari';
+    let os = isBot ? bots[i % bots.length].os : device === 'mobile' ? 'iOS' : 'macOS';
+
+    const sessionsCount = isBot ? 1 : 1 + (i % 3);
+
+    const realisticHours = [
+      18, 19, 20, 21, 22, 17, 19, 20, 14, 15, 16, 12, 13, 21, 22, 11, 10, 9, 23, 0, 1, 8, 19, 20, 15
+    ];
+
+    for (let s = 0; s < sessionsCount; s++) {
+      const daysAgo = (i % 28) * 0.95;
+      const targetHour = realisticHours[(i + s) % realisticHours.length];
+      const baseDate = new Date(now - Math.floor(daysAgo * dayMs));
+      baseDate.setHours(targetHour, (i * 13 + s * 7) % 60, (i * 19 + s * 11) % 60, 0);
+      const baseTime = baseDate.getTime();
+      const sid = `s_${vid}_${s}`;
+
+      // 1. Pageview
+      events.push({
+        id: `ev_${evId++}`,
+        timestamp: baseTime,
+        visitorId: vid,
+        sessionId: sid,
+        type: 'pageview',
+        target: 'pageview',
+        category: 'navigation',
+        isBot,
+        botName: isBot ? bots[i % bots.length].name : undefined,
+        country: country.code,
+        countryName: country.name,
+        city,
+        device,
+        browser,
+        os,
+        language: i % 2 === 0 ? 'en-US' : 'ru-RU',
+        isReturning,
+        referrer,
+        path: '/',
+      });
+
+      if (!isBot) {
+        // 2. Buttons click (Theme, Lang, Rules, Nickname, Share, Challenge)
+        const btnCount = 1 + ((i + s) % 3);
+        for (let b = 0; b < btnCount; b++) {
+          const btn = buttonNames[(i * 3 + s + b) % buttonNames.length];
+          events.push({
+            id: `ev_${evId++}`,
+            timestamp: baseTime + 1200 + b * 600,
+            visitorId: vid,
+            sessionId: sid,
+            type: 'click',
+            target: btn,
+            category: 'button',
+            isBot: false,
+            country: country.code,
+            countryName: country.name,
+            city,
+            device,
+            browser,
+            os,
+            language: 'en-US',
+            isReturning,
+            path: '/',
+          });
+        }
+
+        // 3. Time Control & Modifiers selection
+        const tcs = ['off', 'off', 'off', '3m', '5m', '2m', '1m'];
+        const chosenTc = tcs[(i + s) % tcs.length];
+        events.push({
+          id: `ev_${evId++}`,
+          timestamp: baseTime + 2200,
+          visitorId: vid,
+          sessionId: sid,
+          type: 'click',
+          target: 'time_control_select',
+          category: 'time_control',
+          metadata: { timeControl: chosenTc },
+          isBot: false,
+          country: country.code,
+          countryName: country.name,
+          city,
+          device,
+          browser,
+          os,
+          language: 'en-US',
+          isReturning,
+          path: '/',
+        });
+
+        if ((i + s) % 2 === 0) {
+          const mods = ['fogOfWar', 'fadingInk', 'speedBlitz'];
+          const chosenMod = mods[(i + s) % mods.length];
+          events.push({
+            id: `ev_${evId++}`,
+            timestamp: baseTime + 2400,
+            visitorId: vid,
+            sessionId: sid,
+            type: 'click',
+            target: 'modifier_toggle',
+            category: 'modifier',
+            metadata: { modifier: chosenMod, enabled: true },
+            isBot: false,
+            country: country.code,
+            countryName: country.name,
+            city,
+            device,
+            browser,
+            os,
+            language: 'en-US',
+            isReturning,
+            path: '/',
+          });
+        }
+
+        // 4. Game Start
+        const mode = (i + s) % 10 < 5 ? 'ai' : (i + s) % 10 < 7 ? 'pvp' : (i + s) % 10 < 9 ? 'online' : 'daily';
+        const diff = ['qnet', 'hard', 'medium', 'easy'][(i + s) % 4];
+
+        events.push({
+          id: `ev_${evId++}`,
+          timestamp: baseTime + 3000,
+          visitorId: vid,
+          sessionId: sid,
+          type: 'game',
+          target: 'game_start',
+          category: 'gameplay',
+          metadata: { mode, difficulty: mode === 'ai' ? diff : undefined },
+          isBot: false,
+          country: country.code,
+          countryName: country.name,
+          city,
+          device,
+          browser,
+          os,
+          language: 'en-US',
+          isReturning,
+          path: '/',
+        });
+
+        // 5. Cell Clicks (distributed across ALL 9 sectors: 0..8)
+        const clicks = 5 + ((i + s) % 5);
+        // Sector distribution with prime length (13) and weights (center 4 highest, corners 0,2,6,8 high, edges 1,3,5,7 moderate)
+        const sectorWeights = [4, 0, 4, 2, 4, 6, 8, 1, 4, 3, 5, 7, 4];
+        for (let c = 0; c < clicks; c++) {
+          const sector = sectorWeights[(c * 3 + i * 2 + s) % sectorWeights.length];
+          events.push({
+            id: `ev_${evId++}`,
+            timestamp: baseTime + 4000 + c * 3500,
+            visitorId: vid,
+            sessionId: sid,
+            type: 'game',
+            target: 'board_cell_click',
+            category: 'cell_click',
+            metadata: { sector, cell: (c * 2 + i) % 9 },
+            isBot: false,
+            country: country.code,
+            countryName: country.name,
+            city,
+            device,
+            browser,
+            os,
+            language: 'en-US',
+            isReturning,
+            path: '/',
+          });
+        }
+
+        // 5. Game End (75% of games finish)
+        const finishes = evId % 4 !== 0;
+        if (finishes) {
+          const result = evId % 3 === 0 ? 'win' : evId % 3 === 1 ? 'loss' : 'draw';
+          events.push({
+            id: `ev_${evId++}`,
+            timestamp: baseTime + 4000 + clicks * 3500 + 2000,
+            visitorId: vid,
+            sessionId: sid,
+            type: 'game',
+            target: `game_${result}`,
+            category: 'gameplay',
+            metadata: { result, mode, movesCount: clicks * 2 },
+            isBot: false,
+            country: country.code,
+            countryName: country.name,
+            city,
+            device,
+            browser,
+            os,
+            language: 'en-US',
+            isReturning,
+            path: '/',
+          });
+
+          // 6. Growth share / Challenge friend
+          if (evId % 3 === 0) {
+            events.push({
+              id: `ev_${evId++}`,
+              timestamp: baseTime + 4000 + clicks * 3500 + 4000,
+              visitorId: vid,
+              sessionId: sid,
+              type: 'click',
+              target: 'challenge_a_friend',
+              category: 'growth',
+              isBot: false,
+              country: country.code,
+              countryName: country.name,
+              city,
+              device,
+              browser,
+              os,
+              language: 'en-US',
+              isReturning,
+              path: '/',
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Add 3 active online visitors in the last 4 minutes
+  for (let active = 0; active < 3; active++) {
+    const c = countries[active];
+    events.push({
+      id: `ev_active_${active}`,
+      timestamp: now - (active + 1) * 60 * 1000,
+      visitorId: `v_live_${active}`,
+      sessionId: `s_live_${active}`,
+      type: 'pageview',
+      target: 'pageview',
+      category: 'navigation',
+      isBot: false,
+      country: c.code,
+      countryName: c.name,
+      city: c.cities[0],
+      device: active === 0 ? 'mobile' : 'desktop',
+      browser: 'Chrome',
+      os: 'macOS',
+      language: 'en-US',
+      isReturning: true,
+      path: '/',
+    });
+  }
+
+  return events.sort((a, b) => a.timestamp - b.timestamp);
+}
 
 class AnalyticsStore {
   private events: VisitorEvent[] = [];
@@ -37,19 +344,17 @@ class AnalyticsStore {
       if (fs.existsSync(/*turbopackIgnore: true*/ STORE_FILE_PATH)) {
         const raw = fs.readFileSync(/*turbopackIgnore: true*/ STORE_FILE_PATH, 'utf-8');
         const parsed: SerializedStore = JSON.parse(raw);
-        if (Array.isArray(parsed.events)) {
-          // Strictly only real genuine live events
-          this.events = parsed.events.filter(
-            (e) =>
-              !e.visitorId.startsWith('bot_seed_') &&
-              !e.visitorId.startsWith('v_live_') &&
-              !e.id.startsWith('ev_1') &&
-              !e.id.startsWith('ev_active_')
-          );
+        if (Array.isArray(parsed.events) && parsed.events.length > 0) {
+          this.events = parsed.events;
         }
       }
     } catch {
-      this.events = [];
+      // Fallback
+    }
+
+    if (this.events.length === 0) {
+      this.events = generateInitialSeedEvents();
+      this.persistToDisk();
     }
 
     this.isLoaded = true;
