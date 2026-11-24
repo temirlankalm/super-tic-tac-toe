@@ -14,6 +14,8 @@ interface ChessClockBarProps {
   gameMode: GameMode;
   onlineRole?: OnlineRole;
   onlinePlayer?: Player | null;
+  humanPlayer?: Player;
+  pvpFirstPlayer?: 'p1' | 'p2';
   difficulty?: string;
   myNickname?: string;
   opponentNickname?: string | null;
@@ -35,6 +37,8 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
   gameMode,
   onlineRole,
   onlinePlayer,
+  humanPlayer = 'X',
+  pvpFirstPlayer = 'p1',
   difficulty,
   myNickname,
   opponentNickname,
@@ -65,20 +69,28 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
 
   const playerXLabel =
     gameMode === 'ai'
-      ? `${youWord} (x)`
+      ? humanPlayer === 'O'
+        ? `${aiWord} (${diffLabel})`
+        : `${youWord} (x)`
       : gameMode === 'online'
       ? isXSelf
         ? `${youWord} (x)`
         : `${opponentWord} (x)`
+      : pvpFirstPlayer === 'p2'
+      ? `${language === 'ru' ? 'игрок 2' : 'player 2'} (x)`
       : t.clock.player1X;
 
   const playerOLabel =
     gameMode === 'ai'
-      ? `${aiWord} (${diffLabel})`
+      ? humanPlayer === 'O'
+        ? `${youWord} (o)`
+        : `${aiWord} (${diffLabel})`
       : gameMode === 'online'
       ? isOSelf
         ? `${youWord} (o)`
         : `${opponentWord} (o)`
+      : pvpFirstPlayer === 'p2'
+      ? `${language === 'ru' ? 'игрок 1' : 'player 1'} (o)`
       : t.clock.player2O;
 
   return (

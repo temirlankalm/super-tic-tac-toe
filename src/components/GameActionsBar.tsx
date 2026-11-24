@@ -25,6 +25,7 @@ interface GameActionsBarProps {
   myNickname?: string;
   opponentNickname?: string | null;
   difficulty?: string;
+  humanPlayer?: Player;
   lastDelta?: number | null;
   newRating?: number;
   isRatedGame?: boolean;
@@ -55,6 +56,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
   myNickname,
   opponentNickname,
   difficulty,
+  humanPlayer = 'X',
   lastDelta,
   newRating,
   isRatedGame,
@@ -89,11 +91,12 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
       } else {
         title = opponentNickname ? t.results.playerWon.replace('{name}', opponentNickname) : t.results.opponentWon;
       }
-    } else if (gameMode === 'ai') {
-      if (winner === 'X') {
+    } else if (gameMode === 'ai' || gameMode === 'daily') {
+      const isHumanWinner = winner === humanPlayer;
+      if (isHumanWinner) {
         title = myNickname ? t.results.playerBeatAi.replace('{name}', myNickname) : t.results.youWon;
       } else {
-        title = myNickname ? t.results.aiBeatPlayer.replace('{name}', myNickname) : t.results.oWon;
+        title = myNickname ? t.results.aiBeatPlayer.replace('{name}', myNickname) : (winner === 'X' ? t.results.xWon : t.results.oWon);
       }
     } else {
       title = winner === 'X' ? t.results.xWon : t.results.oWon;

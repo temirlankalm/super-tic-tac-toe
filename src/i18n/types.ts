@@ -230,4 +230,20 @@ export interface Translations {
     nicknameTaken: string;
     eloNote: string;
   };
+  sideSelection: {
+    side: string;
+    chooseSide: string;
+    random: string;
+    youAreX: string;
+    youAreO: string;
+    yourTurn: string;
+    aiTurn: string;
+    opponentTurn: string;
+    creatorPlays: string;
+    joinerPlays: string;
+    pvpXFirst: string;
+    player1: string;
+    player2: string;
+    swappedNotice: string;
+  };
 }

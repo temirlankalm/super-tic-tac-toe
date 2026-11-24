@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { X, Copy, Check, QrCode, Globe, LogIn, Share2 } from 'lucide-react';
-import { ConnectionStatus, OnlineRole, RoomJoinError } from '@/types/game';
+import { ConnectionStatus, OnlineRole, Player, RoomJoinError, SideChoice } from '@/types/game';
 import { useTranslation } from '@/i18n/LanguageContext';
 import { analytics } from '@/lib/analytics/client';
 
@@ -11,6 +11,9 @@ interface OnlineRoomModalProps {
   isOpen: boolean;
   roomId: string | null;
   role: OnlineRole;
+  myPlayer?: Player | null;
+  opponentPlayer?: Player | null;
+  creatorSidePreference?: SideChoice;
   status: ConnectionStatus;
   peerJoinError?: RoomJoinError;
   theme: 'light' | 'dark';
@@ -18,14 +21,18 @@ interface OnlineRoomModalProps {
   opponentNickname?: string | null;
   onClose: () => void;
   onLeaveRoom: () => void;
-  onCreateRoom: () => void;
+  onCreateRoom: (assignedPlayer?: Player) => void;
   onJoinRoom: (targetRoomId: string) => void;
+  onSelectCreatorSide?: (choice: SideChoice) => void;
 }
 
 export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
   isOpen,
   roomId,
   role,
+  myPlayer,
+  opponentPlayer,
+  creatorSidePreference = 'X',
   status,
   peerJoinError,
   theme,
@@ -35,6 +42,7 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
   onLeaveRoom,
   onCreateRoom,
   onJoinRoom,
+  onSelectCreatorSide,
 }) => {
   const { t, language } = useTranslation();
   const [activeTab, setActiveTab] = useState<'share' | 'join'>('share');
@@ -229,20 +237,51 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
                     : language === 'ru' ? 'комната создана' : 'room ready'}
                 </span>
                 <span className="text-[11px] text-[var(--ink-mute)] font-sans lowercase">
-                  {role === 'host'
-                    ? (language === 'ru' ? 'вы за X' : 'you play X')
-                    : role === 'guest'
-                    ? (language === 'ru' ? 'вы за O' : 'you play O')
-                    : ''}
+                  {myPlayer === 'X' ? t.sideSelection.youAreX : t.sideSelection.youAreO}
                 </span>
               </div>
             </div>
+
+            {/* Creator Side Selector (Host only) */}
+            {role === 'host' && onSelectCreatorSide && (
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--line)]/20 border border-[var(--line)] mb-3 text-xs animate-fade-up">
+                <span className="text-[11px] text-[var(--ink-soft)] lowercase font-medium">
+                  {t.sideSelection.side}:
+                </span>
+                <div className="flex items-center rounded-md border border-[var(--line-strong)] p-0.5 font-sans lowercase text-xs bg-[var(--bg)]">
+                  {(['X', 'O', 'random'] as const).map((side) => {
+                    const isSelected = creatorSidePreference === side;
+                    return (
+                      <button
+                        key={side}
+                        type="button"
+                        onClick={() => onSelectCreatorSide(side)}
+                        className={`px-2.5 py-0.5 rounded transition-all cursor-pointer font-medium ${
+                          isSelected
+                            ? 'bg-[var(--line-strong)] text-[var(--highlight-ink)] shadow-2xs'
+                            : 'text-[var(--ink-mute)] hover:text-[var(--ink-soft)]'
+                        }`}
+                      >
+                        {side === 'random' ? t.sideSelection.random : side}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Joiner Notice (Guest only) */}
+            {role === 'guest' && (
+              <div className="p-2 rounded-lg bg-[var(--line)]/20 border border-[var(--line)] mb-3 text-[11px] text-[var(--ink-soft)] lowercase text-center">
+                {`${t.sideSelection.creatorPlays} ${opponentPlayer || 'X'}, ${t.sideSelection.joinerPlays} ${myPlayer || 'O'}`}
+              </div>
+            )}
 
             {/* Players in Room */}
             <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-[var(--line)]/15 border border-[var(--line)] mb-3 text-xs">
               <div>
                 <span className="text-[10px] text-[var(--ink-mute)] uppercase tracking-wider block font-medium">
-                  {t.onlineModal.youLabel} ({role === 'host' ? 'X' : role === 'guest' ? 'O' : 'X'})
+                  {t.onlineModal.youLabel} ({myPlayer || (role === 'host' ? 'X' : 'O')})
                 </span>
                 <span className="font-medium text-[var(--highlight-ink)] truncate block" title={myNickname}>
                   {myNickname}
@@ -250,7 +289,7 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
               </div>
               <div>
                 <span className="text-[10px] text-[var(--ink-mute)] uppercase tracking-wider block font-medium">
-                  {t.onlineModal.opponentLabel} ({role === 'host' ? 'O' : role === 'guest' ? 'X' : 'O'})
+                  {t.onlineModal.opponentLabel} ({opponentPlayer || (role === 'host' ? (myPlayer === 'X' ? 'O' : 'X') : (myPlayer === 'X' ? 'O' : 'X'))})
                 </span>
                 <span className="font-medium text-[var(--highlight-ink)] truncate block">
                   {opponentNickname ||

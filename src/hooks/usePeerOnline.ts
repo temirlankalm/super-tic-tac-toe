@@ -12,7 +12,8 @@ interface UsePeerOnlineOptions {
   onInitSync?: (msg: Extract<PeerMessage, { type: 'INIT' }>) => void;
   onTimeSync?: (timeX: number, timeO: number) => void;
   onRematchRequested?: (fromPlayer: Player) => void;
-  onRematchAccepted?: (timeControl: TimeControl) => void;
+  onRematchAccepted?: (timeControl: TimeControl, nextSide?: Player) => void;
+  onSideChanged?: (newSide: Player) => void;
   onRemoteResign?: (player: Player) => void;
   onDrawOffered?: (fromPlayer: Player) => void;
   onDrawAccepted?: () => void;
@@ -35,6 +36,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
   const [drawOfferedByOpponent, setDrawOfferedByOpponent] = useState(false);
   const [myDrawOffered, setMyDrawOffered] = useState(false);
   const [drawDeclinedNotice, setDrawDeclinedNotice] = useState(false);
+  const [rematchSwappedNotice, setRematchSwappedNotice] = useState(false);
   const [opponentNickname, setOpponentNickname] = useState<string | null>(null);
   const [opponentPlayerId, setOpponentPlayerId] = useState<string | null>(null);
   const [matchCount, setMatchCount] = useState<number>(1);
@@ -207,8 +209,23 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
           case 'REMATCH_ACCEPT':
             setRematchRequestedByOpponent(false);
             setMyRematchSent(false);
+            setRematchSwappedNotice(true);
+            setTimeout(() => setRematchSwappedNotice(false), 4000);
             setMatchCount((prev) => prev + 1);
-            optionsRef.current?.onRematchAccepted?.(msg.timeControl);
+            setMyPlayer((current) => {
+              const nextSide: Player = msg.swappedSide
+                ? (msg.swappedSide === 'X' ? 'O' : 'X')
+                : (current === 'X' ? 'O' : 'X');
+              optionsRef.current?.onRematchAccepted?.(msg.timeControl, nextSide);
+              return nextSide;
+            });
+            break;
+          case 'SIDE_CHANGE':
+            if (role === 'guest' && msg.hostPlayer) {
+              const guestSide: Player = msg.hostPlayer === 'X' ? 'O' : 'X';
+              setMyPlayer(guestSide);
+              optionsRef.current?.onSideChanged?.(guestSide);
+            }
             break;
           case 'RESIGN':
             optionsRef.current?.onRemoteResign?.(msg.player);
@@ -363,17 +380,37 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     });
   }, [myPlayer, role, sendMessage]);
 
-  // Accept rematch
+  // Accept rematch with side swap by default
   const acceptRematch = useCallback(
     (currentTc: TimeControl) => {
       setRematchRequestedByOpponent(false);
       setMyRematchSent(false);
+      setRematchSwappedNotice(true);
+      setTimeout(() => setRematchSwappedNotice(false), 4000);
       setMatchCount((prev) => prev + 1);
+
+      // Swap sides by default on rematch
+      const nextSide: Player = myPlayer === 'X' ? 'O' : 'X';
+      setMyPlayer(nextSide);
+
       sendMessage({
         type: 'REMATCH_ACCEPT',
         timeControl: currentTc,
+        swappedSide: nextSide,
       });
-      optionsRef.current?.onRematchAccepted?.(currentTc);
+      optionsRef.current?.onRematchAccepted?.(currentTc, nextSide);
+    },
+    [myPlayer, sendMessage]
+  );
+
+  // Creator side selection update (syncs to joiner)
+  const setHostSide = useCallback(
+    (side: Player) => {
+      setMyPlayer(side);
+      sendMessage({
+        type: 'SIDE_CHANGE',
+        hostPlayer: side,
+      });
     },
     [sendMessage]
   );
@@ -433,6 +470,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     joinError,
     role,
     myPlayer,
+    opponentPlayer: (myPlayer ? (myPlayer === 'X' ? 'O' : 'X') : null) as Player | null,
     roomId,
     opponentNickname,
     opponentPlayerId,
@@ -442,10 +480,12 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     drawOfferedByOpponent,
     myDrawOffered,
     drawDeclinedNotice,
+    rematchSwappedNotice,
     disconnectGraceSeconds,
     createRoom,
     joinRoom,
     leaveRoom,
+    setHostSide,
     sendMessage,
     sendNickname,
     requestRematch,

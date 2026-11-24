@@ -36,6 +36,8 @@ export type ConnectionStatus =
 
 export type RoomJoinError = 'timeout' | 'not_found' | 'connection_failed' | null;
 
+export type SideChoice = 'X' | 'O' | 'random';
+
 export type PeerMessage =
   | {
       type: 'INIT';
@@ -78,6 +80,11 @@ export type PeerMessage =
   | {
       type: 'REMATCH_ACCEPT';
       timeControl: TimeControl;
+      swappedSide?: Player;
+    }
+  | {
+      type: 'SIDE_CHANGE';
+      hostPlayer: Player;
     }
   | {
       type: 'RESIGN';

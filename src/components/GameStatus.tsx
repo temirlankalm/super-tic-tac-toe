@@ -26,6 +26,7 @@ import {
   OnlineRole,
   Player,
   RoomJoinError,
+  SideChoice,
   TimeControl,
 } from '@/types/game';
 import { HandDrawnLogo } from './hand-drawn/HandDrawnLogo';
@@ -45,6 +46,7 @@ interface GameStatusProps {
   drawOfferedByOpponent?: boolean;
   myDrawOffered?: boolean;
   drawDeclinedNotice?: boolean;
+  rematchSwappedNotice?: boolean;
   dailyStreak?: number;
   activeModifiersCount?: number;
   disconnectGraceSeconds?: number | null;
@@ -52,6 +54,11 @@ interface GameStatusProps {
   opponentNickname?: string | null;
   rating?: number;
   isProvisional?: boolean;
+  aiSidePreference?: SideChoice;
+  humanPlayer?: Player;
+  onSelectAiSide?: (side: SideChoice) => void;
+  pvpFirstPlayer?: 'p1' | 'p2';
+  onTogglePvpFirstPlayer?: () => void;
   onSelectMode: (mode: GameMode) => void;
   onToggleMode?: () => void;
   onSetDifficulty: (difficulty: AiDifficulty) => void;
@@ -92,6 +99,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   drawOfferedByOpponent,
   myDrawOffered,
   drawDeclinedNotice,
+  rematchSwappedNotice,
   dailyStreak,
   activeModifiersCount,
   disconnectGraceSeconds,
@@ -99,6 +107,11 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   opponentNickname,
   rating,
   isProvisional,
+  aiSidePreference = 'X',
+  humanPlayer = 'X',
+  onSelectAiSide,
+  pvpFirstPlayer = 'p1',
+  onTogglePvpFirstPlayer,
   onSelectMode,
   onToggleMode,
   onSetDifficulty,
@@ -467,7 +480,42 @@ export const GameStatus: React.FC<GameStatusProps> = ({
         </div>
 
         {/* Right side: Controls for current active mode */}
-        <div className="flex items-center gap-1.5 text-xs">
+        <div className="flex items-center gap-1.5 text-xs flex-wrap justify-end">
+          {/* AI Side Selector: X | O | Random */}
+          {gameMode === 'ai' && onSelectAiSide && (
+            <div
+              className="flex items-center rounded-md border border-[var(--line)] p-0.5 text-[11px] font-sans lowercase"
+              title={t.sideSelection.chooseSide}
+            >
+              {(['X', 'O', 'random'] as const).map((side) => {
+                const isSelected = aiSidePreference === side;
+                const canChange =
+                  gameState.history.length === 0 ||
+                  (gameState.history.length === 1 && humanPlayer === 'O' && !gameState.isAiThinking);
+                return (
+                  <button
+                    key={side}
+                    type="button"
+                    disabled={!canChange}
+                    onClick={() => onSelectAiSide(side)}
+                    className={`px-1.5 py-0.5 rounded-[4px] transition-all ${
+                      isSelected
+                        ? 'bg-[var(--line-strong)] text-[var(--highlight-ink)] font-semibold shadow-2xs'
+                        : 'text-[var(--ink-mute)] hover:text-[var(--ink-soft)]'
+                    } ${!canChange ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+                    title={
+                      side === 'random'
+                        ? t.sideSelection.random
+                        : `${t.sideSelection.side} ${side}`
+                    }
+                  >
+                    {side === 'random' ? '?' : side}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Difficulty selector (when in vs ai mode) */}
           {gameMode === 'ai' && (
             <div className="flex items-center rounded-md border border-[var(--line)] p-0.5 text-[11px] font-sans lowercase">
@@ -493,6 +541,28 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                 </button>
               ))}
             </div>
+          )}
+
+          {/* PvP X First toggle */}
+          {gameMode === 'pvp' && onTogglePvpFirstPlayer && (
+            <button
+              type="button"
+              disabled={gameState.history.length > 0}
+              onClick={onTogglePvpFirstPlayer}
+              className={`px-2 py-0.5 rounded-md border border-[var(--line)] text-[11px] font-sans lowercase transition-all ${
+                gameState.history.length > 0
+                  ? 'opacity-40 cursor-not-allowed'
+                  : 'hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] cursor-pointer'
+              }`}
+              title={t.sideSelection.pvpXFirst.replace(
+                '{player}',
+                pvpFirstPlayer === 'p1' ? t.sideSelection.player1 : t.sideSelection.player2
+              )}
+            >
+              <span>
+                X: {pvpFirstPlayer === 'p1' ? t.sideSelection.player1 : t.sideSelection.player2}
+              </span>
+            </button>
           )}
 
           {/* Room Trigger (when in online mode) */}
@@ -583,6 +653,18 @@ export const GameStatus: React.FC<GameStatusProps> = ({
         </div>
       )}
 
+      {/* Online Rematch Sides Swapped Notice Banner */}
+      {gameMode === 'online' && rematchSwappedNotice && (
+        <div className="pt-2">
+          <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--line)]/25 border border-[var(--line-strong)] text-xs text-[var(--highlight-ink)] lowercase animate-fade-up">
+            <span>{t.sideSelection.swappedNotice}</span>
+            <span className="text-[11px] text-[var(--ink-mute)]">
+              ({(onlinePlayer || 'X') === 'O' ? t.sideSelection.youAreO : t.sideSelection.youAreX})
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Live Status Bar (Turn Indicator & Target Sector Guidance) */}
       <div className="flex items-center justify-between pt-2.5 text-xs min-h-[30px]">
         {/* Game State Message */}
@@ -620,34 +702,84 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <span className="text-[var(--ink-soft)] lowercase">
-                  {language === 'ru' ? 'ход:' : 'turn:'}
-                </span>
-                <span className="inline-flex items-center gap-1.5 font-medium text-[var(--highlight-ink)]">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Visual Mark of Current Player */}
+                <div className="flex items-center gap-1.5 font-medium text-[var(--highlight-ink)]">
                   {currentPlayer === 'X' ? (
                     <HandDrawnX variant={0} className="w-3.5 h-3.5 text-[var(--highlight-ink)]" />
                   ) : (
                     <HandDrawnO variant={0} className="w-3.5 h-3.5 text-[var(--highlight-ink)]" />
                   )}
-                  {gameMode === 'ai' && currentPlayer !== gameState.humanPlayer && (
-                    <span className="text-xs text-[var(--ink-mute)] font-normal">
-                      {isAiThinking
-                        ? `(${difficulty === 'qnet' ? t.status.qnetThinking : t.status.aiThinking})`
-                        : `(${language === 'ru' ? 'ии' : 'ai'})`}
+                </div>
+
+                {/* VS AI Mode Status */}
+                {gameMode === 'ai' && (
+                  <div className="flex items-center gap-1.5">
+                    {currentPlayer === humanPlayer ? (
+                      <span className="px-2 py-0.5 rounded-full bg-[var(--highlight-ink)] text-[var(--bg)] font-medium text-[11px] shadow-2xs lowercase animate-fade-up">
+                        {t.sideSelection.yourTurn} ({humanPlayer})
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-[var(--line)]/60 text-[var(--ink-soft)] text-[11px] lowercase">
+                        {isAiThinking
+                          ? (difficulty === 'qnet' ? t.status.qnetThinking : t.status.aiThinking)
+                          : t.sideSelection.aiTurn}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-[var(--ink-mute)] font-sans lowercase">
+                      ({humanPlayer === 'X' ? t.sideSelection.youAreX : t.sideSelection.youAreO})
                     </span>
-                  )}
-                  {gameMode === 'online' && (
-                    <span className="text-xs text-[var(--ink-soft)] font-normal lowercase">
-                      {(onlinePlayer
-                        ? currentPlayer === onlinePlayer
-                        : (onlineRole === 'host' && currentPlayer === 'X') ||
-                          (onlineRole === 'guest' && currentPlayer === 'O'))
-                        ? `· ${nickname ? `${nickname} (${t.status.yourTurn})` : t.status.yourTurn}`
-                        : `· ${opponentNickname ? `${opponentNickname} (${t.status.opponentTurn})` : t.status.opponentTurn}`}
+                  </div>
+                )}
+
+                {/* Online Room Mode Status */}
+                {gameMode === 'online' && (
+                  <div className="flex items-center gap-1.5">
+                    {(onlinePlayer
+                      ? currentPlayer === onlinePlayer
+                      : (onlineRole === 'host' && currentPlayer === 'X') ||
+                        (onlineRole === 'guest' && currentPlayer === 'O')) ? (
+                      <span className="px-2 py-0.5 rounded-full bg-[var(--highlight-ink)] text-[var(--bg)] font-medium text-[11px] shadow-2xs lowercase animate-fade-up">
+                        {t.status.yourTurn}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-[var(--line)]/60 text-[var(--ink-soft)] text-[11px] lowercase">
+                        {opponentNickname ? `${opponentNickname} (${t.status.opponentTurn})` : t.status.opponentTurn}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-[var(--ink-mute)] font-sans lowercase">
+                      ({(onlinePlayer || 'X') === 'O' ? t.sideSelection.youAreO : t.sideSelection.youAreX})
                     </span>
-                  )}
-                </span>
+                  </div>
+                )}
+
+                {/* Local PvP Mode Status */}
+                {gameMode === 'pvp' && (
+                  <span className="px-2 py-0.5 rounded-full bg-[var(--line)] text-[var(--highlight-ink)] font-medium text-[11px] lowercase">
+                    {currentPlayer === 'X'
+                      ? `${language === 'ru' ? 'ход' : 'turn'}: ${
+                          pvpFirstPlayer === 'p1' ? t.sideSelection.player1 : t.sideSelection.player2
+                        } (X)`
+                      : `${language === 'ru' ? 'ход' : 'turn'}: ${
+                          pvpFirstPlayer === 'p1' ? t.sideSelection.player2 : t.sideSelection.player1
+                        } (O)`}
+                  </span>
+                )}
+
+                {/* Daily Challenge Mode Status */}
+                {gameMode === 'daily' && (
+                  <div className="flex items-center gap-1.5">
+                    {currentPlayer === humanPlayer ? (
+                      <span className="px-2 py-0.5 rounded-full bg-[var(--highlight-ink)] text-[var(--bg)] font-medium text-[11px] shadow-2xs lowercase">
+                        {t.sideSelection.yourTurn}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-[var(--line)]/60 text-[var(--ink-soft)] text-[11px] lowercase">
+                        {isAiThinking ? t.status.aiThinking : t.sideSelection.aiTurn}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             )
           ) : (

@@ -31,7 +31,7 @@ import {
   getTodayDateString,
   getChallengeNumber,
 } from '@/lib/daily';
-import { GameMode, Player } from '@/types/game';
+import { GameMode, Player, SideChoice } from '@/types/game';
 import { useTranslation } from '@/i18n/LanguageContext';
 
 interface GameClientProps {
@@ -52,6 +52,9 @@ export function GameClient({ initialRoomId }: GameClientProps) {
     history: [],
   });
   const [aiDrawNotice, setAiDrawNotice] = useState<string | null>(null);
+  const [aiSidePreference, setAiSidePreferenceState] = useState<SideChoice>('X');
+  const [pvpFirstPlayer, setPvpFirstPlayer] = useState<'p1' | 'p2'>('p1');
+  const [creatorSidePreference, setCreatorSidePreference] = useState<SideChoice>('X');
 
   const {
     nickname,
@@ -148,10 +151,10 @@ export function GameClient({ initialRoomId }: GameClientProps) {
     onTimeSync: (newTimeX, newTimeO) => {
       syncClocks(newTimeX, newTimeO);
     },
-    onRematchAccepted: (tc) => {
+    onRematchAccepted: (tc, nextSide) => {
       elo.resetLastDelta();
       recordedMatchIdRef.current = null;
-      resetGame();
+      resetGame(nextSide);
       resetClocks(tc);
       haptic('win');
     },
@@ -224,6 +227,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
     applyRemoteMove,
     syncState,
     resetGame,
+    setHumanPlayer,
     undoMove,
     setGameMode,
     toggleGameMode,
@@ -295,6 +299,56 @@ export function GameClient({ initialRoomId }: GameClientProps) {
   timeControlRef.current = timeControl;
   timeXRef.current = timeX;
   timeORef.current = timeO;
+
+  // Load saved AI side choice preference from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('ttt_ai_side') as SideChoice | null;
+      if (stored === 'X' || stored === 'O' || stored === 'random') {
+        setAiSidePreferenceState(stored);
+        if (stored === 'O') {
+          setHumanPlayer('O');
+        } else if (stored === 'random') {
+          const randSide: Player = Math.random() < 0.5 ? 'X' : 'O';
+          setHumanPlayer(randSide);
+        }
+      }
+    } catch {}
+  }, [setHumanPlayer]);
+
+  const handleSelectAiSide = useCallback(
+    (choice: SideChoice) => {
+      setAiSidePreferenceState(choice);
+      try {
+        localStorage.setItem('ttt_ai_side', choice);
+      } catch {}
+      const targetSide: Player =
+        choice === 'random' ? (Math.random() < 0.5 ? 'X' : 'O') : choice;
+      setHumanPlayer(targetSide);
+      resetClocks();
+      elo.resetLastDelta();
+      haptic('tap');
+    },
+    [setHumanPlayer, resetClocks, elo, haptic]
+  );
+
+  const handleTogglePvpFirstPlayer = useCallback(() => {
+    setPvpFirstPlayer((prev) => (prev === 'p1' ? 'p2' : 'p1'));
+    resetGame();
+    resetClocks();
+    haptic('tap');
+  }, [resetGame, resetClocks, haptic]);
+
+  const handleSelectCreatorSide = useCallback(
+    (choice: SideChoice) => {
+      setCreatorSidePreference(choice);
+      const resolved: Player =
+        choice === 'random' ? (Math.random() < 0.5 ? 'X' : 'O') : choice;
+      peerOnline.setHostSide(resolved);
+      haptic('tap');
+    },
+    [peerOnline, haptic]
+  );
 
   // Track daily challenge progress, persistence, and completion
   const dailyCompletedRef = useRef<boolean>(false);
@@ -490,6 +544,13 @@ export function GameClient({ initialRoomId }: GameClientProps) {
       }
       resetGame();
       resetClocks('off');
+    } else if (gameState.gameMode === 'ai') {
+      const nextSide: Player =
+        aiSidePreference === 'random'
+          ? (Math.random() < 0.5 ? 'X' : 'O')
+          : aiSidePreference;
+      resetGame(nextSide);
+      resetClocks();
     } else {
       resetGame();
       resetClocks();
@@ -529,7 +590,11 @@ export function GameClient({ initialRoomId }: GameClientProps) {
 
     if (targetMode === 'online') {
       if (peerOnline.status === 'idle') {
-        peerOnline.createRoom();
+        const resolved: Player =
+          creatorSidePreference === 'random'
+            ? (Math.random() < 0.5 ? 'X' : 'O')
+            : creatorSidePreference;
+        peerOnline.createRoom(resolved);
       }
       setIsOnlineModalOpen(true);
     } else {
@@ -571,7 +636,11 @@ export function GameClient({ initialRoomId }: GameClientProps) {
 
   const handleOpenOnlineModal = () => {
     if (peerOnline.status === 'idle') {
-      peerOnline.createRoom();
+      const resolved: Player =
+        creatorSidePreference === 'random'
+          ? (Math.random() < 0.5 ? 'X' : 'O')
+          : creatorSidePreference;
+      peerOnline.createRoom(resolved);
     }
     setIsOnlineModalOpen(true);
   };
@@ -598,8 +667,13 @@ export function GameClient({ initialRoomId }: GameClientProps) {
     }
   };
 
-  const handleCreateRoom = () => {
-    peerOnline.createRoom();
+  const handleCreateRoom = (assignedPlayer?: Player) => {
+    const resolved: Player =
+      assignedPlayer ||
+      (creatorSidePreference === 'random'
+        ? (Math.random() < 0.5 ? 'X' : 'O')
+        : creatorSidePreference);
+    peerOnline.createRoom(resolved);
   };
 
   const handleRequestRematch = () => {
@@ -722,6 +796,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         drawOfferedByOpponent={peerOnline.drawOfferedByOpponent}
         myDrawOffered={peerOnline.myDrawOffered}
         drawDeclinedNotice={peerOnline.drawDeclinedNotice}
+        rematchSwappedNotice={peerOnline.rematchSwappedNotice}
         dailyStreak={dailyStats.currentStreak}
         activeModifiersCount={activeModifiersCount}
         disconnectGraceSeconds={peerOnline.disconnectGraceSeconds}
@@ -729,6 +804,11 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         opponentNickname={peerOnline.opponentNickname}
         rating={elo.rating}
         isProvisional={elo.isProvisional}
+        aiSidePreference={aiSidePreference}
+        humanPlayer={gameState.humanPlayer}
+        onSelectAiSide={handleSelectAiSide}
+        pvpFirstPlayer={pvpFirstPlayer}
+        onTogglePvpFirstPlayer={handleTogglePvpFirstPlayer}
         onSelectMode={handleSelectMode}
         onToggleMode={handleToggleMode}
         onSetDifficulty={(d) => { analytics.difficulty(d); setDifficulty(d); }}
@@ -754,6 +834,8 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         gameMode={gameState.gameMode}
         onlineRole={peerOnline.role}
         onlinePlayer={peerOnline.myPlayer}
+        humanPlayer={gameState.humanPlayer}
+        pvpFirstPlayer={pvpFirstPlayer}
         difficulty={gameState.difficulty}
         myNickname={nickname}
         opponentNickname={peerOnline.opponentNickname}
@@ -782,7 +864,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         historyLength={gameState.history.length}
         isAiThinking={gameState.isAiThinking}
         canUndo={
-          gameState.history.length > 0 &&
+          gameState.history.length > (gameState.gameMode === 'ai' && gameState.humanPlayer === 'O' ? 1 : 0) &&
           !gameState.isAiThinking &&
           gameState.winner === null &&
           gameState.gameMode !== 'online' &&
@@ -796,6 +878,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         myNickname={nickname}
         opponentNickname={peerOnline.opponentNickname}
         difficulty={gameState.difficulty}
+        humanPlayer={gameState.humanPlayer}
         lastDelta={elo.lastDelta}
         newRating={elo.rating}
         isRatedGame={gameState.gameMode === 'ai' || gameState.gameMode === 'online'}
@@ -861,6 +944,9 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         isOpen={isOnlineModalOpen}
         roomId={peerOnline.roomId}
         role={peerOnline.role}
+        myPlayer={peerOnline.myPlayer}
+        opponentPlayer={peerOnline.opponentPlayer}
+        creatorSidePreference={creatorSidePreference}
         status={peerOnline.status}
         peerJoinError={peerOnline.joinError}
         theme={theme}
@@ -870,6 +956,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         onLeaveRoom={handleLeaveRoom}
         onCreateRoom={handleCreateRoom}
         onJoinRoom={handleJoinByCode}
+        onSelectCreatorSide={handleSelectCreatorSide}
       />
 
       {/* Arcade Modifiers Settings Modal */}

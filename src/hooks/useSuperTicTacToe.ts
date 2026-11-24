@@ -31,11 +31,12 @@ export interface UseSuperTicTacToeOptions {
   isOnlineConnected?: boolean;
   /** Remaining clock of `player` in ms, or null without a time control. */
   getClockMs?: (player: Player) => number | null;
+  initialHumanPlayer?: Player;
 }
 
 export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
   const [gameState, setGameState] = useState<GameState>(() =>
-    createInitialState('ai', 'X', 'hard')
+    createInitialState('ai', options?.initialHumanPlayer || 'X', 'hard')
   );
 
   const [speedBlitzTime, setSpeedBlitzTime] = useState<number>(5.0);
@@ -320,10 +321,25 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
     if (ponderKey !== null) ponderQnet(gameStateRef.current);
   }, [ponderKey]);
 
-  const resetGame = useCallback(() => {
+  const resetGame = useCallback((nextHumanPlayer?: Player) => {
     aiThinkingRef.current = false;
     aiRequestRef.current++;
-    setGameState((prev) => createInitialState(prev.gameMode, prev.humanPlayer, prev.difficulty, prev.modifiers));
+    setGameState((prev) =>
+      createInitialState(
+        prev.gameMode,
+        nextHumanPlayer ?? prev.humanPlayer,
+        prev.difficulty,
+        prev.modifiers
+      )
+    );
+  }, []);
+
+  const setHumanPlayer = useCallback((humanPlayer: Player) => {
+    aiThinkingRef.current = false;
+    aiRequestRef.current++;
+    setGameState((prev) =>
+      createInitialState(prev.gameMode, humanPlayer, prev.difficulty, prev.modifiers)
+    );
   }, []);
 
   const undoMove = useCallback(() => {
@@ -441,6 +457,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
     applyRemoteMove,
     syncState,
     resetGame,
+    setHumanPlayer,
     undoMove,
     setGameMode,
     toggleGameMode,
