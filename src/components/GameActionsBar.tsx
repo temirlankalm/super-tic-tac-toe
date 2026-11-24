@@ -22,6 +22,9 @@ interface GameActionsBarProps {
   rematchRequestedByOpponent?: boolean;
   myRematchSent?: boolean;
   aiDrawNotice?: string | null;
+  myNickname?: string;
+  opponentNickname?: string | null;
+  difficulty?: string;
   onUndo: () => void;
   onReset: () => void;
   onResign: () => void;
@@ -45,6 +48,9 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
   rematchRequestedByOpponent,
   myRematchSent,
   aiDrawNotice,
+  myNickname,
+  opponentNickname,
+  difficulty,
   onUndo,
   onReset,
   onResign,
@@ -70,7 +76,17 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
     if (winner === 'TIE') {
       title = winReason === 'agreement' ? t.results.drawAgreement : t.results.drawGeneric;
     } else if (isOnline) {
-      title = isMeWinner ? t.results.youWon : t.results.opponentWon;
+      if (isMeWinner) {
+        title = myNickname ? t.results.playerWon.replace('{name}', myNickname) : t.results.youWon;
+      } else {
+        title = opponentNickname ? t.results.playerWon.replace('{name}', opponentNickname) : t.results.opponentWon;
+      }
+    } else if (gameMode === 'ai') {
+      if (winner === 'X') {
+        title = myNickname ? t.results.playerBeatAi.replace('{name}', myNickname) : t.results.youWon;
+      } else {
+        title = myNickname ? t.results.aiBeatPlayer.replace('{name}', myNickname) : t.results.oWon;
+      }
     } else {
       title = winner === 'X' ? t.results.xWon : t.results.oWon;
     }

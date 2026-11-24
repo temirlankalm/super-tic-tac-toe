@@ -38,6 +38,7 @@ export const en: Translations = {
     darkTheme: 'dark theme',
     rulesTitle: 'game rules',
     langToggle: 'switch to russian language',
+    nicknameTitle: 'player nickname',
     timeLabels: {
       off: 'off',
       60: '1m',
@@ -125,6 +126,9 @@ export const en: Translations = {
     youResigned: 'you resigned',
     timeOut: "time's up",
     threeInRow: '3 in a row on global board',
+    playerWon: '{name} won!',
+    playerBeatAi: '{name} beat the AI',
+    aiBeatPlayer: 'AI won against {name}',
   },
   rulesModal: {
     title: 'super tic-tac-toe rules',
@@ -147,6 +151,9 @@ export const en: Translations = {
     title: 'arcade modifiers',
     subtitle: 'customize rules and game mechanics',
     activeCount: 'active',
+    nicknameSection: 'player nickname',
+    nicknameDesc: 'visible in online matches and game summaries',
+    changeNickname: 'change',
     fogOfWar: {
       title: 'fog of war',
       desc: 'only the active sector and sectors with moves are visible. the rest are veiled in a soft mist.',
@@ -190,6 +197,8 @@ export const en: Translations = {
     createNewRoom: 'create new room',
     emptyCodeError: 'please enter a room code',
     connectFailed: 'failed to connect to room',
+    youLabel: 'you',
+    opponentLabel: 'opponent',
   },
   alerts: {
     confirmResignDaily: 'resign from the daily challenge? this will be recorded as a loss.',
@@ -201,5 +210,20 @@ export const en: Translations = {
   },
   cell: {
     fadingSoon: 'mark will fade on next move',
+  },
+  nicknameModal: {
+    chooseTitle: 'choose a nickname',
+    changeTitle: 'change nickname',
+    subtitle: 'letters, numbers, spaces, _ and - · max 16 chars',
+    placeholder: 'your nickname',
+    save: 'save',
+    skip: 'skip',
+    cancel: 'cancel',
+    randomizeTooltip: 'generate random nickname',
+    rulesHint: 'saved locally on your device · no password or account needed',
+    tooShort: 'nickname cannot be empty',
+    tooLong: 'maximum 16 characters',
+    invalidChars: 'only letters, numbers, spaces, _ and - allowed',
+    profanityError: 'nickname contains forbidden words',
   },
 };

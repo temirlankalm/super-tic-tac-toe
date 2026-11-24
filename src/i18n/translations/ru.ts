@@ -38,6 +38,7 @@ export const ru: Translations = {
     darkTheme: 'тёмная тема',
     rulesTitle: 'правила игры',
     langToggle: 'переключить на английский язык',
+    nicknameTitle: 'никнейм игрока',
     timeLabels: {
       off: 'off',
       60: '1m',
@@ -125,6 +126,9 @@ export const ru: Translations = {
     youResigned: 'вы сдались',
     timeOut: 'время вышло',
     threeInRow: '3 в ряд на глобальном поле',
+    playerWon: '{name} побеждает!',
+    playerBeatAi: '{name} побеждает ИИ',
+    aiBeatPlayer: 'ИИ побеждает {name}',
   },
   rulesModal: {
     title: 'правила super tic-tac-toe',
@@ -147,6 +151,9 @@ export const ru: Translations = {
     title: 'аркадные модификаторы',
     subtitle: 'настройте дополнительные правила игры',
     activeCount: 'активно',
+    nicknameSection: 'никнейм игрока',
+    nicknameDesc: 'отображается в онлайн-партиях и сводках',
+    changeNickname: 'изменить',
     fogOfWar: {
       title: 'туман войны',
       desc: 'виден только активный сектор и секторы с ходами. остальные скрыты полупрозрачной дымкой.',
@@ -190,6 +197,8 @@ export const ru: Translations = {
     createNewRoom: 'создать новую комнату',
     emptyCodeError: 'введи код комнаты',
     connectFailed: 'не удалось подключиться к комнате',
+    youLabel: 'вы',
+    opponentLabel: 'соперник',
   },
   alerts: {
     confirmResignDaily: 'сдаться в игре дня? партия будет засчитана как поражение.',
@@ -201,5 +210,20 @@ export const ru: Translations = {
   },
   cell: {
     fadingSoon: 'знак исчезнет на следующем ходу',
+  },
+  nicknameModal: {
+    chooseTitle: 'выберите никнейм',
+    changeTitle: 'сменить никнейм',
+    subtitle: 'буквы, цифры, пробелы, _ и - · до 16 символов',
+    placeholder: 'ваш никнейм',
+    save: 'сохранить',
+    skip: 'позже',
+    cancel: 'отмена',
+    randomizeTooltip: 'случайный никнейм',
+    rulesHint: 'сохраняется локально на устройстве · без паролей и аккаунтов',
+    tooShort: 'никнейм не может быть пустым',
+    tooLong: 'максимум 16 символов',
+    invalidChars: 'разрешены только буквы, цифры, пробелы, _ и -',
+    profanityError: 'никнейм содержит недопустимые слова',
   },
 };

@@ -16,6 +16,8 @@ import { RulesModal } from '@/components/RulesModal';
 import { OnlineRoomModal } from '@/components/OnlineRoomModal';
 import { SettingsModal } from '@/components/SettingsModal';
 import { DailyChallengeModal } from '@/components/DailyChallengeModal';
+import { NicknameModal } from '@/components/NicknameModal';
+import { useNickname } from '@/hooks/useNickname';
 import { evaluateStaticState } from '@/lib/ai';
 import {
   DailyStats,
@@ -48,6 +50,16 @@ export function GameClient({ initialRoomId }: GameClientProps) {
     history: [],
   });
   const [aiDrawNotice, setAiDrawNotice] = useState<string | null>(null);
+
+  const {
+    nickname,
+    isFirstVisit,
+    isModalOpen: isNicknameModalOpen,
+    openModal: openNicknameModal,
+    closeModal: closeNicknameModal,
+    saveNickname,
+    skipPrompt: skipNicknamePrompt,
+  } = useNickname();
 
   useEffect(() => {
     setDailyStats(getDailyStats());
@@ -102,6 +114,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
 
   // Setup PeerJS online multiplayer hook
   const peerOnline = usePeerOnline({
+    myNickname: nickname,
     isGameActive:
       Boolean(gameStateRef.current?.history?.length > 0) &&
       gameStateRef.current?.winner === null,
@@ -595,6 +608,8 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         dailyStreak={dailyStats.currentStreak}
         activeModifiersCount={activeModifiersCount}
         disconnectGraceSeconds={peerOnline.disconnectGraceSeconds}
+        nickname={nickname}
+        opponentNickname={peerOnline.opponentNickname}
         onSelectMode={handleSelectMode}
         onToggleMode={handleToggleMode}
         onSetDifficulty={(d) => { analytics.difficulty(d); setDifficulty(d); }}
@@ -607,6 +622,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         onDeclineDraw={handleDeclineDraw}
         onOpenDailyModal={() => { analytics.click("open_daily_modal", "modal"); setIsDailyModalOpen(true); }}
         onOpenSettingsModal={() => { analytics.click("open_settings_modal", "modal"); setIsSettingsOpen(true); }}
+        onOpenNicknameModal={openNicknameModal}
       />
 
       {/* Chess Clock Bar (visible when timer is active) */}
@@ -620,6 +636,8 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         onlineRole={peerOnline.role}
         onlinePlayer={peerOnline.myPlayer}
         difficulty={gameState.difficulty}
+        myNickname={nickname}
+        opponentNickname={peerOnline.opponentNickname}
       />
 
       {/* The 9x9 Super Board */}
@@ -656,6 +674,9 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         rematchRequestedByOpponent={peerOnline.rematchRequestedByOpponent}
         myRematchSent={peerOnline.myRematchSent}
         aiDrawNotice={aiDrawNotice}
+        myNickname={nickname}
+        opponentNickname={peerOnline.opponentNickname}
+        difficulty={gameState.difficulty}
         onUndo={handleUndo}
         onReset={handleReset}
         onResign={handleResign}
@@ -712,6 +733,8 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         role={peerOnline.role}
         status={peerOnline.status}
         theme={theme}
+        myNickname={nickname}
+        opponentNickname={peerOnline.opponentNickname}
         onClose={() => setIsOnlineModalOpen(false)}
         onLeaveRoom={handleLeaveRoom}
         onCreateRoom={handleCreateRoom}
@@ -722,6 +745,8 @@ export function GameClient({ initialRoomId }: GameClientProps) {
       <SettingsModal
         isOpen={isSettingsOpen}
         modifiers={gameState.modifiers}
+        nickname={nickname}
+        onOpenNicknameModal={openNicknameModal}
         onToggleModifier={toggleModifier}
         onClose={() => setIsSettingsOpen(false)}
       />
@@ -733,8 +758,25 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         currentBoardWinners={gameState.boardWinners}
         movesCount={gameState.history.length}
         winner={gameState.winner}
+        nickname={nickname}
         onClose={() => setIsDailyModalOpen(false)}
         onStartDailyMatch={handleStartDailyMatch}
+      />
+
+      {/* Nickname Selection & Edit Modal */}
+      <NicknameModal
+        isOpen={isNicknameModalOpen}
+        isFirstVisit={isFirstVisit}
+        currentNickname={nickname}
+        onSave={(name) => {
+          const res = saveNickname(name);
+          if (res.ok) {
+            peerOnline.sendNickname(name);
+          }
+          return res;
+        }}
+        onSkip={skipNicknamePrompt}
+        onClose={closeNicknameModal}
       />
     </main>
   );

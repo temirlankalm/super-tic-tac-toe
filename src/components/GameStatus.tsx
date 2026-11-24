@@ -14,6 +14,7 @@ import {
   Flame,
   Sliders,
   ChevronDown,
+  User,
 } from 'lucide-react';
 import {
   AiDifficulty,
@@ -43,6 +44,8 @@ interface GameStatusProps {
   dailyStreak?: number;
   activeModifiersCount?: number;
   disconnectGraceSeconds?: number | null;
+  nickname?: string;
+  opponentNickname?: string | null;
   onSelectMode: (mode: GameMode) => void;
   onToggleMode?: () => void;
   onSetDifficulty: (difficulty: AiDifficulty) => void;
@@ -55,6 +58,7 @@ interface GameStatusProps {
   onDeclineDraw?: () => void;
   onOpenDailyModal?: () => void;
   onOpenSettingsModal?: () => void;
+  onOpenNicknameModal?: () => void;
 }
 
 const sectorKeys = [
@@ -84,6 +88,8 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   dailyStreak,
   activeModifiersCount,
   disconnectGraceSeconds,
+  nickname,
+  opponentNickname,
   onSelectMode,
   onToggleMode,
   onSetDifficulty,
@@ -96,6 +102,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   onDeclineDraw,
   onOpenDailyModal,
   onOpenSettingsModal,
+  onOpenNicknameModal,
 }) => {
   const { t, language, toggleLanguage } = useTranslation();
   const {
@@ -167,6 +174,20 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                   ? `${dailyStreak}${t.common.daysShort}`
                   : t.header.dailyButton}
               </span>
+            </button>
+          )}
+
+          {/* Nickname Button */}
+          {onOpenNicknameModal && (
+            <button
+              type="button"
+              onClick={onOpenNicknameModal}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-[11px] max-w-[85px] sm:max-w-[120px] truncate"
+              title={t.header.nicknameTitle}
+              aria-label={t.header.nicknameTitle}
+            >
+              <User size={12} className="shrink-0 text-[var(--ink-soft)]" />
+              <span className="truncate">{nickname || 'player'}</span>
             </button>
           )}
 
@@ -568,8 +589,8 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                         ? currentPlayer === onlinePlayer
                         : (onlineRole === 'host' && currentPlayer === 'X') ||
                           (onlineRole === 'guest' && currentPlayer === 'O'))
-                        ? `· ${t.status.yourTurn}`
-                        : `· ${t.status.opponentTurn}`}
+                        ? `· ${nickname ? `${nickname} (${t.status.yourTurn})` : t.status.yourTurn}`
+                        : `· ${opponentNickname ? `${opponentNickname} (${t.status.opponentTurn})` : t.status.opponentTurn}`}
                     </span>
                   )}
                 </span>

@@ -213,7 +213,8 @@ export function generateShareText(
   movesCount: number,
   streak: number,
   boardWinners: BoardWinner[],
-  lang: 'ru' | 'en' = 'ru'
+  lang: 'ru' | 'en' = 'ru',
+  nickname?: string
 ): string {
   // Convert 9 board winners into 3x3 emoji grid
   // 🟩 = Player (X) won this sector
@@ -244,7 +245,13 @@ export function generateShareText(
     ? `played in ${movesCount} moves · streak: ${streak}`
     : `партия сыграна (${movesCount} ходов) · стрик: ${streak}`;
 
-  return `Tic³ · super #${challengeNum}
+  const header = nickname
+    ? lang === 'en'
+      ? `${nickname} played Tic³ · super #${challengeNum}`
+      : `${nickname} сыграл в Tic³ · super #${challengeNum}`
+    : `Tic³ · super #${challengeNum}`;
+
+  return `${header}
 ${resultLine}
 ${rows.join('\n')}
 https://ttt.temr.dev`;

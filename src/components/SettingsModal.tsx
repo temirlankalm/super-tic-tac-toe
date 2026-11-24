@@ -1,13 +1,15 @@
 'use client';
 
 import React from 'react';
-import { X, Sliders, EyeOff, Sparkles, Zap } from 'lucide-react';
+import { X, Sliders, EyeOff, Sparkles, Zap, User } from 'lucide-react';
 import { GameModifiers } from '@/types/game';
 import { useTranslation } from '@/i18n/LanguageContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
   modifiers: GameModifiers;
+  nickname?: string;
+  onOpenNicknameModal?: () => void;
   onToggleModifier: (key: keyof GameModifiers) => void;
   onClose: () => void;
 }
@@ -15,6 +17,8 @@ interface SettingsModalProps {
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   modifiers,
+  nickname,
+  onOpenNicknameModal,
   onToggleModifier,
   onClose,
 }) => {
@@ -74,6 +78,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <X size={17} />
           </button>
         </div>
+
+        {/* Nickname section */}
+        {onOpenNicknameModal && (
+          <div className="flex items-center justify-between p-3.5 rounded-xl border border-[var(--line)] bg-[var(--line)]/10 mb-4">
+            <div className="flex items-center gap-2.5">
+              <User size={16} className="text-[var(--highlight-ink)]" />
+              <div>
+                <span className="text-[10px] text-[var(--ink-mute)] uppercase tracking-wider block font-medium">
+                  {t.settingsModal.nicknameSection}
+                </span>
+                <span className="text-sm font-medium text-[var(--highlight-ink)]">
+                  {nickname || 'Player'}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenNicknameModal}
+              className="px-2.5 py-1 text-xs font-sans lowercase rounded-md border border-[var(--line-strong)] hover:bg-[var(--line)]/40 text-[var(--highlight-ink)] transition-colors cursor-pointer"
+            >
+              {t.settingsModal.changeNickname}
+            </button>
+          </div>
+        )}
 
         {/* Modifiers List */}
         <div className="space-y-3.5">

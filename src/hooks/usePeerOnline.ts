@@ -3,8 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { DataConnection, Peer } from 'peerjs';
 import { ConnectionStatus, OnlineRole, PeerMessage, Player, TimeControl } from '@/types/game';
+import { sanitizeNickname } from '@/lib/nickname';
 
 interface UsePeerOnlineOptions {
+  myNickname?: string;
   onRemoteMove?: (boardIdx: number, cellIdx: number, player: Player, timeX?: number, timeO?: number) => void;
   onInitSync?: (msg: Extract<PeerMessage, { type: 'INIT' }>) => void;
   onTimeSync?: (timeX: number, timeO: number) => void;
@@ -31,6 +33,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
   const [drawOfferedByOpponent, setDrawOfferedByOpponent] = useState(false);
   const [myDrawOffered, setMyDrawOffered] = useState(false);
   const [drawDeclinedNotice, setDrawDeclinedNotice] = useState(false);
+  const [opponentNickname, setOpponentNickname] = useState<string | null>(null);
 
   // Disconnect grace state
   const [disconnectGraceSeconds, setDisconnectGraceSeconds] = useState<number | null>(null);
@@ -81,6 +84,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     setDrawOfferedByOpponent(false);
     setMyDrawOffered(false);
     setDrawDeclinedNotice(false);
+    setOpponentNickname(null);
   }, [clearDisconnectGrace]);
 
   // Start 30s disconnect grace period
@@ -124,6 +128,17 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
         }
         clearDisconnectGrace();
         setStatus('connected');
+
+        // Exchange nickname on open
+        if (optionsRef.current?.myNickname) {
+          try {
+            conn.send({
+              type: 'NICKNAME',
+              nickname: sanitizeNickname(optionsRef.current.myNickname),
+            });
+          } catch {}
+        }
+
         optionsRef.current?.onOpponentReconnected?.();
         optionsRef.current?.onConnected?.();
       });
@@ -137,7 +152,23 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
             if (msg.hostPlayer) {
               setMyPlayer(msg.hostPlayer === 'X' ? 'O' : 'X');
             }
+            if (msg.hostNickname) {
+              setOpponentNickname(sanitizeNickname(msg.hostNickname));
+            }
+            if (optionsRef.current?.myNickname) {
+              try {
+                conn.send({
+                  type: 'NICKNAME',
+                  nickname: sanitizeNickname(optionsRef.current.myNickname),
+                });
+              } catch {}
+            }
             optionsRef.current?.onInitSync?.(msg);
+            break;
+          case 'NICKNAME':
+            if (msg.nickname) {
+              setOpponentNickname(sanitizeNickname(msg.nickname));
+            }
             break;
           case 'MOVE':
             optionsRef.current?.onRemoteMove?.(
@@ -347,11 +378,23 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     };
   }, [cleanup]);
 
+  // Send updated nickname to opponent
+  const sendNickname = useCallback(
+    (name: string) => {
+      sendMessage({
+        type: 'NICKNAME',
+        nickname: sanitizeNickname(name),
+      });
+    },
+    [sendMessage]
+  );
+
   return {
     status,
     role,
     myPlayer,
     roomId,
+    opponentNickname,
     rematchRequestedByOpponent,
     myRematchSent,
     drawOfferedByOpponent,
@@ -362,6 +405,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     joinRoom,
     leaveRoom,
     sendMessage,
+    sendNickname,
     requestRematch,
     acceptRematch,
     resignOnline,

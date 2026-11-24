@@ -13,6 +13,8 @@ interface OnlineRoomModalProps {
   role: OnlineRole;
   status: ConnectionStatus;
   theme: 'light' | 'dark';
+  myNickname?: string;
+  opponentNickname?: string | null;
   onClose: () => void;
   onLeaveRoom: () => void;
   onCreateRoom: () => void;
@@ -25,6 +27,8 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
   role,
   status,
   theme,
+  myNickname = 'Player',
+  opponentNickname,
   onClose,
   onLeaveRoom,
   onCreateRoom,
@@ -70,7 +74,10 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
       try {
         await navigator.share({
           title: 'Tic³ - Ultimate Tic-Tac-Toe',
-          text: language === 'ru' ? 'Сыграй со мной в super tic-tac-toe!' : 'Join my game of Ultimate Tic-Tac-Toe!',
+          text:
+            language === 'ru'
+              ? `${myNickname} приглашает сыграть в super tic-tac-toe!`
+              : `${myNickname} challenges you to Ultimate Tic-Tac-Toe!`,
           url: roomUrl,
         });
         analytics.roomLinkShared('share', roomId || undefined);
@@ -211,6 +218,33 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
                     : role === 'guest'
                     ? (language === 'ru' ? 'вы за O' : 'you play O')
                     : ''}
+                </span>
+              </div>
+            </div>
+
+            {/* Players in Room */}
+            <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-[var(--line)]/15 border border-[var(--line)] mb-3 text-xs">
+              <div>
+                <span className="text-[10px] text-[var(--ink-mute)] uppercase tracking-wider block font-medium">
+                  {t.onlineModal.youLabel} ({role === 'host' ? 'X' : role === 'guest' ? 'O' : 'X'})
+                </span>
+                <span className="font-medium text-[var(--highlight-ink)] truncate block" title={myNickname}>
+                  {myNickname}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-[var(--ink-mute)] uppercase tracking-wider block font-medium">
+                  {t.onlineModal.opponentLabel} ({role === 'host' ? 'O' : role === 'guest' ? 'X' : 'O'})
+                </span>
+                <span className="font-medium text-[var(--highlight-ink)] truncate block">
+                  {opponentNickname ||
+                    (status === 'connected'
+                      ? language === 'ru'
+                        ? 'подключен'
+                        : 'connected'
+                      : language === 'ru'
+                      ? 'ожидание…'
+                      : 'waiting…')}
                 </span>
               </div>
             </div>

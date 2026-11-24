@@ -38,6 +38,7 @@ export interface Translations {
     darkTheme: string;
     rulesTitle: string;
     langToggle: string;
+    nicknameTitle: string;
     timeLabels: {
       off: string;
       60: string;
@@ -124,6 +125,9 @@ export interface Translations {
     youResigned: string;
     timeOut: string;
     threeInRow: string;
+    playerWon: string;
+    playerBeatAi: string;
+    aiBeatPlayer: string;
   };
   rulesModal: {
     title: string;
@@ -142,6 +146,9 @@ export interface Translations {
     title: string;
     subtitle: string;
     activeCount: string;
+    nicknameSection: string;
+    nicknameDesc: string;
+    changeNickname: string;
     fogOfWar: {
       title: string;
       desc: string;
@@ -185,6 +192,8 @@ export interface Translations {
     createNewRoom: string;
     emptyCodeError: string;
     connectFailed: string;
+    youLabel: string;
+    opponentLabel: string;
   };
   alerts: {
     confirmResignDaily: string;
@@ -196,5 +205,20 @@ export interface Translations {
   };
   cell: {
     fadingSoon: string;
+  };
+  nicknameModal: {
+    chooseTitle: string;
+    changeTitle: string;
+    subtitle: string;
+    placeholder: string;
+    save: string;
+    skip: string;
+    cancel: string;
+    randomizeTooltip: string;
+    rulesHint: string;
+    tooShort: string;
+    tooLong: string;
+    invalidChars: string;
+    profanityError: string;
   };
 }

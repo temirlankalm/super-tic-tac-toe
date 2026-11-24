@@ -19,6 +19,7 @@ interface DailyChallengeModalProps {
   currentBoardWinners?: BoardWinner[];
   movesCount?: number;
   winner?: BoardWinner;
+  nickname?: string;
   onClose: () => void;
   onStartDailyMatch: () => void;
 }
@@ -27,6 +28,7 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
   isOpen,
   dailyStats,
   currentBoardWinners,
+  nickname,
   onClose,
   onStartDailyMatch,
 }) => {
@@ -53,7 +55,7 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
     const moves = todayResult ? todayResult.movesCount : 0;
     const streak = dailyStats.currentStreak;
 
-    const shareText = generateShareText(challengeNum, won, moves, streak, winners, language);
+    const shareText = generateShareText(challengeNum, won, moves, streak, winners, language, nickname);
     analytics.buttonClick('share_daily_result', { won, moves, streak, challengeNum });
 
     try {
@@ -135,6 +137,11 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
               <div className="text-sm font-medium text-[var(--highlight-ink)] lowercase mb-1">
                 {todayResult.won ? t.dailyModal.statusWon : t.dailyModal.statusLost}
               </div>
+              {nickname && (
+                <div className="text-[11px] font-mono text-[var(--ink-mute)] mb-1">
+                  {nickname}
+                </div>
+              )}
               <p className="text-xs text-[var(--ink-soft)] lowercase mb-3">
                 {todayResult.won
                   ? (language === 'ru'

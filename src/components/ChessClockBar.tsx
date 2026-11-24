@@ -15,6 +15,8 @@ interface ChessClockBarProps {
   onlineRole?: OnlineRole;
   onlinePlayer?: Player | null;
   difficulty?: string;
+  myNickname?: string;
+  opponentNickname?: string | null;
 }
 
 function formatClock(seconds: number): string {
@@ -34,6 +36,8 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
   onlineRole,
   onlinePlayer,
   difficulty,
+  myNickname,
+  opponentNickname,
 }) => {
   const { t, language } = useTranslation();
 
@@ -51,7 +55,8 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
   const isXSelf = onlinePlayer ? onlinePlayer === 'X' : onlineRole === 'host';
   const isOSelf = onlinePlayer ? onlinePlayer === 'O' : onlineRole === 'guest';
 
-  const opponentWord = language === 'ru' ? 'соперник' : 'opponent';
+  const opponentWord = opponentNickname || (language === 'ru' ? 'соперник' : 'opponent');
+  const youWord = myNickname || (language === 'ru' ? 'вы' : 'you');
   const aiWord = language === 'ru' ? 'ии' : 'ai';
   const diffLabel =
     difficulty && difficulty in t.difficulties
@@ -60,10 +65,10 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
 
   const playerXLabel =
     gameMode === 'ai'
-      ? t.clock.youX
+      ? `${youWord} (x)`
       : gameMode === 'online'
       ? isXSelf
-        ? t.clock.youX
+        ? `${youWord} (x)`
         : `${opponentWord} (x)`
       : t.clock.player1X;
 
@@ -72,8 +77,8 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
       ? `${aiWord} (${diffLabel})`
       : gameMode === 'online'
       ? isOSelf
-        ? language === 'ru' ? 'вы (o)' : 'you (o)'
-        : t.clock.opponentO
+        ? `${youWord} (o)`
+        : `${opponentWord} (o)`
       : t.clock.player2O;
 
   return (

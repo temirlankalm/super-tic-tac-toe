@@ -47,6 +47,11 @@ export type PeerMessage =
       timeO: number;
       modifiers?: GameModifiers;
       hostPlayer?: Player;
+      hostNickname?: string;
+    }
+  | {
+      type: 'NICKNAME';
+      nickname: string;
     }
   | {
       type: 'MOVE';
