@@ -2,14 +2,37 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { DataConnection, Peer } from 'peerjs';
-import { ConnectionStatus, OnlineRole, PeerMessage, Player, RoomJoinError, TimeControl } from '@/types/game';
+import {
+  BoardWinner,
+  CellState,
+  ConnectionStatus,
+  MoveHistory,
+  OnlineRole,
+  PeerMessage,
+  Player,
+  RoomJoinError,
+  TimeControl,
+} from '@/types/game';
 import { sanitizeNickname } from '@/lib/nickname';
+
+interface FullGameStateSnapshot {
+  cells: CellState[][];
+  boardWinners: BoardWinner[];
+  boardWinningLines: (number[] | null)[];
+  activeBoard: number | null;
+  currentPlayer: Player;
+  history: MoveHistory[];
+  timeX: number;
+  timeO: number;
+}
 
 interface UsePeerOnlineOptions {
   myNickname?: string;
   myPlayerId?: string;
   onRemoteMove?: (boardIdx: number, cellIdx: number, player: Player, timeX?: number, timeO?: number) => void;
   onInitSync?: (msg: Extract<PeerMessage, { type: 'INIT' }>) => void;
+  onResyncState?: (msg: Extract<PeerMessage, { type: 'RESYNC_STATE' }>) => void;
+  getFullState?: () => FullGameStateSnapshot;
   onTimeSync?: (timeX: number, timeO: number) => void;
   onRematchRequested?: (fromPlayer: Player) => void;
   onRematchAccepted?: (timeControl: TimeControl, nextSide?: Player) => void;
@@ -23,6 +46,31 @@ interface UsePeerOnlineOptions {
   onOpponentForfeit?: () => void;
   onOpponentReconnected?: () => void;
   isGameActive?: boolean;
+}
+
+function getPeerConfig() {
+  const iceServers: RTCIceServer[] = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
+  ];
+
+  const turnUrl = process.env.NEXT_PUBLIC_TURN_SERVER_URL;
+  if (turnUrl) {
+    iceServers.push({
+      urls: turnUrl,
+      username: process.env.NEXT_PUBLIC_TURN_USERNAME || undefined,
+      credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL || undefined,
+    });
+  }
+
+  return {
+    debug: 1,
+    config: {
+      iceServers,
+    },
+  };
 }
 
 export function usePeerOnline(options?: UsePeerOnlineOptions) {
@@ -48,9 +96,18 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
   const connRef = useRef<DataConnection | null>(null);
   const connectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const disconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const redialTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const redialDeadlineRef = useRef<number>(0);
+  const targetRoomIdRef = useRef<string | null>(null);
 
   const optionsRef = useRef(options);
   optionsRef.current = options;
+
+  const roleRef = useRef<OnlineRole>(role);
+  roleRef.current = role;
+
+  const myPlayerRef = useRef<Player | null>(myPlayer);
+  myPlayerRef.current = myPlayer;
 
   // Clear disconnect grace timer
   const clearDisconnectGrace = useCallback(() => {
@@ -61,6 +118,14 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     setDisconnectGraceSeconds(null);
   }, []);
 
+  // Stop auto redial
+  const stopAutoRedial = useCallback(() => {
+    if (redialTimerRef.current) {
+      clearInterval(redialTimerRef.current);
+      redialTimerRef.current = null;
+    }
+  }, []);
+
   // Cleanup connection and peer
   const cleanup = useCallback(() => {
     if (connectTimeoutRef.current) {
@@ -68,6 +133,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
       connectTimeoutRef.current = null;
     }
     clearDisconnectGrace();
+    stopAutoRedial();
 
     if (connRef.current) {
       try {
@@ -81,6 +147,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
       } catch {}
       peerRef.current = null;
     }
+    targetRoomIdRef.current = null;
     setStatus('idle');
     setJoinError(null);
     setRole(null);
@@ -91,10 +158,11 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     setDrawOfferedByOpponent(false);
     setMyDrawOffered(false);
     setDrawDeclinedNotice(false);
+    setRematchSwappedNotice(false);
     setOpponentNickname(null);
     setOpponentPlayerId(null);
     setMatchCount(1);
-  }, [clearDisconnectGrace]);
+  }, [clearDisconnectGrace, stopAutoRedial]);
 
   // Start 30s disconnect grace period
   const startDisconnectGrace = useCallback(() => {
@@ -136,6 +204,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
           connectTimeoutRef.current = null;
         }
         clearDisconnectGrace();
+        stopAutoRedial();
         setStatus('connected');
 
         // Exchange nickname and player ID on open
@@ -147,6 +216,19 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
               playerId: optionsRef.current?.myPlayerId,
             });
           } catch {}
+        }
+
+        // If host, resend full state upon reconnection
+        if (roleRef.current === 'host' && optionsRef.current?.getFullState) {
+          try {
+            const full = optionsRef.current.getFullState();
+            conn.send({
+              type: 'RESYNC_STATE',
+              ...full,
+            });
+          } catch (err) {
+            console.error('Failed to send RESYNC_STATE on reconnect:', err);
+          }
         }
 
         optionsRef.current?.onOpponentReconnected?.();
@@ -182,6 +264,23 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
             }
             optionsRef.current?.onInitSync?.(msg);
             break;
+
+          case 'RESYNC_STATE':
+            optionsRef.current?.onResyncState?.(msg);
+            break;
+
+          case 'ROOM_FULL':
+            if (connectTimeoutRef.current) {
+              clearTimeout(connectTimeoutRef.current);
+              connectTimeoutRef.current = null;
+            }
+            setJoinError('room_full');
+            setStatus('error');
+            try {
+              conn.close();
+            } catch {}
+            break;
+
           case 'NICKNAME':
             if (msg.nickname) {
               setOpponentNickname(sanitizeNickname(msg.nickname));
@@ -190,7 +289,18 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
               setOpponentPlayerId(msg.playerId);
             }
             break;
+
           case 'MOVE':
+            // Host validates that move comes from the remote opponent only
+            if (roleRef.current === 'host') {
+              const expectedOpponent = myPlayerRef.current === 'X' ? 'O' : 'X';
+              if (msg.player !== expectedOpponent) {
+                console.warn(
+                  `[Host] Rejected MOVE from wrong player ${msg.player}, expected ${expectedOpponent}`
+                );
+                return;
+              }
+            }
             optionsRef.current?.onRemoteMove?.(
               msg.boardIdx,
               msg.cellIdx,
@@ -199,13 +309,16 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
               msg.timeO
             );
             break;
+
           case 'TIME_SYNC':
             optionsRef.current?.onTimeSync?.(msg.timeX, msg.timeO);
             break;
+
           case 'REMATCH_REQUEST':
             setRematchRequestedByOpponent(true);
             optionsRef.current?.onRematchRequested?.(msg.fromPlayer);
             break;
+
           case 'REMATCH_ACCEPT':
             setRematchRequestedByOpponent(false);
             setMyRematchSent(false);
@@ -214,37 +327,47 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
             setMatchCount((prev) => prev + 1);
             setMyPlayer((current) => {
               const nextSide: Player = msg.swappedSide
-                ? (msg.swappedSide === 'X' ? 'O' : 'X')
-                : (current === 'X' ? 'O' : 'X');
+                ? msg.swappedSide === 'X'
+                  ? 'O'
+                  : 'X'
+                : current === 'X'
+                ? 'O'
+                : 'X';
               optionsRef.current?.onRematchAccepted?.(msg.timeControl, nextSide);
               return nextSide;
             });
             break;
+
           case 'SIDE_CHANGE':
-            if (role === 'guest' && msg.hostPlayer) {
+            if (roleRef.current === 'guest' && msg.hostPlayer) {
               const guestSide: Player = msg.hostPlayer === 'X' ? 'O' : 'X';
               setMyPlayer(guestSide);
               optionsRef.current?.onSideChanged?.(guestSide);
             }
             break;
+
           case 'RESIGN':
             optionsRef.current?.onRemoteResign?.(msg.player);
             break;
+
           case 'DRAW_OFFER':
             setDrawOfferedByOpponent(true);
             optionsRef.current?.onDrawOffered?.(msg.fromPlayer);
             break;
+
           case 'DRAW_ACCEPT':
             setMyDrawOffered(false);
             setDrawOfferedByOpponent(false);
             optionsRef.current?.onDrawAccepted?.();
             break;
+
           case 'DRAW_DECLINE':
             setMyDrawOffered(false);
             setDrawDeclinedNotice(true);
             setTimeout(() => setDrawDeclinedNotice(false), 3000);
             optionsRef.current?.onDrawDeclined?.();
             break;
+
           case 'DISCONNECT':
             setStatus('disconnected');
             if (optionsRef.current?.isGameActive) {
@@ -259,6 +382,9 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
         connRef.current = null;
         if (optionsRef.current?.isGameActive) {
           startDisconnectGrace();
+          if (roleRef.current === 'guest' && targetRoomIdRef.current) {
+            startGuestAutoRedial(targetRoomIdRef.current);
+          }
         }
       });
 
@@ -267,57 +393,138 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
         setStatus('disconnected');
         if (optionsRef.current?.isGameActive) {
           startDisconnectGrace();
+          if (roleRef.current === 'guest' && targetRoomIdRef.current) {
+            startGuestAutoRedial(targetRoomIdRef.current);
+          }
         }
       });
     },
-    [clearDisconnectGrace, startDisconnectGrace]
+    [clearDisconnectGrace, startDisconnectGrace, stopAutoRedial]
   );
 
+  // Guest auto-redial for 30 seconds on mid-game disconnect
+  const startGuestAutoRedial = useCallback(
+    (cleanId: string) => {
+      stopAutoRedial();
+      redialDeadlineRef.current = Date.now() + 30000;
+      setStatus('reconnecting');
+
+      redialTimerRef.current = setInterval(() => {
+        if (Date.now() > redialDeadlineRef.current) {
+          stopAutoRedial();
+          setStatus('disconnected');
+          return;
+        }
+        if (connRef.current && connRef.current.open) {
+          stopAutoRedial();
+          setStatus('connected');
+          return;
+        }
+
+        try {
+          if (peerRef.current && !peerRef.current.destroyed) {
+            const targetPeerId = `sttt-${cleanId}`;
+            const newConn = peerRef.current.connect(targetPeerId, { reliable: true });
+            attachConnectionHandlers(newConn);
+          }
+        } catch (e) {
+          console.warn('Auto-redial attempt error:', e);
+        }
+      }, 3000);
+    },
+    [stopAutoRedial, attachConnectionHandlers]
+  );
+
+  // Start guest connection timeout (raised to 20s)
+  const startGuestTimeout = useCallback((timeoutMs = 20000) => {
+    if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
+    connectTimeoutRef.current = setTimeout(() => {
+      setStatus((curr) => {
+        if (curr === 'connecting') {
+          setJoinError('timeout');
+          return 'error';
+        }
+        return curr;
+      });
+    }, timeoutMs);
+  }, []);
+
   // Create room as Host (Player X by default)
-  const createRoom = useCallback(async (assignedPlayer?: Player): Promise<string> => {
-    cleanup();
-    setStatus('creating');
-    setRole('host');
-    setMyPlayer(assignedPlayer || 'X');
+  const createRoom = useCallback(
+    async (assignedPlayer?: Player): Promise<string> => {
+      cleanup();
+      setStatus('creating');
+      setRole('host');
+      setMyPlayer(assignedPlayer || 'X');
 
-    // Generate short 6-char clean alphanumeric room code
-    const newRoomId = Math.random().toString(36).substring(2, 8).toLowerCase();
-    setRoomId(newRoomId);
+      // Generate short 6-char clean alphanumeric room code
+      const newRoomId = Math.random().toString(36).substring(2, 8).toLowerCase();
+      setRoomId(newRoomId);
 
-    const { Peer } = await import('peerjs');
-    const peerId = `sttt-${newRoomId}`;
+      const { Peer } = await import('peerjs');
+      const peerId = `sttt-${newRoomId}`;
+      const config = getPeerConfig();
 
-    const peer = new Peer(peerId, { debug: 1 });
-    peerRef.current = peer;
+      const peer = new Peer(peerId, config);
+      peerRef.current = peer;
 
-    peer.on('open', () => {
-      setStatus('waiting');
-    });
+      peer.on('open', () => {
+        setStatus('waiting');
+      });
 
-    peer.on('connection', (incomingConn) => {
-      if (connRef.current && connRef.current.open) {
-        incomingConn.close();
-        return;
-      }
-      attachConnectionHandlers(incomingConn);
-    });
+      // Handle host disconnect from signaling server with automatic reconnect
+      peer.on('disconnected', () => {
+        console.log('Host disconnected from signaling server, reconnecting...');
+        setStatus('reconnecting');
+        try {
+          peer.reconnect();
+        } catch (err) {
+          console.error('Host peer.reconnect failed:', err);
+        }
+      });
 
-    peer.on('error', (err) => {
-      console.error('Host peer error:', err);
-      if (err.type === 'unavailable-id') {
-        createRoom();
-      } else {
-        setJoinError('connection_failed');
-        setStatus('error');
-      }
-    });
+      peer.on('connection', (incomingConn) => {
+        // If room already has an active player, reject third joiner with ROOM_FULL
+        if (connRef.current && connRef.current.open) {
+          incomingConn.on('open', () => {
+            try {
+              incomingConn.send({ type: 'ROOM_FULL' });
+            } catch {}
+            setTimeout(() => {
+              try {
+                incomingConn.close();
+              } catch {}
+            }, 300);
+          });
+          return;
+        }
+        attachConnectionHandlers(incomingConn);
+      });
 
-    return newRoomId;
-  }, [cleanup, attachConnectionHandlers]);
+      peer.on('error', (err) => {
+        console.error('Host peer error:', err);
+        if (err.type === 'unavailable-id') {
+          // Retry with fresh ID
+          createRoom(assignedPlayer);
+        } else {
+          setJoinError('connection_failed');
+          setStatus('error');
+        }
+      });
+
+      return newRoomId;
+    },
+    [cleanup, attachConnectionHandlers]
+  );
 
   // Join room as Guest (Player O by default)
   const joinRoom = useCallback(
-    async (targetRoomId: string, assignedRole: OnlineRole = 'guest', assignedPlayer?: Player) => {
+    async (
+      targetRoomId: string,
+      assignedRole: OnlineRole = 'guest',
+      assignedPlayer?: Player,
+      deferTimeout = false
+    ) => {
       cleanup();
       let cleanId = targetRoomId.trim().toLowerCase();
       if (cleanId.includes('room=')) {
@@ -326,25 +533,20 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
       cleanId = cleanId.replace(/^sttt-/, '').replace(/[^a-z0-9]/g, '');
       if (!cleanId) return;
 
+      targetRoomIdRef.current = cleanId;
       setStatus('connecting');
       setJoinError(null);
       setRole(assignedRole);
       setMyPlayer(assignedPlayer || (assignedRole === 'host' ? 'X' : 'O'));
       setRoomId(cleanId);
 
-      if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
-      connectTimeoutRef.current = setTimeout(() => {
-        setStatus((curr) => {
-          if (curr === 'connecting') {
-            setJoinError('timeout');
-            return 'error';
-          }
-          return curr;
-        });
-      }, 12000);
+      if (!deferTimeout) {
+        startGuestTimeout(20000); // 20s timeout
+      }
 
       const { Peer } = await import('peerjs');
-      const peer = new Peer();
+      const config = getPeerConfig();
+      const peer = new Peer(config);
       peerRef.current = peer;
 
       peer.on('open', () => {
@@ -368,7 +570,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
         setStatus('error');
       });
     },
-    [cleanup, attachConnectionHandlers]
+    [cleanup, attachConnectionHandlers, startGuestTimeout]
   );
 
   // Request rematch
@@ -484,6 +686,7 @@ export function usePeerOnline(options?: UsePeerOnlineOptions) {
     disconnectGraceSeconds,
     createRoom,
     joinRoom,
+    startGuestTimeout,
     leaveRoom,
     setHostSide,
     sendMessage,

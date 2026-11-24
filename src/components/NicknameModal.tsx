@@ -27,25 +27,53 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     if (isOpen) {
+      previousActiveElement.current = document.activeElement as HTMLElement;
       setName(currentNickname);
       setError(null);
       setTimeout(() => inputRef.current?.select(), 50);
     }
   }, [isOpen, currentNickname]);
 
-  // Close modal on Escape key
+  // Focus trap, Escape key, and restore focus on close
   useEffect(() => {
     if (!isOpen) return;
+
+    const modal = modalRef.current;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (isFirstVisit) onSkip();
         else onClose();
+        return;
+      }
+
+      if (e.key === 'Tab' && modal) {
+        const focusable = modal.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      previousActiveElement.current?.focus?.();
+    };
   }, [isOpen, isFirstVisit, onSkip, onClose]);
 
   if (!isOpen) return null;
@@ -97,14 +125,21 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
       onClick={isFirstVisit ? onSkip : onClose}
     >
       <div
-        className="relative w-full max-w-[380px] p-6 rounded-2xl bg-[var(--bg)] border border-[var(--line-strong)] shadow-2xl text-[var(--ink)]"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="nickname-modal-title"
+        className="relative w-full max-w-[calc(100vw-2rem)] sm:max-w-[380px] max-h-[90dvh] overflow-y-auto p-5 sm:p-6 rounded-2xl bg-[var(--bg)] border border-[var(--line-strong)] shadow-2xl text-[var(--ink)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[var(--line)]">
           <div className="flex items-center gap-2">
             <User size={16} className="text-[var(--highlight-ink)]" />
-            <h2 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase">
+            <h2
+              id="nickname-modal-title"
+              className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase"
+            >
               {isFirstVisit ? t.nicknameModal.chooseTitle : t.nicknameModal.changeTitle}
             </h2>
           </div>
@@ -138,6 +173,7 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
                 setError(null);
               }}
               placeholder={t.nicknameModal.placeholder}
+              aria-label={t.nicknameModal.placeholder}
               className="w-full px-3 py-2 pr-16 text-xs rounded-lg border border-[var(--line-strong)] bg-transparent text-[var(--highlight-ink)] focus:outline-none focus:border-[var(--highlight-ink)] transition-colors font-medium font-sans"
               autoFocus
             />
@@ -151,6 +187,7 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
                 onClick={handleRandomize}
                 className="p-1 rounded text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] hover:bg-[var(--line)]/50 transition-colors cursor-pointer"
                 title={t.nicknameModal.randomizeTooltip}
+                aria-label={t.nicknameModal.randomizeTooltip}
               >
                 <Sparkles size={13} />
               </button>

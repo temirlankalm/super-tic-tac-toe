@@ -45,7 +45,14 @@ export const ChessClockBar: React.FC<ChessClockBarProps> = ({
 }) => {
   const { t, language } = useTranslation();
 
-  if (timeControl === 'off') return null;
+  if (timeControl === 'off') {
+    return (
+      <div
+        className="w-full max-w-[460px] sm:max-w-[480px] mx-auto px-1 sm:px-2 py-1 my-1 h-10 pointer-events-none opacity-0 select-none"
+        aria-hidden="true"
+      />
+    );
+  }
 
   const isXActive = winner === null && currentPlayer === 'X';
   const isOActive = winner === null && currentPlayer === 'O';

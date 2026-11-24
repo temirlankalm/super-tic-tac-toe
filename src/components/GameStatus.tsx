@@ -167,9 +167,9 @@ export const GameStatus: React.FC<GameStatusProps> = ({
   return (
     <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-3">
       {/* Row 1: Brand Logo & Global App Utilities */}
-      <div className="flex items-center justify-between pb-2 border-b border-[var(--line)] gap-2">
-        {/* Left: Brand, Daily Streak & Modifiers */}
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between pb-2 border-b border-[var(--line)] gap-y-1.5 gap-x-2">
+        {/* Left: Brand, Daily Streak, Nickname, Elo, & Modifiers */}
+        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
           <div className="flex items-center gap-1.5">
             <h1 className="flex items-center gap-1.5 font-normal">
               <HandDrawnLogo className="h-6 w-auto text-[var(--highlight-ink)]" />
@@ -184,7 +184,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             <button
               type="button"
               onClick={onOpenDailyModal}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-[11px]"
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-[11px] min-h-[32px] sm:min-h-0"
               title={t.header.dailyTitle}
             >
               <Flame
@@ -204,7 +204,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             <button
               type="button"
               onClick={onOpenNicknameModal}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-[11px] max-w-[85px] sm:max-w-[120px] truncate"
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-[11px] max-w-[70px] sm:max-w-[110px] truncate min-h-[32px] sm:min-h-0"
               title={t.header.nicknameTitle}
               aria-label={t.header.nicknameTitle}
             >
@@ -216,7 +216,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           {/* Elo Rating & Global Leaderboard Link */}
           <Link
             href="/leaderboard"
-            className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-[11px]"
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-sans lowercase text-[11px] min-h-[32px] sm:min-h-0"
             title={t.header.leaderboardTitle}
           >
             <Trophy size={11} className="shrink-0 text-amber-500" />
@@ -234,14 +234,16 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             <button
               type="button"
               onClick={onOpenSettingsModal}
-              className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border transition-all cursor-pointer font-sans lowercase text-[11px] ${
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border transition-all cursor-pointer font-sans lowercase text-[11px] min-h-[32px] sm:min-h-0 ${
                 activeModifiersCount && activeModifiersCount > 0
                   ? 'border-[var(--line-strong)] text-[var(--highlight-ink)] bg-[var(--line)]/30 font-medium'
                   : 'border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
               }`}
               title={t.header.modifiersTitle}
+              aria-label={t.header.modifiersTitle}
             >
               <Sliders size={12} />
+              <span>{t.header.modifiersButton}</span>
               {activeModifiersCount && activeModifiersCount > 0 && (
                 <span className="text-[9px] px-1 rounded-full bg-[var(--highlight-ink)] text-[var(--bg)] font-medium">
                   {activeModifiersCount}
@@ -252,13 +254,15 @@ export const GameStatus: React.FC<GameStatusProps> = ({
         </div>
 
         {/* Right: Clock, Language Switch, Sound, Theme, Rules */}
-        <div className="flex items-center gap-1.5 text-xs">
+        <div className="flex items-center gap-1 text-xs shrink-0">
           {/* Chess Clock Timer Selector */}
           <div className="relative" ref={timeMenuRef}>
             <button
               type="button"
               onClick={() => setIsTimeMenuOpen((prev) => !prev)}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md border transition-all cursor-pointer font-sans lowercase ${
+              aria-haspopup="menu"
+              aria-expanded={isTimeMenuOpen}
+              className={`flex items-center gap-1 px-2 py-1 rounded-md border transition-all cursor-pointer font-sans lowercase min-h-[32px] sm:min-h-0 ${
                 timeControl !== 'off'
                   ? 'border-[var(--line-strong)] text-[var(--highlight-ink)] bg-[var(--active-board-bg)] font-medium'
                   : 'border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
@@ -271,7 +275,11 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             </button>
 
             {isTimeMenuOpen && (
-              <div className="absolute right-0 top-full mt-1.5 z-40 py-1 px-1 min-w-[145px] rounded-lg bg-[var(--bg)] border border-[var(--line-strong)] shadow-lg animate-fade-up text-xs font-sans">
+              <div
+                role="menu"
+                aria-label={t.header.clockMenuHeader}
+                className="absolute right-0 top-full mt-1.5 z-40 py-1 px-1 min-w-[145px] rounded-lg bg-[var(--bg)] border border-[var(--line-strong)] shadow-lg animate-fade-up text-xs font-sans"
+              >
                 <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--ink-mute)] font-medium border-b border-[var(--line)] mb-1">
                   {t.header.clockMenuHeader}
                 </div>
@@ -287,6 +295,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                   <button
                     key={opt.value}
                     type="button"
+                    role="menuitem"
                     onClick={() => {
                       onSetTimeControl(opt.value);
                       setIsTimeMenuOpen(false);
@@ -309,7 +318,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           <button
             type="button"
             onClick={toggleLanguage}
-            className="px-1.5 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-mono font-medium text-[11px] uppercase tracking-wider"
+            className="px-1.5 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer font-mono font-medium text-[11px] uppercase tracking-wider min-h-[32px] sm:min-h-0"
             title={language === 'ru' ? 'Switch to English' : 'Переключить на русский'}
             aria-label={t.header.langToggle}
           >
@@ -320,7 +329,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           <button
             type="button"
             onClick={onToggleSound}
-            className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer"
+            className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer min-h-[32px] min-w-[32px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
             title={isSoundEnabled ? t.header.soundOn : t.header.soundOff}
             aria-label={isSoundEnabled ? t.header.soundOn : t.header.soundOff}
           >
@@ -331,7 +340,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           <button
             type="button"
             onClick={onToggleTheme}
-            className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer"
+            className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-all cursor-pointer min-h-[32px] min-w-[32px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
             title={theme === 'dark' ? t.header.lightTheme : t.header.darkTheme}
             aria-label={theme === 'dark' ? t.header.lightTheme : t.header.darkTheme}
           >
@@ -343,7 +352,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
             type="button"
             onClick={onOpenRules}
             aria-label={t.header.rulesTitle}
-            className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+            className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer min-h-[32px] min-w-[32px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
             title={t.header.rulesTitle}
           >
             <HelpCircle size={13} />
@@ -358,7 +367,9 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           <button
             type="button"
             onClick={() => setIsModeMenuOpen((prev) => !prev)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-all cursor-pointer font-sans lowercase text-xs ${
+            aria-haspopup="menu"
+            aria-expanded={isModeMenuOpen}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-all cursor-pointer font-sans lowercase text-xs min-h-[32px] sm:min-h-0 ${
               isModeMenuOpen
                 ? 'border-[var(--line-strong)] text-[var(--highlight-ink)] bg-[var(--active-board-bg)] font-medium shadow-xs'
                 : gameMode === 'daily'
@@ -408,7 +419,11 @@ export const GameStatus: React.FC<GameStatusProps> = ({
           </span>
 
           {isModeMenuOpen && (
-            <div className="absolute left-0 top-full mt-1.5 z-40 py-1 px-1 min-w-[210px] rounded-lg bg-[var(--bg)] border border-[var(--line-strong)] shadow-lg animate-fade-up text-xs font-sans">
+            <div
+              role="menu"
+              aria-label={t.modes.chooseMode}
+              className="absolute left-0 top-full mt-1.5 z-40 py-1 px-1 min-w-[210px] rounded-lg bg-[var(--bg)] border border-[var(--line-strong)] shadow-lg animate-fade-up text-xs font-sans"
+            >
               <div className="px-2.5 py-1 text-[10px] uppercase tracking-wider text-[var(--ink-mute)] font-medium border-b border-[var(--line)] mb-1">
                 {t.modes.chooseMode}
               </div>
@@ -438,6 +453,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                 <button
                   key={mode}
                   type="button"
+                  role="menuitem"
                   onClick={() => {
                     onSelectMode(mode);
                     setIsModeMenuOpen(false);
@@ -578,7 +594,9 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                   className={`w-1.5 h-1.5 rounded-full ${
                     connectionStatus === 'connected'
                       ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50'
-                      : connectionStatus === 'waiting' || connectionStatus === 'connecting'
+                      : connectionStatus === 'waiting' ||
+                        connectionStatus === 'connecting' ||
+                        connectionStatus === 'reconnecting'
                       ? 'bg-amber-500 animate-pulse'
                       : connectionStatus === 'disconnected' || connectionStatus === 'error'
                       ? 'bg-rose-500'
@@ -592,6 +610,8 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                     ? language === 'ru' ? 'ожидание…' : 'waiting…'
                     : connectionStatus === 'connecting'
                     ? language === 'ru' ? 'вход…' : 'joining…'
+                    : connectionStatus === 'reconnecting'
+                    ? t.onlineModal.reconnecting
                     : roomId
                     ? `#${roomId}`
                     : language === 'ru' ? 'код комнаты' : 'room code'}
@@ -691,12 +711,19 @@ export const GameStatus: React.FC<GameStatusProps> = ({
                     {language === 'ru' ? 'соперник отключился' : 'opponent disconnected'}
                   </span>
                 )}
+                {connectionStatus === 'reconnecting' && (
+                  <span className="text-xs text-amber-500 lowercase animate-pulse">
+                    {t.onlineModal.reconnecting}
+                  </span>
+                )}
                 {connectionStatus === 'error' && (
                   <span className="text-xs text-rose-500 lowercase">
                     {joinError === 'timeout'
                       ? t.onlineModal.errorTimeout
                       : joinError === 'not_found'
                       ? t.onlineModal.errorNotFound
+                      : joinError === 'room_full'
+                      ? t.onlineModal.errorRoomFull
                       : t.onlineModal.errorConnectionFailed}
                   </span>
                 )}

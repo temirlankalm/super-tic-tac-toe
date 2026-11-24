@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { CellState } from '@/types/game';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
 import { useTranslation } from '@/i18n/LanguageContext';
@@ -15,6 +15,9 @@ interface CellProps {
   cellIdx: number;
   opacity?: number;
   isExpiringSoon?: boolean;
+  tabIndex?: number;
+  isFocused?: boolean;
+  onFocus?: () => void;
 }
 
 export const Cell: React.FC<CellProps> = ({
@@ -27,18 +30,36 @@ export const Cell: React.FC<CellProps> = ({
   cellIdx,
   opacity,
   isExpiringSoon,
+  tabIndex = -1,
+  isFocused = false,
+  onFocus,
 }) => {
   const { t } = useTranslation();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (isFocused) {
+      buttonRef.current?.focus();
+    }
+  }, [isFocused]);
+
   // Deterministic variation (0, 1, or 2)
   const variant = (boardIdx * 7 + cellIdx * 3) % 3;
 
   return (
     <button
+      ref={buttonRef}
       type="button"
+      role="gridcell"
+      tabIndex={tabIndex}
+      onFocus={onFocus}
       onClick={onClick}
       disabled={!isPlayable}
-      aria-label={`Sector ${boardIdx + 1}, cell ${cellIdx + 1}: ${value || 'empty'}`}
-      className={`w-full h-full min-w-0 min-h-0 relative flex items-center justify-center p-0.5 sm:p-1 transition-colors duration-150 select-none ${
+      aria-label={t.cell.ariaLabel
+        .replace('{sector}', String(boardIdx + 1))
+        .replace('{cell}', String(cellIdx + 1))
+        .replace('{value}', value || t.cell.empty)}
+      className={`w-full h-full min-w-0 min-h-0 relative flex items-center justify-center p-0.5 sm:p-1 transition-colors duration-150 select-none focus:outline-none focus:ring-2 focus:ring-[var(--highlight-ink)] ${
         isPlayable
           ? 'cursor-pointer hover:bg-[var(--cell-hover)] active:scale-95'
           : 'cursor-default'

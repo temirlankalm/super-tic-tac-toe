@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import QRCode from 'qrcode';
-import { X, Copy, Check, QrCode, Globe, LogIn, Share2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Copy, Check, QrCode, Globe, LogIn } from 'lucide-react';
 import { ConnectionStatus, OnlineRole, Player, RoomJoinError, SideChoice } from '@/types/game';
 import { useTranslation } from '@/i18n/LanguageContext';
 import { analytics } from '@/lib/analytics/client';
@@ -51,39 +50,83 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
   const [inputCode, setInputCode] = useState('');
   const [joinError, setJoinError] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
 
   const roomUrl =
     typeof window !== 'undefined' && roomId
       ? `${window.location.origin}/?room=${roomId}`
       : '';
 
-  // Generate QR code matching the active theme
+  // Generate QR code matching the active theme dynamically
   useEffect(() => {
     if (!roomUrl) return;
 
     const darkColor = theme === 'dark' ? '#d2d6db' : '#4e545a';
     const lightColor = '#00000000'; // transparent background
 
-    QRCode.toDataURL(roomUrl, {
-      margin: 1,
-      width: 140,
-      color: {
-        dark: darkColor,
-        light: lightColor,
-      },
-    })
-      .then((url) => setQrDataUrl(url))
-      .catch((err) => console.error('Failed to generate QR code', err));
+    import('qrcode')
+      .then((mod) => {
+        const QRCode = mod.default || mod;
+        QRCode.toDataURL(roomUrl, {
+          margin: 1,
+          width: 140,
+          color: {
+            dark: darkColor,
+            light: lightColor,
+          },
+        })
+          .then((url: string) => setQrDataUrl(url))
+          .catch((err: unknown) => console.error('Failed to generate QR code', err));
+      })
+      .catch((err: unknown) => console.error('Failed to import qrcode', err));
   }, [roomUrl, theme]);
 
-  // Close modal on Escape key
+  // Focus trap, Escape key, and restore focus on close
   useEffect(() => {
     if (!isOpen) return;
+
+    previousActiveElement.current = document.activeElement as HTMLElement;
+
+    const modal = modalRef.current;
+    if (modal) {
+      const focusable = modal.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length > 0) {
+        focusable[0].focus();
+      }
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      if (e.key === 'Tab' && modal) {
+        const focusable = modal.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      previousActiveElement.current?.focus?.();
+    };
   }, [isOpen, onClose]);
 
   const handleCopyLink = async () => {
@@ -154,21 +197,28 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[440px] p-6 sm:p-7 rounded-2xl bg-[var(--bg)] border border-[var(--line-strong)] shadow-2xl text-[var(--ink)]"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="online-room-modal-title"
+        className="relative w-full max-w-[calc(100vw-2rem)] sm:max-w-[440px] max-h-[90dvh] overflow-y-auto p-4 sm:p-6 rounded-2xl bg-[var(--bg)] border border-[var(--line-strong)] shadow-2xl text-[var(--ink)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-[var(--line)]">
           <div className="flex items-center gap-2">
             <Globe size={18} className="text-[var(--highlight-ink)]" />
-            <h2 className="text-base sm:text-lg font-normal lowercase tracking-tight">
+            <h2
+              id="online-room-modal-title"
+              className="text-base sm:text-lg font-normal lowercase tracking-tight"
+            >
               {t.onlineModal.title}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-md text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-md text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
             aria-label={t.common.close}
           >
             <X size={17} />
@@ -228,11 +278,15 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
                     ? t.onlineModal.statusWaiting
                     : status === 'connecting'
                     ? t.onlineModal.statusConnecting
+                    : status === 'reconnecting'
+                    ? t.onlineModal.reconnecting
                     : status === 'error'
                     ? peerJoinError === 'timeout'
                       ? t.onlineModal.errorTimeout
                       : peerJoinError === 'not_found'
                       ? t.onlineModal.errorNotFound
+                      : peerJoinError === 'room_full'
+                      ? t.onlineModal.errorRoomFull
                       : t.onlineModal.errorConnectionFailed
                     : language === 'ru' ? 'комната создана' : 'room ready'}
                 </span>
@@ -413,6 +467,8 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
                       ? t.onlineModal.errorTimeout
                       : peerJoinError === 'not_found'
                       ? t.onlineModal.errorNotFound
+                      : peerJoinError === 'room_full'
+                      ? t.onlineModal.errorRoomFull
                       : t.onlineModal.errorConnectionFailed)}
                 </span>
               )}

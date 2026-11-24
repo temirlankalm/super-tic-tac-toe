@@ -116,7 +116,7 @@ export function getValidMoves(state: GameState): { boardIdx: number; cellIdx: nu
 export function createInitialState(
   gameMode: GameMode = 'ai',
   humanPlayer: Player = 'X',
-  difficulty: AiDifficulty = 'hard',
+  difficulty: AiDifficulty = 'medium',
   modifiers: GameModifiers = DEFAULT_MODIFIERS
 ): GameState {
   return {

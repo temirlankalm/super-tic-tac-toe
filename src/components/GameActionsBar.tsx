@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Undo2, RotateCcw, Flag, Handshake, Zap, Share2, Trophy } from 'lucide-react';
 import { BoardWinner, GameMode, OnlineRole, Player, WinReason } from '@/types/game';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
@@ -71,6 +71,14 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
 }) => {
   const { t, language } = useTranslation();
   const [isResignConfirmOpen, setIsResignConfirmOpen] = useState(false);
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll result panel into view on game end
+  useEffect(() => {
+    if (winner !== null && resultRef.current) {
+      resultRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [winner]);
 
   // 1. GAME OVER VIEW
   if (winner !== null) {
@@ -99,26 +107,39 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
         title = myNickname ? t.results.aiBeatPlayer.replace('{name}', myNickname) : (winner === 'X' ? t.results.xWon : t.results.oWon);
       }
     } else {
-      title = winner === 'X' ? t.results.xWon : t.results.oWon;
+      if (winReason === 'resignation') {
+        const loser = winner === 'X' ? 'O' : 'X';
+        title = t.results.resignedWins.replace('{loser}', loser).replace('{winner}', winner);
+      } else {
+        title = winner === 'X' ? t.results.xWon : t.results.oWon;
+      }
     }
 
     let subtitle = '';
     if (winReason === 'resignation') {
-      subtitle = isOnline && isMeWinner ? t.results.opponentResigned : t.results.youResigned;
+      subtitle =
+        gameMode === 'pvp'
+          ? ''
+          : isOnline && isMeWinner
+          ? t.results.opponentResigned
+          : t.results.youResigned;
     } else if (winReason === 'timeout') {
       subtitle = t.results.timeOut;
     } else if (winReason === 'agreement') {
-      subtitle = language === 'ru' ? 'взаимное согласие игроков' : 'mutual agreement';
+      subtitle = t.results.agreementSubtitle;
     } else if (winner !== 'TIE') {
       subtitle = wonByLine
         ? t.results.threeInRow
-        : language === 'ru'
-        ? 'больше захваченных секторов'
-        : 'majority of sectors claimed';
+        : t.results.majoritySubtitle;
     }
 
     return (
-      <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mt-4 p-4 rounded-xl border border-[var(--line-strong)] bg-[var(--active-board-bg)] animate-fade-up text-center">
+      <div
+        ref={resultRef}
+        role="region"
+        aria-live="polite"
+        className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mt-4 p-4 rounded-xl border border-[var(--line-strong)] bg-[var(--active-board-bg)] animate-fade-up text-center"
+      >
         <div className="flex items-center justify-center gap-2 mb-1">
           {winner === 'X' ? (
             <HandDrawnX variant={0} className="w-6 h-6 text-[var(--highlight-ink)]" />
@@ -231,7 +252,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
             type="button"
             onClick={onUndo}
             disabled={!canUndo}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-colors lowercase font-sans ${
+            className={`flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg transition-colors lowercase font-sans ${
               canUndo
                 ? 'hover:bg-[var(--line)] hover:text-[var(--highlight-ink)] cursor-pointer'
                 : 'opacity-30 cursor-not-allowed'
@@ -246,11 +267,11 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
         )}
 
         {/* Center Group: Speed Blitz Timer, Resign & Offer Draw */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Speed Blitz 5s Countdown Badge */}
           {speedBlitzTime !== undefined && speedBlitzTime !== null && (
             <div
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-mono font-medium transition-colors ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 min-h-[40px] rounded-md text-xs font-mono font-medium transition-colors ${
                 speedBlitzTime <= 2.0
                   ? 'bg-rose-500/15 text-rose-500 animate-pulse'
                   : 'bg-[var(--line)]/40 text-[var(--highlight-ink)]'
@@ -265,7 +286,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
           {/* Resign Button */}
           {historyLength > 0 && (
             isResignConfirmOpen ? (
-              <div className="flex items-center gap-1 bg-rose-500/10 border border-rose-500/30 px-2 py-1 rounded-lg text-xs animate-fade-up">
+              <div className="flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/30 px-3 py-1.5 min-h-[40px] rounded-lg text-xs animate-fade-up">
                 <span className="text-rose-500 lowercase">{language === 'ru' ? 'сдаться?' : 'resign?'}</span>
                 <button
                   type="button"
@@ -273,14 +294,14 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
                     setIsResignConfirmOpen(false);
                     onResign();
                   }}
-                  className="text-rose-600 dark:text-rose-400 font-medium hover:underline px-1 cursor-pointer lowercase"
+                  className="text-rose-600 dark:text-rose-400 font-medium hover:underline px-1.5 py-1 min-h-[36px] flex items-center cursor-pointer lowercase"
                 >
                   {language === 'ru' ? 'да' : 'yes'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsResignConfirmOpen(false)}
-                  className="text-[var(--ink-mute)] hover:text-[var(--ink-soft)] px-1 cursor-pointer lowercase"
+                  className="text-[var(--ink-mute)] hover:text-[var(--ink-soft)] px-1.5 py-1 min-h-[36px] flex items-center cursor-pointer lowercase"
                 >
                   {language === 'ru' ? 'нет' : 'no'}
                 </button>
@@ -289,7 +310,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
               <button
                 type="button"
                 onClick={() => setIsResignConfirmOpen(true)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-colors cursor-pointer lowercase font-sans"
+                className="flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-colors cursor-pointer lowercase font-sans"
                 title={language === 'ru' ? 'Сдаться в этой партии' : 'Resign game'}
               >
                 <Flag size={13} />
@@ -298,13 +319,13 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
             )
           )}
 
-          {/* Offer Draw Button */}
-          {historyLength > 0 && (
+          {/* Offer Draw Button (vs AI only after at least 10 moves) */}
+          {historyLength > 0 && (gameMode === 'online' || historyLength >= 10) && (
             <button
               type="button"
               onClick={onOfferDraw}
               disabled={myDrawOffered}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-colors lowercase font-sans ${
+              className={`flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg transition-colors lowercase font-sans ${
                 myDrawOffered
                   ? 'opacity-40 cursor-not-allowed'
                   : 'hover:bg-[var(--line)] hover:text-[var(--highlight-ink)] cursor-pointer'
@@ -321,7 +342,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
         <button
           type="button"
           onClick={onReset}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-[var(--line)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer lowercase font-sans"
+          className="flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg hover:bg-[var(--line)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer lowercase font-sans"
           title={gameMode === 'online' ? t.actions.rematch : t.actions.newGame}
         >
           <RotateCcw size={13} />

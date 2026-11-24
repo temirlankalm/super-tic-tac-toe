@@ -15,6 +15,11 @@ export interface Translations {
     or: string;
     cancel: string;
     daysShort: string;
+    privacyNotice: string;
+    howtoHint: string;
+    howtoLearn: string;
+    yourName: string;
+    change: string;
   };
   sectors: {
     topLeft: string;
@@ -30,6 +35,7 @@ export interface Translations {
   header: {
     dailyTitle: string;
     dailyButton: string;
+    modifiersButton: string;
     modifiersTitle: string;
     clockTitle: string;
     clockMenuHeader: string;
@@ -132,6 +138,9 @@ export interface Translations {
     playerWon: string;
     playerBeatAi: string;
     aiBeatPlayer: string;
+    agreementSubtitle: string;
+    majoritySubtitle: string;
+    resignedWins: string;
   };
   rulesModal: {
     title: string;
@@ -144,6 +153,10 @@ export interface Translations {
     rule3Desc: string;
     rule4Title: string;
     rule4Desc: string;
+    rule5Title: string;
+    rule5Desc: string;
+    rule6Title: string;
+    rule6Desc: string;
     button: string;
   };
   settingsModal: {
@@ -199,6 +212,11 @@ export interface Translations {
     errorTimeout: string;
     errorNotFound: string;
     errorConnectionFailed: string;
+    errorRoomFull: string;
+    tryAgain: string;
+    createMyOwnRoom: string;
+    playVsAi: string;
+    reconnecting: string;
     youLabel: string;
     opponentLabel: string;
   };
@@ -212,6 +230,8 @@ export interface Translations {
   };
   cell: {
     fadingSoon: string;
+    ariaLabel: string;
+    empty: string;
   };
   nicknameModal: {
     chooseTitle: string;

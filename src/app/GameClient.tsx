@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
+import { X } from 'lucide-react';
 import { analytics } from '@/lib/analytics/client';
 import { MoveEvent, useSuperTicTacToe } from '@/hooks/useSuperTicTacToe';
 import { useTheme } from '@/hooks/useTheme';
@@ -14,6 +15,7 @@ import { ChessClockBar } from '@/components/ChessClockBar';
 import { GameActionsBar } from '@/components/GameActionsBar';
 import { RulesModal } from '@/components/RulesModal';
 import { OnlineRoomModal } from '@/components/OnlineRoomModal';
+import { OnlineRoomErrorCard } from '@/components/OnlineRoomErrorCard';
 import { SettingsModal } from '@/components/SettingsModal';
 import { DailyChallengeModal } from '@/components/DailyChallengeModal';
 import { NicknameModal } from '@/components/NicknameModal';
@@ -31,7 +33,7 @@ import {
   getTodayDateString,
   getChallengeNumber,
 } from '@/lib/daily';
-import { GameMode, Player, SideChoice } from '@/types/game';
+import { AiDifficulty, GameMode, Player, SideChoice } from '@/types/game';
 import { useTranslation } from '@/i18n/LanguageContext';
 
 interface GameClientProps {
@@ -59,6 +61,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
   const {
     nickname,
     isFirstVisit,
+    dismissFirstVisitHint,
     isModalOpen: isNicknameModalOpen,
     openModal: openNicknameModal,
     closeModal: closeNicknameModal,
@@ -92,6 +95,8 @@ export function GameClient({ initialRoomId }: GameClientProps) {
   const timeORef = useRef<number>(180);
   const gameStartTimeRef = useRef<number>(Date.now());
   const recordedMatchIdRef = useRef<string | null>(null);
+  const savedDifficultyRef = useRef<AiDifficulty | null>(null);
+  const [showHowtoHint, setShowHowtoHint] = useState(false);
 
   // Handle sound & haptic response for every move
   const handleMoveEvent = useCallback(
@@ -151,6 +156,28 @@ export function GameClient({ initialRoomId }: GameClientProps) {
     onTimeSync: (newTimeX, newTimeO) => {
       syncClocks(newTimeX, newTimeO);
     },
+    getFullState: () => ({
+      cells: gameStateRef.current.cells,
+      boardWinners: gameStateRef.current.boardWinners,
+      boardWinningLines: gameStateRef.current.boardWinningLines,
+      activeBoard: gameStateRef.current.activeBoard,
+      currentPlayer: gameStateRef.current.currentPlayer,
+      history: gameStateRef.current.history,
+      timeX: timeXRef.current,
+      timeO: timeORef.current,
+    }),
+    onResyncState: (msg) => {
+      syncState({
+        cells: msg.cells,
+        boardWinners: msg.boardWinners,
+        boardWinningLines: msg.boardWinningLines,
+        currentPlayer: msg.currentPlayer,
+        activeBoard: msg.activeBoard,
+        history: msg.history,
+      });
+      syncClocks(msg.timeX, msg.timeO);
+      haptic('tap');
+    },
     onRematchAccepted: (tc, nextSide) => {
       elo.resetLastDelta();
       recordedMatchIdRef.current = null;
@@ -177,8 +204,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
       const myPlayer: Player = peerOnline.myPlayer || (peerOnline.role === 'host' ? 'X' : 'O');
       const timedOutOpponent: Player = myPlayer === 'X' ? 'O' : 'X';
       rawHandleTimeout(timedOutOpponent);
-      playGameVictory(false);
-      haptic('win');
+      haptic('tap');
 
       if (peerOnline.roomId) {
         const matchId = peerOnline.currentMatchId || `${peerOnline.roomId}_m1`;
@@ -268,10 +294,9 @@ export function GameClient({ initialRoomId }: GameClientProps) {
     (timedOutPlayer: Player) => {
       rawHandleTimeout(timedOutPlayer);
       playClock();
-      playGameVictory(false);
-      haptic('win');
+      haptic('tap');
     },
-    [rawHandleTimeout, playClock, playGameVictory, haptic]
+    [rawHandleTimeout, playClock, haptic]
   );
 
   const hasGameStarted = gameState.history.length > 0;
@@ -412,6 +437,13 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         gameState.gameMode === 'ai' ? gameState.difficulty : undefined,
         peerOnline.roomId || undefined
       );
+
+      try {
+        const seen = localStorage.getItem('ttt_howto_hint');
+        if (!seen) {
+          setShowHowtoHint(true);
+        }
+      } catch {}
     }
     prevHistoryLenRef.current = gameState.history.length;
 
@@ -504,6 +536,75 @@ export function GameClient({ initialRoomId }: GameClientProps) {
     elo,
   ]);
 
+  const dismissHowtoHint = useCallback(() => {
+    setShowHowtoHint(false);
+    try {
+      localStorage.setItem('ttt_howto_hint', 'seen');
+    } catch {}
+  }, []);
+
+  const liveAnnouncement = useMemo(() => {
+    if (gameState.winner !== null) {
+      if (gameState.winner === 'TIE') {
+        return language === 'ru' ? 'Игра окончена. Ничья.' : 'Game over. Draw.';
+      }
+      return language === 'ru'
+        ? `Игра окончена. Победитель: ${gameState.winner}`
+        : `Game over. Winner: ${gameState.winner}`;
+    }
+    if (gameState.gameMode === 'online') {
+      if (peerOnline.status === 'reconnecting') {
+        return language === 'ru' ? 'Переподключение к комнате...' : 'Reconnecting to room...';
+      }
+      if (peerOnline.joinError) {
+        return language === 'ru' ? 'Ошибка подключения к комнате' : 'Room connection error';
+      }
+    }
+    if (gameState.isAiThinking) {
+      return language === 'ru' ? 'ИИ думает...' : 'AI is thinking...';
+    }
+    return language === 'ru'
+      ? `Ход: ${gameState.currentPlayer}`
+      : `Turn: ${gameState.currentPlayer}`;
+  }, [
+    gameState.winner,
+    gameState.gameMode,
+    gameState.currentPlayer,
+    gameState.isAiThinking,
+    peerOnline.status,
+    peerOnline.joinError,
+    language,
+  ]);
+
+  const isAnyModalOpen =
+    isRulesOpen ||
+    isOnlineModalOpen ||
+    isSettingsOpen ||
+    isDailyModalOpen ||
+    isNicknameModalOpen;
+
+  // Start guest timeout only after any modal closes
+  const wasAnyModalOpenRef = useRef(isAnyModalOpen);
+  useEffect(() => {
+    if (wasAnyModalOpenRef.current && !isAnyModalOpen) {
+      if (peerOnline.status === 'connecting' && peerOnline.role === 'guest') {
+        peerOnline.startGuestTimeout(20000);
+      }
+    }
+    wasAnyModalOpenRef.current = isAnyModalOpen;
+  }, [isAnyModalOpen, peerOnline]);
+
+  // Remove ?room= from URL when join error occurs
+  useEffect(() => {
+    if (peerOnline.joinError) {
+      if (typeof window !== 'undefined' && window.location.search.includes('room=')) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('room');
+        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+      }
+    }
+  }, [peerOnline.joinError]);
+
   // Detect ?room=xxxx query param or initialRoomId on mount to join room
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -511,7 +612,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
     const roomParam = params.get('room') || initialRoomId;
     if (roomParam) {
       setGameMode('online');
-      peerOnline.joinRoom(roomParam);
+      peerOnline.joinRoom(roomParam, 'guest', undefined, isAnyModalOpen);
       setIsOnlineModalOpen(false);
     }
   }, [initialRoomId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -584,6 +685,11 @@ export function GameClient({ initialRoomId }: GameClientProps) {
       clearActiveDaily();
     }
 
+    if (savedDifficultyRef.current && targetMode === 'ai') {
+      setDifficulty(savedDifficultyRef.current);
+      savedDifficultyRef.current = null;
+    }
+
     setGameMode(targetMode);
     resetClocks();
     haptic('tap');
@@ -614,6 +720,7 @@ export function GameClient({ initialRoomId }: GameClientProps) {
 
   // Daily Challenge Start from Modal
   const handleStartDailyMatch = () => {
+    savedDifficultyRef.current = gameState.difficulty;
     setGameMode('daily');
     setDifficulty('medium');
     dailyCompletedRef.current = false;
@@ -696,12 +803,11 @@ export function GameClient({ initialRoomId }: GameClientProps) {
       peerOnline.resignOnline();
       rawHandleResign(myPlayer);
     } else if (gameState.gameMode === 'ai' || gameState.gameMode === 'daily') {
-      rawHandleResign('X');
+      rawHandleResign(gameState.humanPlayer || 'X');
     } else {
       rawHandleResign(gameState.currentPlayer);
     }
-    playGameVictory(false);
-    haptic('win');
+    haptic('tap');
   };
 
   const handleOfferDraw = () => {
@@ -709,8 +815,12 @@ export function GameClient({ initialRoomId }: GameClientProps) {
       peerOnline.offerDrawOnline();
       haptic('tap');
     } else if (gameState.gameMode === 'ai' || gameState.gameMode === 'daily') {
-      const score = evaluateStaticState(gameState, 'O');
-      if (score > 250) {
+      if (gameState.history.length < 10) {
+        return;
+      }
+      const aiPlayer: Player = (gameState.humanPlayer || 'X') === 'X' ? 'O' : 'X';
+      const score = evaluateStaticState(gameState, aiPlayer);
+      if (Math.abs(score) > 150) {
         setAiDrawNotice(t.alerts.aiDeclineDraw);
         setTimeout(() => setAiDrawNotice(null), 3000);
         haptic('tap');
@@ -824,6 +934,66 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         onOpenNicknameModal={openNicknameModal}
       />
 
+      {/* First visit nickname hint (Req 12) */}
+      {isFirstVisit && (
+        <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-2 px-3 py-1.5 rounded-lg border border-[var(--line-strong)] bg-[var(--line)]/20 text-xs flex items-center justify-between animate-fade-up">
+          <span className="text-[var(--ink-soft)] lowercase">
+            {t.common.yourName}:{' '}
+            <strong className="text-[var(--highlight-ink)] font-medium font-sans">
+              {nickname}
+            </strong>{' '}
+            <button
+              type="button"
+              onClick={openNicknameModal}
+              className="ml-1 text-[var(--highlight-ink)] hairline-link cursor-pointer underline"
+            >
+              ({t.common.change})
+            </button>
+          </span>
+          <button
+            type="button"
+            onClick={dismissFirstVisitHint}
+            className="p-1 text-[var(--ink-mute)] hover:text-[var(--highlight-ink)] cursor-pointer"
+            aria-label={t.common.close}
+          >
+            <X size={13} />
+          </button>
+        </div>
+      )}
+
+      {/* One-time how-to-play hint on first game start (Req 11) */}
+      {showHowtoHint && (
+        <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-2 px-3 py-1.5 rounded-lg border border-[var(--line-strong)] bg-[var(--line)]/20 text-xs flex items-center justify-between animate-fade-up">
+          <span className="text-[var(--ink-soft)] lowercase">
+            {t.common.howtoHint} (
+            <button
+              type="button"
+              onClick={() => {
+                dismissHowtoHint();
+                setIsRulesOpen(true);
+              }}
+              className="text-[var(--highlight-ink)] hairline-link cursor-pointer underline"
+            >
+              {t.common.howtoLearn}
+            </button>
+            )
+          </span>
+          <button
+            type="button"
+            onClick={dismissHowtoHint}
+            className="p-1 text-[var(--ink-mute)] hover:text-[var(--highlight-ink)] cursor-pointer"
+            aria-label={t.common.close}
+          >
+            <X size={13} />
+          </button>
+        </div>
+      )}
+
+      {/* WAI-ARIA live region for screen readers (Req 16) */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {liveAnnouncement}
+      </div>
+
       {/* Chess Clock Bar (visible when timer is active) */}
       <ChessClockBar
         timeControl={timeControl}
@@ -840,6 +1010,23 @@ export function GameClient({ initialRoomId }: GameClientProps) {
         myNickname={nickname}
         opponentNickname={peerOnline.opponentNickname}
       />
+
+      {/* Online Room Error Card */}
+      {gameState.gameMode === 'online' && peerOnline.joinError && (
+        <OnlineRoomErrorCard
+          error={peerOnline.joinError}
+          onTryAgain={() => {
+            if (peerOnline.roomId) {
+              peerOnline.joinRoom(peerOnline.roomId, 'guest');
+            }
+          }}
+          onCreateRoom={() => {
+            handleCreateRoom();
+            setIsOnlineModalOpen(true);
+          }}
+          onPlayVsAi={() => handleSelectMode('ai')}
+        />
+      )}
 
       {/* The 9x9 Super Board */}
       <SuperBoard
@@ -893,44 +1080,41 @@ export function GameClient({ initialRoomId }: GameClientProps) {
       />
 
       {/* Subtle Minimalist Footer */}
-      <footer className="mt-5 md:mt-6 text-center text-xs text-[var(--ink-mute)] font-light tracking-wide lowercase">
-        <span>Tic³ · super tic-tac-toe</span>
-        <span className="mx-2 opacity-40">·</span>
-        <Link
-          href="/leaderboard"
-          className="hover:text-[var(--highlight-ink)] hairline-link cursor-pointer"
-        >
-          {t.common.leaderboard}
-        </Link>
-        <span className="mx-2 opacity-40">·</span>
-        <button
-          type="button"
-          onClick={() => {
-            analytics.buttonClick('open_rules');
-            setIsRulesOpen(true);
-          }}
-          className="hover:text-[var(--highlight-ink)] hairline-link cursor-pointer"
-        >
-          {t.common.rules}
-        </button>
-        <span className="mx-2 opacity-40">·</span>
-        <a
-          href="https://temr.dev/"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => analytics.outboundClick('https://temr.dev/')}
-          className="hover:text-[var(--highlight-ink)] hairline-link cursor-pointer"
-        >
-          temr.dev
-        </a>
-        <span className="mx-2 opacity-40">·</span>
-        <Link
-          href="/admin"
-          className="hover:text-[var(--highlight-ink)] hairline-link cursor-pointer"
-          title={language === 'ru' ? 'панель аналитики платформы' : 'analytics dashboard'}
-        >
-          {t.common.analytics}
-        </Link>
+      <footer className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mt-5 md:mt-6 text-center text-xs text-[var(--ink-mute)] font-light tracking-wide lowercase">
+        <div className="flex flex-wrap items-center justify-center">
+          <span>Tic³ · super tic-tac-toe</span>
+          <span className="mx-2 opacity-40">·</span>
+          <Link
+            href="/leaderboard"
+            className="hover:text-[var(--highlight-ink)] hairline-link cursor-pointer"
+          >
+            {t.common.leaderboard}
+          </Link>
+          <span className="mx-2 opacity-40">·</span>
+          <button
+            type="button"
+            onClick={() => {
+              analytics.buttonClick('open_rules');
+              setIsRulesOpen(true);
+            }}
+            className="hover:text-[var(--highlight-ink)] hairline-link cursor-pointer"
+          >
+            {t.common.rules}
+          </button>
+          <span className="mx-2 opacity-40">·</span>
+          <a
+            href="https://temr.dev/"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => analytics.outboundClick('https://temr.dev/')}
+            className="hover:text-[var(--highlight-ink)] hairline-link cursor-pointer"
+          >
+            temr.dev
+          </a>
+        </div>
+        <div className="mt-2 text-[10px] text-[var(--ink-mute)] opacity-70">
+          {t.common.privacyNotice}
+        </div>
       </footer>
 
       {/* Rules Modal */}
@@ -963,8 +1147,6 @@ export function GameClient({ initialRoomId }: GameClientProps) {
       <SettingsModal
         isOpen={isSettingsOpen}
         modifiers={gameState.modifiers}
-        nickname={nickname}
-        onOpenNicknameModal={openNicknameModal}
         onToggleModifier={toggleModifier}
         onClose={() => setIsSettingsOpen(false)}
       />

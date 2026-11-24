@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { useTranslation } from '@/i18n/LanguageContext';
 
@@ -10,16 +10,55 @@ interface RulesModalProps {
 }
 
 export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
 
-  // Close modal on Escape key
+  // Focus trap, Escape key, and restore focus on close
   useEffect(() => {
     if (!isOpen) return;
+
+    previousActiveElement.current = document.activeElement as HTMLElement;
+
+    const modal = modalRef.current;
+    if (modal) {
+      const focusable = modal.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length > 0) {
+        focusable[0].focus();
+      }
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      if (e.key === 'Tab' && modal) {
+        const focusable = modal.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      previousActiveElement.current?.focus?.();
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -30,18 +69,22 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[480px] p-6 md:p-8 rounded-2xl bg-[var(--bg)] border border-[var(--line-strong)] shadow-xl text-[var(--ink)]"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rules-modal-title"
+        className="relative w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] max-h-[90dvh] overflow-y-auto p-5 md:p-8 rounded-2xl bg-[var(--bg)] border border-[var(--line-strong)] shadow-xl text-[var(--ink)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-[var(--line)]">
-          <h2 className="text-lg md:text-xl font-normal lowercase tracking-tight">
+          <h2 id="rules-modal-title" className="text-lg md:text-xl font-normal lowercase tracking-tight">
             {t.rulesModal.title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-md text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-md text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
             aria-label={t.common.close}
           >
             <X size={18} />
@@ -88,12 +131,19 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
 
           <div>
             <h3 className="font-medium text-[var(--highlight-ink)] lowercase mb-1">
-              {language === 'ru' ? '5. режим шахматных часов' : '5. chess clock mode'}
+              {t.rulesModal.rule5Title}
             </h3>
             <p className="text-[var(--ink-soft)] font-light">
-              {language === 'ru'
-                ? 'Выберите 1 мин (пуля), 2 мин, 3 мин (блиц) или 5 мин (рапид). Таймер начинает обратный отсчет только после первого хода и переключается при передаче хода. Если время истекает, сопернику присуждается победа.'
-                : 'Select 1 min (bullet), 2 min, 3 min (blitz), or 5 min (rapid). The clock counts down after your first move and alternates each turn. Running out of time results in defeat.'}
+              {t.rulesModal.rule5Desc}
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-medium text-[var(--highlight-ink)] lowercase mb-1">
+              {t.rulesModal.rule6Title}
+            </h3>
+            <p className="text-[var(--ink-soft)] font-light">
+              {t.rulesModal.rule6Desc}
             </p>
           </div>
         </div>
@@ -103,7 +153,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg text-xs tracking-wider lowercase bg-[var(--line)] hover:bg-[var(--line-strong)] text-[var(--highlight-ink)] transition-colors cursor-pointer font-medium"
+            className="px-4 py-2 min-h-[40px] rounded-lg text-xs tracking-wider lowercase bg-[var(--line)] hover:bg-[var(--line-strong)] text-[var(--highlight-ink)] transition-colors cursor-pointer font-medium"
           >
             {t.rulesModal.button}
           </button>

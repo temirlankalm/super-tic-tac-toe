@@ -22,6 +22,8 @@ interface LocalBoardProps {
   lastMove: Move | null;
   onCellClick: (boardIdx: number, cellIdx: number) => void;
   disabled: boolean;
+  focusedCell?: { boardIdx: number; cellIdx: number } | null;
+  onFocusCell?: (boardIdx: number, cellIdx: number) => void;
 }
 
 export const LocalBoard: React.FC<LocalBoardProps> = ({
@@ -37,6 +39,8 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
   lastMove,
   onCellClick,
   disabled,
+  focusedCell,
+  onFocusCell,
 }) => {
   const isResolved = winner !== null;
 
@@ -114,6 +118,23 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
                   isWinningCell={isWinCell}
                   opacity={cellOpacity}
                   isExpiringSoon={isExpiringSoon}
+                  tabIndex={
+                    focusedCell
+                      ? focusedCell.boardIdx === boardIdx && focusedCell.cellIdx === cellIdx
+                        ? 0
+                        : -1
+                      : boardIdx === 4 && cellIdx === 4
+                      ? 0
+                      : -1
+                  }
+                  isFocused={
+                    Boolean(
+                      focusedCell &&
+                        focusedCell.boardIdx === boardIdx &&
+                        focusedCell.cellIdx === cellIdx
+                    )
+                  }
+                  onFocus={() => onFocusCell?.(boardIdx, cellIdx)}
                   onClick={() => onCellClick(boardIdx, cellIdx)}
                   boardIdx={boardIdx}
                   cellIdx={cellIdx}

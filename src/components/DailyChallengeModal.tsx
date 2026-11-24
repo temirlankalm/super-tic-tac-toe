@@ -37,22 +37,61 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
   const [challengeNum, setChallengeNum] = useState(1);
   const [todayResult, setTodayResult] = useState<ReturnType<typeof getTodayResult>>(null);
 
+  const modalRef = React.useRef<HTMLDivElement>(null);
+  const previousActiveElement = React.useRef<HTMLElement | null>(null);
+
   React.useEffect(() => {
     if (isOpen) {
+      previousActiveElement.current = document.activeElement as HTMLElement;
       const today = getTodayDateString();
       setChallengeNum(getChallengeNumber(today));
       setTodayResult(getTodayResult());
     }
   }, [isOpen]);
 
-  // Close modal on Escape key
+  // Focus trap, Escape key, and restore focus on close
   React.useEffect(() => {
     if (!isOpen) return;
+
+    const modal = modalRef.current;
+    if (modal) {
+      const focusable = modal.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length > 0) {
+        focusable[0].focus();
+      }
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      if (e.key === 'Tab' && modal) {
+        const focusable = modal.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      previousActiveElement.current?.focus?.();
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -100,21 +139,25 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[420px] p-6 rounded-2xl bg-[var(--bg)] border border-[var(--line-strong)] shadow-2xl text-[var(--ink)]"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="daily-challenge-modal-title"
+        className="relative w-full max-w-[calc(100vw-2rem)] sm:max-w-[420px] max-h-[90dvh] overflow-y-auto p-5 sm:p-6 rounded-2xl bg-[var(--bg)] border border-[var(--line-strong)] shadow-2xl text-[var(--ink)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-[var(--line)]">
           <div className="flex items-center gap-2">
             <Calendar size={17} className="text-[var(--highlight-ink)]" />
-            <h2 className="text-base font-normal lowercase tracking-tight">
+            <h2 id="daily-challenge-modal-title" className="text-base font-normal lowercase tracking-tight">
               {t.dailyModal.title.replace('{num}', String(challengeNum)).replace('#{num}', `#${challengeNum}`)}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-md text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-md text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
             aria-label={t.common.close}
           >
             <X size={17} />

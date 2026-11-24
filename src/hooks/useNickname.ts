@@ -20,6 +20,9 @@ export function useNickname() {
       if (stored) {
         const clean = sanitizeNickname(stored);
         setNicknameState(clean);
+        if (clean !== stored) {
+          localStorage.setItem(NICKNAME_STORAGE_KEY, clean);
+        }
         setIsLoaded(true);
       } else {
         // First visit: generate a friendly name and trigger prompt
@@ -30,7 +33,8 @@ export function useNickname() {
 
         if (!prompted) {
           setIsFirstVisit(true);
-          setIsModalOpen(true);
+          // Do not open blocking modal on first visit; show small hint instead
+          setIsModalOpen(false);
         }
       }
     } catch {
@@ -65,6 +69,13 @@ export function useNickname() {
     setIsFirstVisit(false);
   }, []);
 
+  const dismissFirstVisitHint = useCallback(() => {
+    try {
+      localStorage.setItem(PROMPTED_STORAGE_KEY, 'true');
+    } catch {}
+    setIsFirstVisit(false);
+  }, []);
+
   const openModal = useCallback(() => {
     setIsFirstVisit(false);
     setIsModalOpen(true);
@@ -84,6 +95,7 @@ export function useNickname() {
     isLoaded,
     isModalOpen,
     isFirstVisit,
+    dismissFirstVisitHint,
     saveNickname,
     skipPrompt,
     openModal,

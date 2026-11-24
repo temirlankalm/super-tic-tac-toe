@@ -31,10 +31,11 @@ export type ConnectionStatus =
   | 'waiting'
   | 'connecting'
   | 'connected'
+  | 'reconnecting'
   | 'disconnected'
   | 'error';
 
-export type RoomJoinError = 'timeout' | 'not_found' | 'connection_failed' | null;
+export type RoomJoinError = 'timeout' | 'not_found' | 'connection_failed' | 'room_full' | null;
 
 export type SideChoice = 'X' | 'O' | 'random';
 
@@ -102,7 +103,34 @@ export type PeerMessage =
     }
   | {
       type: 'DISCONNECT';
+    }
+  | {
+      type: 'ROOM_FULL';
+    }
+  | {
+      type: 'RESYNC_STATE';
+      cells: CellState[][];
+      boardWinners: BoardWinner[];
+      boardWinningLines: (number[] | null)[];
+      activeBoard: number | null;
+      currentPlayer: Player;
+      history: MoveHistory[];
+      timeX: number;
+      timeO: number;
     };
+
+export type MoveHistory = {
+  cells: CellState[][];
+  boardWinners: BoardWinner[];
+  boardWinningLines: (number[] | null)[];
+  currentPlayer: Player;
+  activeBoard: number | null;
+  lastMove: Move | null;
+  playerMoveHistory?: {
+    X: { boardIdx: number; cellIdx: number }[];
+    O: { boardIdx: number; cellIdx: number }[];
+  };
+};
 
 export interface Move {
   boardIdx: number;
@@ -132,18 +160,7 @@ export interface GameState {
   // Winning line on global board (e.g. [0, 1, 2])
   globalWinningLine: number[] | null;
   // Game history for undo
-  history: {
-    cells: CellState[][];
-    boardWinners: BoardWinner[];
-    boardWinningLines: (number[] | null)[];
-    currentPlayer: Player;
-    activeBoard: number | null;
-    lastMove: Move | null;
-    playerMoveHistory?: {
-      X: { boardIdx: number; cellIdx: number }[];
-      O: { boardIdx: number; cellIdx: number }[];
-    };
-  }[];
+  history: MoveHistory[];
   // Settings
   gameMode: GameMode;
   difficulty: AiDifficulty;

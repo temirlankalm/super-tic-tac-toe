@@ -1,15 +1,13 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { X, Sliders, EyeOff, Sparkles, Zap, User } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { X, Sliders, EyeOff, Sparkles, Zap } from 'lucide-react';
 import { GameModifiers } from '@/types/game';
 import { useTranslation } from '@/i18n/LanguageContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
   modifiers: GameModifiers;
-  nickname?: string;
-  onOpenNicknameModal?: () => void;
   onToggleModifier: (key: keyof GameModifiers) => void;
   onClose: () => void;
 }
@@ -17,21 +15,58 @@ interface SettingsModalProps {
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   modifiers,
-  nickname,
-  onOpenNicknameModal,
   onToggleModifier,
   onClose,
 }) => {
   const { t, language } = useTranslation();
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
 
-  // Close modal on Escape key
+  // Focus trap, Escape key, and restore focus on close
   useEffect(() => {
     if (!isOpen) return;
+
+    previousActiveElement.current = document.activeElement as HTMLElement;
+
+    const modal = modalRef.current;
+    if (modal) {
+      const focusable = modal.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length > 0) {
+        focusable[0].focus();
+      }
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      if (e.key === 'Tab' && modal) {
+        const focusable = modal.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      previousActiveElement.current?.focus?.();
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -68,50 +103,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[440px] p-6 rounded-2xl bg-[var(--bg)] border border-[var(--line-strong)] shadow-2xl text-[var(--ink)]"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-modal-title"
+        className="relative w-full max-w-[calc(100vw-2rem)] sm:max-w-[440px] max-h-[90dvh] overflow-y-auto p-5 sm:p-6 rounded-2xl bg-[var(--bg)] border border-[var(--line-strong)] shadow-2xl text-[var(--ink)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 mb-5 border-b border-[var(--line)]">
           <div className="flex items-center gap-2">
             <Sliders size={17} className="text-[var(--highlight-ink)]" />
-            <h2 className="text-base font-normal lowercase tracking-tight">
+            <h2 id="settings-modal-title" className="text-base font-normal lowercase tracking-tight">
               {t.settingsModal.title}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-md text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-md text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
             aria-label={t.common.close}
           >
             <X size={17} />
           </button>
         </div>
-
-        {/* Nickname section */}
-        {onOpenNicknameModal && (
-          <div className="flex items-center justify-between p-3.5 rounded-xl border border-[var(--line)] bg-[var(--line)]/10 mb-4">
-            <div className="flex items-center gap-2.5">
-              <User size={16} className="text-[var(--highlight-ink)]" />
-              <div>
-                <span className="text-[10px] text-[var(--ink-mute)] uppercase tracking-wider block font-medium">
-                  {t.settingsModal.nicknameSection}
-                </span>
-                <span className="text-sm font-medium text-[var(--highlight-ink)]">
-                  {nickname || 'Player'}
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onOpenNicknameModal}
-              className="px-2.5 py-1 text-xs font-sans lowercase rounded-md border border-[var(--line-strong)] hover:bg-[var(--line)]/40 text-[var(--highlight-ink)] transition-colors cursor-pointer"
-            >
-              {t.settingsModal.changeNickname}
-            </button>
-          </div>
-        )}
 
         {/* Modifiers List */}
         <div className="space-y-3.5">

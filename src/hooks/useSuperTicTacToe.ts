@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import confetti from 'canvas-confetti';
 import { AiDifficulty, GameMode, GameModifiers, GameState, Move, OnlineRole, Player } from '@/types/game';
 import { applyMove, createInitialState, getValidMoves, isMoveValid } from '@/lib/gameLogic';
 import { getBestAiMove } from '@/lib/ai';
@@ -36,7 +35,7 @@ export interface UseSuperTicTacToeOptions {
 
 export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
   const [gameState, setGameState] = useState<GameState>(() =>
-    createInitialState('ai', options?.initialHumanPlayer || 'X', 'hard')
+    createInitialState('ai', options?.initialHumanPlayer || 'X', 'medium')
   );
 
   const [speedBlitzTime, setSpeedBlitzTime] = useState<number>(5.0);
@@ -67,15 +66,22 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
-  // Trigger win confetti
+  // Trigger win confetti dynamically
   const triggerVictory = useCallback((winner: Player) => {
-    confetti({
-      particleCount: 50,
-      spread: 60,
-      origin: { y: 0.7 },
-      colors: winner === 'X' ? ['#4e545a', '#7c828a', '#2e3338'] : ['#64748b', '#94a3b8', '#334155'],
-      disableForReducedMotion: true,
-    });
+    import('canvas-confetti')
+      .then(({ default: confetti }) => {
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.7 },
+          colors:
+            winner === 'X'
+              ? ['#4e545a', '#7c828a', '#2e3338']
+              : ['#64748b', '#94a3b8', '#334155'],
+          disableForReducedMotion: true,
+        });
+      })
+      .catch(() => {});
   }, []);
 
   // Handle cell click by local human player
@@ -423,8 +429,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
         winReason: 'timeout',
       };
     });
-    triggerVictory(winnerPlayer);
-  }, [triggerVictory]);
+  }, []);
 
   const handleResign = useCallback((resigningPlayer: Player) => {
     const winnerPlayer: Player = resigningPlayer === 'X' ? 'O' : 'X';
@@ -436,8 +441,7 @@ export function useSuperTicTacToe(options?: UseSuperTicTacToeOptions) {
         winReason: 'resignation',
       };
     });
-    triggerVictory(winnerPlayer);
-  }, [triggerVictory]);
+  }, []);
 
   const handleDraw = useCallback(() => {
     setGameState((prev) => {

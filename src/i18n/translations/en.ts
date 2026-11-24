@@ -15,6 +15,11 @@ export const en: Translations = {
     or: 'or',
     cancel: 'cancel',
     daysShort: 'd',
+    privacyNotice: 'privacy: anonymous pageviews & moves, zero cookies',
+    howtoHint: 'tip: small cell position sends your opponent to that sector of the big board',
+    howtoLearn: 'learn rules',
+    yourName: 'your name',
+    change: 'change',
   },
   sectors: {
     topLeft: 'top-left',
@@ -30,6 +35,7 @@ export const en: Translations = {
   header: {
     dailyTitle: 'daily challenge & streak',
     dailyButton: 'daily',
+    modifiersButton: 'mods',
     modifiersTitle: 'arcade modifiers',
     clockTitle: 'chess clock',
     clockMenuHeader: 'time control',
@@ -133,13 +139,16 @@ export const en: Translations = {
     playerWon: '{name} won!',
     playerBeatAi: '{name} beat the AI',
     aiBeatPlayer: 'AI won against {name}',
+    agreementSubtitle: 'mutual agreement',
+    majoritySubtitle: 'majority of sectors claimed',
+    resignedWins: '{loser} resigned, {winner} wins',
   },
   rulesModal: {
     title: 'super tic-tac-toe rules',
     subtitle: 'strategic ultimate tic-tac-toe on a 9x9 board',
     rule1Title: '1. the golden direction rule',
     rule1Desc:
-      'The local cell you choose inside a 3×3 mini-board dictates which sector on the global board your opponent must play in next. For instance, playing in the top-right corner forces your opponent to play their next move in the top-right sector.',
+      'X moves first. The local cell you choose inside a 3×3 mini-board dictates which sector on the global board your opponent must play in next. For instance, playing in the top-right corner forces your opponent to play their next move in the top-right sector.',
     rule2Title: '2. winning a sector and the game',
     rule2Desc:
       'Line up 3 marks in a row in a mini-board to claim that entire sector. The grand objective is to claim 3 sectors in a row on the global board (horizontal, vertical, or diagonal).',
@@ -148,7 +157,13 @@ export const en: Translations = {
       'If you are sent to a sector that has already been won or is completely filled, you receive a "free move": you can place your mark in any available cell across the entire 9×9 board.',
     rule4Title: '4. ties and completed sectors',
     rule4Desc:
-      'If a mini-board fills up with no winner, it ends in a tie and belongs to neither player. Play proceeds on the main board until one player lines up 3 claimed sectors or no legal moves remain.',
+      'If a mini-board fills up with no winner, it ends in a tie and belongs to neither player. If neither player claims 3 sectors in a row and all 9 sectors are decided, the player with the most claimed sectors wins; if equal, the game is a draw.',
+    rule5Title: '5. chess clock mode',
+    rule5Desc:
+      'Select 1 min (bullet), 2 min, 3 min (blitz), or 5 min (rapid). The clock counts down after your first move and alternates each turn. Running out of time results in defeat.',
+    rule6Title: '6. resign, draw, daily & rooms',
+    rule6Desc:
+      'You can resign at any time or offer a draw (available vs AI after 10 moves if the position is roughly even). Solve the daily challenge seeded by UTC date to build your streak, or create private online rooms with custom side selection to play friends.',
     button: "got it, let's play",
   },
   settingsModal: {
@@ -204,6 +219,11 @@ export const en: Translations = {
     errorTimeout: 'connection timed out, please try again',
     errorNotFound: 'room not found, please check the code',
     errorConnectionFailed: 'connection failure, please check your network',
+    errorRoomFull: 'room is full',
+    tryAgain: 'try again',
+    createMyOwnRoom: 'create my own room',
+    playVsAi: 'play vs AI',
+    reconnecting: 'reconnecting…',
     youLabel: 'you',
     opponentLabel: 'opponent',
   },
@@ -217,6 +237,8 @@ export const en: Translations = {
   },
   cell: {
     fadingSoon: 'mark will fade on next move',
+    ariaLabel: 'Sector {sector}, cell {cell}: {value}',
+    empty: 'empty',
   },
   nicknameModal: {
     chooseTitle: 'choose a nickname',

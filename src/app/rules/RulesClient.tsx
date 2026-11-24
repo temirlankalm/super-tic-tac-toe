@@ -64,8 +64,8 @@ export function RulesClient() {
             </h2>
             <p className="text-[var(--ink-soft)] font-light">
               {isRu
-                ? 'Каждая малая клетка, в которую вы ставите ход внутри сектора 3×3, определяет сектор глобального поля, в котором обязан ходить соперник. Например, ход в правый верхний угол отправляет соперника в правый верхний сектор супер-доски.'
-                : 'Every small cell you play inside a 3×3 mini-board dictates which sector of the global board your opponent must play in next. For example, if you place your mark in the top-right cell of any local board, your opponent is forced to play their subsequent move inside the top-right global sector.'}
+                ? 'X всегда ходит первым. Каждая малая клетка, в которую вы ставите ход внутри сектора 3×3, определяет сектор глобального поля, в котором обязан ходить соперник. Например, ход в правый верхний угол отправляет соперника в правый верхний сектор супер-доски.'
+                : 'X moves first. Every small cell you play inside a 3×3 mini-board dictates which sector of the global board your opponent must play in next. For example, if you place your mark in the top-right cell of any local board, your opponent is forced to play their subsequent move inside the top-right global sector.'}
             </p>
           </section>
 
@@ -103,12 +103,12 @@ export function RulesClient() {
 
           <section>
             <h2 className="font-serif text-lg font-medium text-[var(--highlight-ink)] lowercase mb-2">
-              {isRu ? '4. ничьи и тупики' : '4. ties & deadlocks'}
+              {isRu ? '4. ничьи и закрытые секторы' : '4. ties and completed sectors'}
             </h2>
             <p className="text-[var(--ink-soft)] font-light">
               {isRu
-                ? 'Если в секторе заполнены все 9 клеток без победителя, сектор завершается вничью и не принадлежит никому. Игра продолжается до тех пор, пока один из игроков не выиграет 3 сектора в ряд или пока не исчерпаются все возможные ходы.'
-                : 'If a mini-board fills up with no winner, it ends in a tie and belongs to neither player. The match proceeds until one player claims 3 sectors in a row on the global grid or all playable moves are exhausted.'}
+                ? 'Если в секторе заполнены все 9 клеток без победителя, сектор завершается вничью и не принадлежит никому. Если никто не собирает 3 сектора в ряд и все 9 секторов завершены, побеждает игрок с большим числом захваченных секторов; при равном счете объявляется ничья.'
+                : 'If a mini-board fills up with no winner, it ends in a tie and belongs to neither player. If neither player claims 3 sectors in a row and all 9 sectors are decided, the player with the most claimed sectors wins; if equal, the game is a draw.'}
             </p>
           </section>
 
@@ -128,6 +128,17 @@ export function RulesClient() {
                   <strong className="font-medium text-[var(--highlight-ink)]">qnet</strong>, play 2 players on one screen, or invite friends to a private WebRTC peer-to-peer room.
                 </>
               )}
+            </p>
+          </section>
+
+          <section>
+            <h2 className="font-serif text-lg font-medium text-[var(--highlight-ink)] lowercase mb-2">
+              {isRu ? '6. сдача, ничья, челлендж и комнаты' : '6. resign, draw, daily & rooms'}
+            </h2>
+            <p className="text-[var(--ink-soft)] font-light">
+              {isRu
+                ? 'Вы можете сдаться в любой момент или предложить ничью (в игре с ИИ доступно после 10 ходов при равной позиции). Решайте ежедневный челлендж по UTC для серии побед или создавайте приватные онлайн-комнаты для игры с друзьями по коду с выбором стороны.'
+                : 'You can resign at any time or offer a draw (available vs AI after 10 moves if the position is roughly even). Solve the daily challenge seeded by UTC date to build your streak, or create private online rooms with custom side selection to play friends.'}
             </p>
           </section>
         </article>

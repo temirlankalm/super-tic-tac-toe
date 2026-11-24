@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { ConnectionStatus, GameState, OnlineRole, Player } from '@/types/game';
 import { isBoardFull } from '@/lib/gameLogic';
 import { LocalBoard } from './LocalBoard';
@@ -20,6 +20,43 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
   connectionStatus,
   onCellClick,
 }) => {
+  const [focusedCell, setFocusedCell] = useState<{ boardIdx: number; cellIdx: number } | null>(null);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const current = focusedCell || { boardIdx: 4, cellIdx: 4 };
+      let row = Math.floor(current.boardIdx / 3) * 3 + Math.floor(current.cellIdx / 3);
+      let col = (current.boardIdx % 3) * 3 + (current.cellIdx % 3);
+
+      switch (e.key) {
+        case 'ArrowUp':
+          row = Math.max(0, row - 1);
+          break;
+        case 'ArrowDown':
+          row = Math.min(8, row + 1);
+          break;
+        case 'ArrowLeft':
+          col = Math.max(0, col - 1);
+          break;
+        case 'ArrowRight':
+          col = Math.min(8, col + 1);
+          break;
+        case 'Enter':
+        case ' ':
+          e.preventDefault();
+          onCellClick(current.boardIdx, current.cellIdx);
+          return;
+        default:
+          return;
+      }
+
+      e.preventDefault();
+      const nextBoardIdx = Math.floor(row / 3) * 3 + Math.floor(col / 3);
+      const nextCellIdx = (row % 3) * 3 + (col % 3);
+      setFocusedCell({ boardIdx: nextBoardIdx, cellIdx: nextCellIdx });
+    },
+    [focusedCell, onCellClick]
+  );
   const {
     cells,
     boardWinners,
@@ -48,7 +85,12 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
     (gameMode === 'online' && !isMyTurnOnline);
 
   return (
-    <div className="relative w-full max-w-[460px] sm:max-w-[480px] aspect-square mx-auto select-none p-1 sm:p-2">
+    <div
+      role="grid"
+      aria-label="Super Tic-Tac-Toe 9x9 Board"
+      onKeyDown={handleKeyDown}
+      className="relative w-full max-w-[min(460px,calc(100vw-1.5rem),calc(100dvh-260px))] sm:max-w-[min(480px,calc(100vw-2rem),calc(100dvh-260px))] aspect-square mx-auto select-none p-1 sm:p-2"
+    >
       {/* 3x3 Grid of 9 Sectors with gap-0 and continuous main divider lines */}
       <div className="grid grid-cols-3 grid-rows-3 w-full h-full gap-0">
         {boardWinners.map((boardWinner, boardIdx) => {
@@ -95,6 +137,8 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
                 lastMove={lastMove}
                 onCellClick={onCellClick}
                 disabled={isBoardDisabled || isFogged}
+                focusedCell={focusedCell}
+                onFocusCell={(b, c) => setFocusedCell({ boardIdx: b, cellIdx: c })}
               />
             </div>
           );
