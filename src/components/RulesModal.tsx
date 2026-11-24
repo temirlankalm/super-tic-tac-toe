@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import { PencilClose } from './hand-drawn/PencilIcons';
 import { useTranslation } from '@/i18n/LanguageContext';
 
 interface RulesModalProps {
@@ -65,7 +65,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-xs animate-fade-up"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--scrim)] backdrop-blur-xs animate-fade-up"
       onClick={onClose}
     >
       <div
@@ -73,21 +73,21 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="rules-modal-title"
-        className="relative w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] max-h-[90dvh] overflow-y-auto p-5 md:p-8 rounded-2xl bg-[var(--bg)] border border-[var(--line-strong)] shadow-xl text-[var(--ink)]"
+        className="pencil-sheet relative w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] max-h-[90dvh] overflow-y-auto p-5 md:p-7 text-[var(--ink)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 mb-4 border-b border-[var(--line)]">
-          <h2 id="rules-modal-title" className="text-lg md:text-xl font-normal lowercase tracking-tight">
+        <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-dashed border-[var(--line-strong)]">
+          <h2 id="rules-modal-title" className="font-hand text-2xl sm:text-3xl font-semibold text-[var(--highlight-ink)] lowercase leading-none">
             {t.rulesModal.title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-md text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+            className="pencil-chip p-2 min-h-[40px] min-w-[40px] flex items-center justify-center text-[var(--ink-soft)] cursor-pointer"
             aria-label={t.common.close}
           >
-            <X size={18} />
+            <PencilClose className="w-4 h-4" />
           </button>
         </div>
 
@@ -149,11 +149,11 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="mt-6 pt-4 border-t border-[var(--line)] flex justify-end">
+        <div className="mt-6 pt-4 border-t border-dashed border-[var(--line-strong)] flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 min-h-[40px] rounded-lg text-xs tracking-wider lowercase bg-[var(--line)] hover:bg-[var(--line-strong)] text-[var(--highlight-ink)] transition-colors cursor-pointer font-medium"
+            className="pencil-btn-primary px-5 py-2 min-h-[40px] text-xs tracking-wider lowercase cursor-pointer font-medium"
           >
             {t.rulesModal.button}
           </button>

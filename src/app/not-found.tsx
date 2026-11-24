@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Globe } from 'lucide-react';
+import { PencilArrowLeft, PencilGlobe } from '@/components/hand-drawn/PencilIcons';
 
 export default function NotFound() {
   const [lang, setLang] = useState<'en' | 'ru'>('en');
@@ -34,25 +34,25 @@ export default function NotFound() {
   const isRu = lang === 'ru';
 
   return (
-    <main className="min-h-screen bg-[var(--bg)] text-[var(--ink)] font-sans antialiased p-6 md:p-12 flex items-center justify-center">
-      <div className="max-w-[480px] w-full text-center space-y-6 animate-fade-up">
-        <div className="flex justify-end mb-4">
+    <main className="min-h-screen text-[var(--ink)] font-sans antialiased p-6 md:p-12 flex items-center justify-center">
+      <div className="pencil-sheet max-w-[480px] w-full p-6 sm:p-8 text-center space-y-6 animate-fade-up">
+        <div className="flex justify-end mb-2">
           <button
             type="button"
             onClick={toggleLanguage}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-[var(--line)] text-xs text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] font-mono transition-colors cursor-pointer uppercase"
+            className="pencil-chip inline-flex items-center gap-1 px-2.5 py-1 text-xs text-[var(--ink-soft)] font-mono cursor-pointer uppercase"
             aria-label={isRu ? 'Switch to English' : 'Переключить на русский'}
           >
-            <Globe size={12} />
+            <PencilGlobe className="w-3.5 h-3.5" />
             <span>{isRu ? 'EN' : 'RU'}</span>
           </button>
         </div>
 
         <div className="space-y-2">
-          <span className="font-mono text-xs text-[var(--ink-mute)] uppercase tracking-widest">
+          <span className="font-mono text-xs text-[var(--highlight-ink)] highlighter-mark px-2 py-0.5 uppercase tracking-widest">
             {isRu ? 'ошибка 404' : 'error 404'}
           </span>
-          <h1 className="font-serif text-3xl md:text-4xl font-medium tracking-tight text-[var(--highlight-ink)] lowercase">
+          <h1 className="font-hand text-4xl md:text-5xl font-semibold tracking-tight text-[var(--highlight-ink)] lowercase">
             {isRu ? 'страница не найдена' : 'page not found'}
           </h1>
           <p className="text-sm text-[var(--ink-soft)] font-light lowercase">
@@ -62,12 +62,12 @@ export default function NotFound() {
           </p>
         </div>
 
-        <div className="pt-4">
+        <div className="pt-2">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--line)] hover:bg-[var(--line-strong)] text-[var(--highlight-ink)] text-xs font-medium lowercase transition-colors cursor-pointer"
+            className="pencil-btn-primary inline-flex items-center gap-1.5 px-5 py-2 text-xs font-medium lowercase cursor-pointer"
           >
-            <ArrowLeft size={14} />
+            <PencilArrowLeft className="w-3.5 h-3.5" />
             <span>{isRu ? 'вернуться к игре Tic³' : 'play Tic³'}</span>
           </Link>
         </div>

@@ -78,7 +78,7 @@ export const Cell: React.FC<CellProps> = ({
           />
           {isExpiringSoon && (
             <span
-              className="absolute top-0.5 right-0.5 w-1 h-1 rounded-full bg-rose-400/80 animate-pulse pointer-events-none"
+              className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full border border-[var(--highlight-ink)] bg-[var(--accent)] animate-pulse pointer-events-none"
               title={t.cell.fadingSoon}
             />
           )}
@@ -97,18 +97,21 @@ export const Cell: React.FC<CellProps> = ({
           />
           {isExpiringSoon && (
             <span
-              className="absolute top-0.5 right-0.5 w-1 h-1 rounded-full bg-rose-400/80 animate-pulse pointer-events-none"
+              className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full border border-[var(--highlight-ink)] bg-[var(--accent)] animate-pulse pointer-events-none"
               title={t.cell.fadingSoon}
             />
           )}
         </div>
       )}
 
-      {/* Enhanced subtle indicator for last move */}
+      {/* Colored pencil dot for last move */}
       {isLastMove && (
         <>
-          <span className="absolute inset-0.5 rounded-sm bg-[var(--cell-last-move)] pointer-events-none opacity-80" />
-          <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-[var(--highlight-ink)] shadow-xs pointer-events-none" />
+          <span className="absolute inset-0.5 rounded-[4px] bg-[var(--cell-last-move)] pointer-events-none opacity-45" />
+          <span
+            className="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-[var(--last-move-dot)] ring-1 ring-[var(--highlight-ink)]/45 pointer-events-none"
+            aria-hidden="true"
+          />
         </>
       )}
     </button>

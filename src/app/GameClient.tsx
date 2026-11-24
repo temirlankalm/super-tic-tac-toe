@@ -2,7 +2,8 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
-import { BarChart3, Lock, X } from 'lucide-react';
+import { Lock } from 'lucide-react';
+import { PencilChart, PencilClose } from '@/components/hand-drawn/PencilIcons';
 import { analytics } from '@/lib/analytics/client';
 import { MoveEvent, useSuperTicTacToe } from '@/hooks/useSuperTicTacToe';
 import { useTheme } from '@/hooks/useTheme';
@@ -979,7 +980,7 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
   const activeModifiersCount = Object.values(gameState.modifiers || {}).filter(Boolean).length;
 
   return (
-    <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 max-w-xl mx-auto w-full pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+    <main className="flex-1 flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 max-w-2xl mx-auto w-full pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       {/* Top Status & Game Setup Bar */}
       <GameStatus
         gameState={gameState}
@@ -1025,16 +1026,16 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
 
       {/* First visit nickname hint (Req 12) */}
       {isFirstVisit && (
-        <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-2 px-3 py-1.5 rounded-lg border border-[var(--line-strong)] bg-[var(--line)]/20 text-xs flex items-center justify-between animate-fade-up">
+        <div className="pencil-card w-full max-w-[430px] sm:max-w-[540px] mx-auto mb-2 px-3 py-1.5 text-xs flex items-center justify-between animate-fade-up">
           <span className="text-[var(--ink-soft)] lowercase">
             {t.common.yourName}:{' '}
-            <strong className="text-[var(--highlight-ink)] font-medium font-sans normal-case">
+            <strong className="text-[var(--highlight-ink)] font-semibold font-sans normal-case highlighter-mark px-1">
               {nickname}
             </strong>{' '}
             <button
               type="button"
               onClick={openNicknameModal}
-              className="ml-1 text-[var(--highlight-ink)] hairline-link cursor-pointer underline"
+              className="ml-1 text-[var(--highlight-ink)] hairline-link cursor-pointer"
             >
               ({t.common.change})
             </button>
@@ -1045,14 +1046,14 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
             className="p-1 text-[var(--ink-mute)] hover:text-[var(--highlight-ink)] cursor-pointer"
             aria-label={t.common.close}
           >
-            <X size={13} />
+            <PencilClose className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
       {/* One-time how-to-play hint on first game start (Req 11) */}
       {showHowtoHint && (
-        <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mb-2 px-3 py-1.5 rounded-lg border border-[var(--line-strong)] bg-[var(--line)]/20 text-xs flex items-center justify-between animate-fade-up">
+        <div className="pencil-card w-full max-w-[430px] sm:max-w-[540px] mx-auto mb-2 px-3 py-1.5 text-xs flex items-center justify-between animate-fade-up">
           <span className="text-[var(--ink-soft)] lowercase">
             {t.common.howtoHint} (
             <button
@@ -1061,7 +1062,7 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
                 dismissHowtoHint();
                 setIsRulesOpen(true);
               }}
-              className="text-[var(--highlight-ink)] hairline-link cursor-pointer underline"
+              className="text-[var(--highlight-ink)] hairline-link cursor-pointer"
             >
               {t.common.howtoLearn}
             </button>
@@ -1073,7 +1074,7 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
             className="p-1 text-[var(--ink-mute)] hover:text-[var(--highlight-ink)] cursor-pointer"
             aria-label={t.common.close}
           >
-            <X size={13} />
+            <PencilClose className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
@@ -1171,7 +1172,7 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
       />
 
       {/* Subtle Minimalist Footer */}
-      <footer className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mt-5 md:mt-6 text-center text-xs text-[var(--ink-mute)] font-light tracking-wide lowercase">
+      <footer className="w-full max-w-[430px] sm:max-w-[540px] mx-auto mt-5 md:mt-6 text-center text-xs text-[var(--ink-mute)] font-light tracking-wide lowercase">
         <div className="flex flex-wrap items-center justify-center">
           <span
             onClick={handleFooterBrandClick}
@@ -1212,15 +1213,14 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
           <div className="mt-2.5 flex justify-center">
             <a
               href={adminUrl}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-[var(--line-strong)] text-[11px] font-medium text-[var(--ink)] hover:text-[var(--highlight-ink)] transition-all"
-              style={{ borderBottomStyle: 'solid' }}
+              className="pencil-chip inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-medium text-[var(--ink)] hover:text-[var(--highlight-ink)]"
             >
-              <BarChart3 size={12} />
+              <PencilChart className="w-3.5 h-3.5" />
               <span>{language === 'ru' ? 'аналитика · админ' : 'analytics · admin'}</span>
             </a>
           </div>
         )}
-        <div className="mt-2 text-[10px] text-[var(--ink-mute)] opacity-70">
+        <div className="mt-2 text-[10px] text-[var(--ink-mute)] opacity-75">
           {t.common.privacyNotice}
         </div>
       </footer>
@@ -1236,12 +1236,12 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
             aria-modal="true"
             aria-labelledby="admin-unlock-title"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-xs rounded-2xl p-5 border border-[var(--line)] bg-[var(--bg)] shadow-xl"
+            className="pencil-sheet w-full max-w-xs p-5"
           >
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-dashed border-[var(--line-strong)]">
               <div className="flex items-center gap-1.5 text-[var(--highlight-ink)]">
                 <Lock size={13} />
-                <h2 id="admin-unlock-title" className="font-serif text-base font-medium lowercase">
+                <h2 id="admin-unlock-title" className="font-hand text-xl font-semibold lowercase leading-none">
                   {language === 'ru' ? 'режим владельца' : 'owner access'}
                 </h2>
               </div>
@@ -1251,7 +1251,7 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
                 aria-label="close"
                 className="p-1 text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] cursor-pointer"
               >
-                <X size={14} />
+                <PencilClose className="w-4 h-4" />
               </button>
             </div>
             <form onSubmit={handleAdminUnlockSubmit} className="space-y-2.5">
@@ -1264,15 +1264,15 @@ export function GameClient({ initialRoomId, initialIsAdmin = false }: GameClient
                 }}
                 placeholder={language === 'ru' ? 'пароль администратора' : 'admin password'}
                 autoFocus
-                className="w-full px-3 py-2 text-xs rounded-lg border border-[var(--line)] bg-transparent text-[var(--highlight-ink)] focus:outline-none focus:border-[var(--highlight-ink)]"
+                className="w-full px-3 py-2 text-xs rounded-[7px_4px_8px_5px] border border-[var(--line-strong)] bg-[var(--bg)] text-[var(--highlight-ink)] focus:outline-none focus:border-[var(--highlight-ink)]"
               />
               {adminUnlockErr && (
-                <p className="text-[11px] text-rose-500 lowercase">{adminUnlockErr}</p>
+                <p className="text-[11px] text-[var(--highlight-ink)] font-medium highlighter-mark px-1.5 py-0.5 lowercase">{adminUnlockErr}</p>
               )}
               <button
                 type="submit"
                 disabled={isAdminUnlockLoading}
-                className="w-full py-2 rounded-lg bg-[var(--highlight-ink)] text-[var(--bg)] text-xs font-medium lowercase hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                className="pencil-btn-primary w-full py-2 text-xs font-medium lowercase disabled:opacity-50 cursor-pointer"
               >
                 {isAdminUnlockLoading
                   ? '...'

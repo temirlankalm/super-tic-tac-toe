@@ -5,64 +5,93 @@
   --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --font-serif: var(--font-newsreader), Georgia, serif;
+  --font-hand: var(--font-caveat), var(--font-newsreader), Georgia, cursive;
 }
 
 :root {
-  /* Temirlan's Design System Palette (Light Theme - Warm Stone) */
-  --bg: #efeeee;
-  --bg-subtle: #e6e5e5;
-  --surface: rgba(255, 255, 255, 0.56);
-  --surface-hover: rgba(255, 255, 255, 0.78);
-  --scrim: rgba(239, 238, 238, 0.88);
+  /* Pencil & Paper Palette (Light Mode - Warm Off-White Paper) */
+  --bg: #f6f2e9;
+  --bg-subtle: #ede6d6;
+  --surface: #fbf8f1;
+  --surface-hover: #f1eadb;
+  --scrim: rgba(246, 242, 233, 0.9);
 
-  --ink: #4e545a;
-  --ink-soft: #7c828a;
-  --ink-mute: #9aa0a7;
-  --highlight-ink: #2e3338;
+  /* Graphite / Pencil Ink */
+  --ink: #2b2b29;
+  --ink-soft: #646159;
+  --ink-mute: #8e8a80;
+  --highlight-ink: #171715;
 
-  --underline: rgba(78, 84, 90, 0.42);
-  --line: rgba(78, 84, 90, 0.16);
-  --line-strong: rgba(78, 84, 90, 0.45);
-  --super-line: #4e545a;
+  --underline: rgba(43, 43, 41, 0.36);
+  --line: rgba(43, 43, 41, 0.16);
+  --line-strong: rgba(43, 43, 41, 0.42);
+  --super-line: #232320;
 
-  /* Active Sector Highlight */
-  --active-board-bg: rgba(78, 84, 90, 0.09);
-  --active-board-border: rgba(46, 51, 56, 0.65);
+  /* Single Highlighter Accent (Highlighter Yellow) */
+  --accent: #f3dc58;
+  --accent-wash: rgba(243, 220, 88, 0.32);
+  --accent-wash-strong: rgba(243, 220, 88, 0.56);
+  --accent-border: rgba(162, 136, 18, 0.58);
+  --accent-ink: #1c1b16;
+
+  /* Active Sector Highlight (Highlighter Wash) */
+  --active-board-bg: rgba(243, 220, 88, 0.25);
+  --active-board-border: rgba(43, 43, 41, 0.55);
 
   /* Cell states */
-  --cell-hover: rgba(78, 84, 90, 0.07);
-  --cell-last-move: rgba(78, 84, 90, 0.16);
+  --cell-hover: rgba(43, 43, 41, 0.055);
+  --cell-last-move: rgba(243, 220, 88, 0.42);
+  --last-move-dot: #c98a12;
 
-  --selection-bg: rgba(78, 84, 90, 0.2);
+  --selection-bg: rgba(243, 220, 88, 0.48);
+
+  /* Paper texture tokens */
+  --paper-grid-minor: rgba(43, 43, 41, 0.032);
+  --paper-grid-major: rgba(43, 43, 41, 0.055);
+  --paper-vignette: rgba(196, 184, 158, 0.22);
 }
 
 html.dark {
-  /* Temirlan's Dark Theme - Deep Graphite / Warm Charcoal */
-  --bg: #141719;
-  --bg-subtle: #1c2022;
-  --surface: rgba(255, 255, 255, 0.035);
-  --surface-hover: rgba(255, 255, 255, 0.065);
-  --scrim: rgba(20, 23, 25, 0.88);
+  /* Dark Paper / Drafting Graph Paper Palette */
+  --bg: #181a1b;
+  --bg-subtle: #202325;
+  --surface: #212426;
+  --surface-hover: #292d30;
+  --scrim: rgba(24, 26, 27, 0.9);
 
-  --ink: #d2d6db;
-  --ink-soft: #8e95a0;
-  --ink-mute: #5f6570;
-  --highlight-ink: #f5f7f9;
+  /* Warm Graphite Chalk Ink */
+  --ink: #dad6cd;
+  --ink-soft: #9e9a90;
+  --ink-mute: #6d6a62;
+  --highlight-ink: #f6f3eb;
 
-  --underline: rgba(210, 214, 219, 0.42);
-  --line: rgba(255, 255, 255, 0.12);
-  --line-strong: rgba(255, 255, 255, 0.38);
-  --super-line: #d2d6db;
+  --underline: rgba(218, 214, 205, 0.34);
+  --line: rgba(218, 214, 205, 0.14);
+  --line-strong: rgba(218, 214, 205, 0.38);
+  --super-line: #dedad0;
+
+  /* Single Highlighter Accent (Muted Highlighter Gold on Dark Paper) */
+  --accent: #d8c04e;
+  --accent-wash: rgba(216, 192, 78, 0.18);
+  --accent-wash-strong: rgba(216, 192, 78, 0.3);
+  --accent-border: rgba(216, 192, 78, 0.55);
+  --accent-ink: #181916;
 
   /* Active Sector Highlight */
-  --active-board-bg: rgba(255, 255, 255, 0.08);
-  --active-board-border: rgba(245, 247, 249, 0.65);
+  --active-board-bg: rgba(216, 192, 78, 0.15);
+  --active-board-border: rgba(216, 192, 78, 0.52);
 
   /* Cell states */
-  --cell-hover: rgba(255, 255, 255, 0.08);
-  --cell-last-move: rgba(255, 255, 255, 0.18);
+  --cell-hover: rgba(218, 214, 205, 0.07);
+  --cell-last-move: rgba(216, 192, 78, 0.22);
+  --last-move-dot: #e6c64e;
 
-  --selection-bg: rgba(255, 255, 255, 0.2);
+  --selection-bg: rgba(216, 192, 78, 0.28);
+
+  /* Graph paper lines */
+  --paper-grid-minor: rgba(218, 214, 205, 0.036);
+  --paper-grid-major: rgba(218, 214, 205, 0.068);
+  --paper-vignette: rgba(0, 0, 0, 0.28);
 }
 
 * {
@@ -75,6 +104,14 @@ html.dark {
 
 body {
   background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 50% 0%, transparent 55%, var(--paper-vignette) 100%),
+    linear-gradient(to right, var(--paper-grid-minor) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--paper-grid-minor) 1px, transparent 1px),
+    linear-gradient(to right, var(--paper-grid-major) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--paper-grid-major) 1px, transparent 1px),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-size: 100% 100%, 24px 24px, 24px 24px, 120px 120px, 120px 120px, 180px 180px;
   color: var(--ink);
   font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -82,11 +119,94 @@ body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* Hairline link style from Temirlan's design system */
+.font-hand {
+  font-family: var(--font-hand);
+}
+
+/* Organic pencil-drawn border & paper card primitives */
+.pencil-card {
+  background-color: var(--surface);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 10px 6px 12px 7px / 7px 11px 6px 10px;
+  box-shadow: 2px 3px 0 var(--line);
+}
+
+.pencil-sheet {
+  background-color: var(--surface);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 12px 8px 14px 9px / 9px 13px 7px 12px;
+  box-shadow: 3px 4px 0 var(--line);
+}
+
+.pencil-chip {
+  background-color: var(--surface);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 7px 4px 8px 5px / 5px 7px 4px 7px;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.12s ease;
+}
+
+.pencil-chip:hover:not(:disabled) {
+  background-color: var(--surface-hover);
+  border-color: var(--highlight-ink);
+  color: var(--highlight-ink);
+}
+
+.pencil-chip-active {
+  background-color: var(--accent-wash);
+  border-color: var(--highlight-ink);
+  color: var(--highlight-ink);
+  box-shadow: 1px 1.5px 0 var(--line-strong);
+}
+
+.pencil-btn-primary {
+  background-color: var(--highlight-ink);
+  color: var(--bg);
+  border: 1.5px solid var(--highlight-ink);
+  border-radius: 7px 4px 8px 5px / 5px 8px 4px 7px;
+  box-shadow: 2px 2px 0 var(--accent);
+  transition: transform 0.12s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pencil-btn-primary:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-0.5px);
+}
+
+.pencil-btn-secondary {
+  background-color: var(--surface);
+  color: var(--ink);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 6px 8px 5px 7px / 7px 5px 8px 5px;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.pencil-btn-secondary:hover:not(:disabled) {
+  background-color: var(--surface-hover);
+  border-color: var(--highlight-ink);
+  color: var(--highlight-ink);
+}
+
+.pencil-divider {
+  border-color: var(--line-strong);
+  border-style: dashed;
+}
+
+.highlighter-mark {
+  background: linear-gradient(
+    102deg,
+    transparent 1%,
+    var(--accent-wash-strong) 7%,
+    var(--accent-wash) 93%,
+    transparent 99%
+  );
+  border-radius: 4px 2px 5px 3px;
+}
+
+/* Hairline link style */
 .hairline-link {
   color: inherit;
   text-decoration: none;
-  border-bottom: 1px solid var(--underline);
+  border-bottom: 1.5px solid var(--underline);
   padding-bottom: 1px;
   transition: border-color 0.2s ease, color 0.2s ease;
 }
@@ -109,7 +229,24 @@ body {
 }
 
 .animate-fade-up {
-  animation: fadeUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: fadeUp 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes pencilDraw {
+  from {
+    stroke-dashoffset: 420;
+    opacity: 0.4;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+.animate-pencil-draw {
+  stroke-dasharray: 420;
+  stroke-dashoffset: 0;
+  animation: pencilDraw 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes pulseGlow {
@@ -117,10 +254,18 @@ body {
     opacity: 0.85;
   }
   50% {
-    opacity: 0.4;
+    opacity: 0.45;
   }
 }
 
 .animate-pulse-glow {
   animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-pencil-draw,
+  .animate-pulse-glow {
+    animation: none !important;
+  }
 }

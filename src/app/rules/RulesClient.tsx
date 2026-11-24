@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Globe } from 'lucide-react';
+import { PencilArrowLeft, PencilGlobe } from '@/components/hand-drawn/PencilIcons';
 import { useTranslation } from '@/i18n/LanguageContext';
 
 export function RulesClient() {
@@ -15,41 +15,40 @@ export function RulesClient() {
   const isRu = language === 'ru';
 
   return (
-    <main className="min-h-screen bg-[var(--bg)] text-[var(--ink)] font-sans antialiased p-6 md:p-12">
-      <div className="max-w-[620px] mx-auto animate-fade-up">
+    <main className="min-h-screen text-[var(--ink)] font-sans antialiased p-5 md:p-12">
+      <div className="pencil-sheet max-w-[660px] mx-auto p-5 sm:p-8 animate-fade-up">
         {/* Navigation & Language toggle */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors lowercase border-b border-[var(--underline)] pb-0.5"
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors lowercase hairline-link"
           >
-            <ArrowLeft size={13} />
+            <PencilArrowLeft className="w-3.5 h-3.5" />
             <span>{isRu ? 'играть в Tic³' : 'play Tic³'}</span>
           </Link>
 
           <button
             type="button"
             onClick={toggleLanguage}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-[var(--line)] text-xs text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] font-mono transition-colors cursor-pointer uppercase"
+            className="pencil-chip inline-flex items-center gap-1 px-2.5 py-1 text-xs text-[var(--ink-soft)] font-mono cursor-pointer uppercase"
             title={isRu ? 'switch to English' : 'переключить на русский'}
           >
-            <Globe size={12} />
+            <PencilGlobe className="w-3.5 h-3.5" />
             <span>{isRu ? 'EN' : 'RU'}</span>
           </button>
         </div>
 
         {/* Title */}
-        <header className="mb-10 pb-6 border-b border-[var(--line)]">
-          <div className="flex items-center gap-2 mb-2 text-[var(--ink-mute)]">
-            <BookOpen size={16} />
-            <span className="text-xs uppercase tracking-widest font-mono">
+        <header className="mb-8 pb-5 border-b border-dashed border-[var(--line-strong)]">
+          <div className="flex items-center gap-2 mb-1.5 text-[var(--ink-mute)]">
+            <span className="text-xs uppercase tracking-widest font-mono highlighter-mark px-1.5 py-0.5 text-[var(--highlight-ink)]">
               {isRu ? 'руководство' : 'game guide'}
             </span>
           </div>
-          <h1 className="font-serif text-3xl md:text-4xl font-medium tracking-tight text-[var(--highlight-ink)] lowercase">
+          <h1 className="font-hand text-4xl md:text-5xl font-semibold tracking-tight text-[var(--highlight-ink)] lowercase leading-tight">
             {isRu ? 'правила Tic³' : 'rules of Tic³'}
           </h1>
-          <p className="text-sm text-[var(--ink-soft)] mt-2 font-light lowercase">
+          <p className="text-sm text-[var(--ink-soft)] mt-1.5 font-light lowercase">
             {isRu
               ? 'стратегические супер крестики-нолики на поле 9×9'
               : 'strategic ultimate tic-tac-toe on a 9×9 board'}
@@ -57,9 +56,9 @@ export function RulesClient() {
         </header>
 
         {/* Rules Content */}
-        <article className="space-y-8 text-[15px] md:text-[16px] leading-relaxed text-[var(--ink)]">
+        <article className="space-y-7 text-[15px] md:text-[16px] leading-relaxed text-[var(--ink)]">
           <section>
-            <h2 className="font-serif text-lg font-medium text-[var(--highlight-ink)] lowercase mb-2">
+            <h2 className="font-hand text-2xl font-semibold text-[var(--highlight-ink)] lowercase mb-1.5">
               {isRu ? '1. золотое правило направления' : '1. the golden direction rule'}
             </h2>
             <p className="text-[var(--ink-soft)] font-light">
@@ -70,7 +69,7 @@ export function RulesClient() {
           </section>
 
           <section>
-            <h2 className="font-serif text-lg font-medium text-[var(--highlight-ink)] lowercase mb-2">
+            <h2 className="font-hand text-2xl font-semibold text-[var(--highlight-ink)] lowercase mb-1.5">
               {isRu ? '2. захват сектора и победа в матче' : '2. claiming a sector & winning the match'}
             </h2>
             <p className="text-[var(--ink-soft)] font-light">
@@ -81,20 +80,20 @@ export function RulesClient() {
           </section>
 
           <section>
-            <h2 className="font-serif text-lg font-medium text-[var(--highlight-ink)] lowercase mb-2">
+            <h2 className="font-hand text-2xl font-semibold text-[var(--highlight-ink)] lowercase mb-1.5">
               {isRu ? '3. механика свободного хода' : '3. the free move mechanic'}
             </h2>
             <p className="text-[var(--ink-soft)] font-light">
               {isRu ? (
                 <>
                   Если соперник отправляет вас в уже выигранный или полностью заполненный сектор, вы получаете{' '}
-                  <strong className="font-medium text-[var(--highlight-ink)]">свободный ход</strong>:
+                  <strong className="font-medium text-[var(--highlight-ink)] highlighter-mark px-1">свободный ход</strong>:
                   вы можете поставить свой знак в абсолютно любую открытую клетку любого сектора на всей доске 9×9.
                 </>
               ) : (
                 <>
                   If your opponent directs you to a sector that has already been won or is completely full, you earn a{' '}
-                  <strong className="font-medium text-[var(--highlight-ink)]">free move</strong>: you
+                  <strong className="font-medium text-[var(--highlight-ink)] highlighter-mark px-1">free move</strong>: you
                   may place your mark in any open cell across any sector on the entire 9×9 super-board.
                 </>
               )}
@@ -102,7 +101,7 @@ export function RulesClient() {
           </section>
 
           <section>
-            <h2 className="font-serif text-lg font-medium text-[var(--highlight-ink)] lowercase mb-2">
+            <h2 className="font-hand text-2xl font-semibold text-[var(--highlight-ink)] lowercase mb-1.5">
               {isRu ? '4. ничьи и закрытые секторы' : '4. ties and completed sectors'}
             </h2>
             <p className="text-[var(--ink-soft)] font-light">
@@ -113,7 +112,7 @@ export function RulesClient() {
           </section>
 
           <section>
-            <h2 className="font-serif text-lg font-medium text-[var(--highlight-ink)] lowercase mb-2">
+            <h2 className="font-hand text-2xl font-semibold text-[var(--highlight-ink)] lowercase mb-1.5">
               {isRu ? '5. шахматные часы и режимы игры' : '5. chess clocks & modes'}
             </h2>
             <p className="text-[var(--ink-soft)] font-light">
@@ -132,7 +131,7 @@ export function RulesClient() {
           </section>
 
           <section>
-            <h2 className="font-serif text-lg font-medium text-[var(--highlight-ink)] lowercase mb-2">
+            <h2 className="font-hand text-2xl font-semibold text-[var(--highlight-ink)] lowercase mb-1.5">
               {isRu ? '6. сдача, ничья, челлендж и комнаты' : '6. resign, draw, daily & rooms'}
             </h2>
             <p className="text-[var(--ink-soft)] font-light">
@@ -144,13 +143,13 @@ export function RulesClient() {
         </article>
 
         {/* Action Button */}
-        <div className="mt-12 pt-8 border-t border-[var(--line)] flex items-center justify-between">
+        <div className="mt-10 pt-6 border-t border-dashed border-[var(--line-strong)] flex items-center justify-between gap-3">
           <span className="text-xs text-[var(--ink-mute)] font-light lowercase">
             {isRu ? 'без регистрации · бесплатно навсегда' : 'no account required · free forever'}
           </span>
           <Link
             href="/"
-            className="px-5 py-2 rounded-lg bg-[var(--highlight-ink)] text-[var(--bg)] text-xs font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+            className="pencil-btn-primary px-5 py-2 text-xs font-medium lowercase cursor-pointer shrink-0"
           >
             {isRu ? 'начать играть в Tic³' : 'start playing Tic³'}
           </Link>

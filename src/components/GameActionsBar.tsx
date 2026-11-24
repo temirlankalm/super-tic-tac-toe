@@ -1,7 +1,16 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Undo2, RotateCcw, Flag, Handshake, Zap, Share2, Trophy, X } from 'lucide-react';
+import {
+  PencilClock,
+  PencilClose,
+  PencilFlag,
+  PencilHandshake,
+  PencilReset,
+  PencilShare,
+  PencilTrophy,
+  PencilUndo,
+} from './hand-drawn/PencilIcons';
 import { BoardWinner, ConnectionStatus, GameMode, OnlineRole, Player, WinReason } from '@/types/game';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
 import { useTranslation } from '@/i18n/LanguageContext';
@@ -142,7 +151,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
         ref={resultRef}
         role="region"
         aria-live="polite"
-        className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mt-4 p-4 rounded-xl border border-[var(--line-strong)] bg-[var(--active-board-bg)] animate-fade-up text-center"
+        className="pencil-card w-full max-w-[430px] sm:max-w-[540px] mx-auto mt-4 p-4 sm:p-5 animate-fade-up text-center"
       >
         <div className="flex items-center justify-center gap-2 mb-1">
           {winner === 'X' ? (
@@ -150,30 +159,30 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
           ) : winner === 'O' ? (
             <HandDrawnO variant={0} className="w-6 h-6 text-[var(--highlight-ink)]" />
           ) : null}
-          <span className="text-base font-medium text-[var(--highlight-ink)] tracking-tight">
+          <span className="font-hand text-2xl sm:text-3xl font-semibold text-[var(--highlight-ink)] leading-tight">
             {title}
           </span>
         </div>
 
         {subtitle && (
-          <p className="text-xs text-[var(--ink-mute)] font-light lowercase mb-3">
+          <p className="text-xs text-[var(--ink-soft)] font-light lowercase mb-3">
             {subtitle}
           </p>
         )}
 
         {/* Rating Delta Badge */}
         {isRatedGame && typeof newRating === 'number' && (
-          <div className="my-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--line-strong)] bg-[var(--bg)] text-xs font-mono shadow-2xs">
-            <Trophy size={12} className="text-amber-500" />
+          <div className="my-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-[7px_4px_8px_5px] border border-[var(--line-strong)] bg-[var(--bg)] text-xs font-mono">
+            <PencilTrophy className="w-3.5 h-3.5 text-[var(--highlight-ink)]" />
             <span className="text-[var(--ink-soft)]">{language === 'ru' ? 'рейтинг:' : 'rating:'}</span>
             <span className="font-semibold text-[var(--highlight-ink)]">{newRating} ELO</span>
             {typeof lastDelta === 'number' && (
               <span
-                className={`font-semibold ml-0.5 ${
+                className={`font-semibold ml-0.5 px-1.5 py-0.2 rounded-[3px] ${
                   lastDelta > 0
-                    ? 'text-emerald-600 dark:text-emerald-400'
+                    ? 'highlighter-mark text-[var(--highlight-ink)] border border-[var(--accent-border)]'
                     : lastDelta < 0
-                    ? 'text-rose-500'
+                    ? 'border border-[var(--line-strong)] text-[var(--ink)]'
                     : 'text-[var(--ink-mute)]'
                 }`}
               >
@@ -181,22 +190,22 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
               </span>
             )}
             {isProvisional && (
-              <span className="text-[10px] text-amber-600 dark:text-amber-400 lowercase font-sans ml-0.5">
+              <span className="text-[10px] text-[var(--ink-soft)] lowercase font-sans ml-0.5">
                 ({language === 'ru' ? 'калибровка' : 'provisional'})
               </span>
             )}
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
           {/* Challenge a friend button (Growth feature) */}
           {onChallengeFriend && (
             <button
               type="button"
               onClick={onChallengeFriend}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[var(--line-strong)] hover:bg-[var(--line)]/40 text-[var(--highlight-ink)] text-xs font-sans font-medium lowercase transition-colors cursor-pointer"
+              className="pencil-btn-secondary flex items-center gap-1.5 px-3.5 py-2 text-xs font-sans font-medium lowercase cursor-pointer"
             >
-              <Share2 size={13} />
+              <PencilShare className="w-3.5 h-3.5" />
               <span>{t.actions.challengeFriend}</span>
             </button>
           )}
@@ -206,7 +215,7 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
               <button
                 type="button"
                 onClick={onAcceptRematch}
-                className="px-4 py-2 rounded-lg bg-[var(--highlight-ink)] text-[var(--bg)] text-xs font-sans font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+                className="pencil-btn-primary px-4 py-2 text-xs font-sans font-medium lowercase cursor-pointer"
               >
                 {t.actions.acceptRematch}
               </button>
@@ -218,9 +227,9 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
               <button
                 type="button"
                 onClick={onRequestRematch}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[var(--line-strong)] hover:bg-[var(--line)]/40 text-[var(--highlight-ink)] text-xs font-sans font-medium lowercase transition-colors cursor-pointer"
+                className="pencil-btn-primary flex items-center gap-1.5 px-4 py-2 text-xs font-sans font-medium lowercase cursor-pointer"
               >
-                <RotateCcw size={13} />
+                <PencilReset className="w-3.5 h-3.5" />
                 <span>{t.actions.rematch}</span>
               </button>
             )
@@ -228,9 +237,9 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
             <button
               type="button"
               onClick={onReset}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--highlight-ink)] text-[var(--bg)] text-xs font-sans font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+              className="pencil-btn-primary flex items-center gap-1.5 px-4 py-2 text-xs font-sans font-medium lowercase cursor-pointer"
             >
-              <RotateCcw size={13} />
+              <PencilReset className="w-3.5 h-3.5" />
               <span>{t.actions.newGame}</span>
             </button>
           )}
@@ -241,29 +250,29 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
 
   // 2. IN-GAME ACTIONS BAR
   return (
-    <div className="w-full max-w-[460px] sm:max-w-[480px] mx-auto mt-3.5">
+    <div className="w-full max-w-[430px] sm:max-w-[540px] mx-auto mt-3.5">
       {/* AI Draw Notice or Status feedback */}
       {aiDrawNotice && (
-        <div className="mb-2 p-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-center text-xs text-rose-500 lowercase animate-fade-up">
+        <div className="pencil-card mb-2 p-2 text-center text-xs text-[var(--highlight-ink)] lowercase animate-fade-up">
           {aiDrawNotice}
         </div>
       )}
 
-      <div className="flex items-center justify-between px-2 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--bg-subtle)] text-xs text-[var(--ink-soft)]">
+      <div className="pencil-card flex items-center justify-between px-2 py-1.5 text-xs text-[var(--ink-soft)]">
         {/* Undo button (disabled in online or when no moves) */}
         {gameMode !== 'online' ? (
           <button
             type="button"
             onClick={onUndo}
             disabled={!canUndo}
-            className={`flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg transition-colors lowercase font-sans ${
+            className={`flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-[6px_4px_7px_5px] transition-colors lowercase font-sans ${
               canUndo
-                ? 'hover:bg-[var(--line)] hover:text-[var(--highlight-ink)] cursor-pointer'
+                ? 'hover:bg-[var(--surface-hover)] hover:text-[var(--highlight-ink)] cursor-pointer'
                 : 'opacity-30 cursor-not-allowed'
             }`}
             title={language === 'ru' ? 'Отменить последний ход' : 'Undo last move'}
           >
-            <Undo2 size={13} />
+            <PencilUndo className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{language === 'ru' ? 'ход назад' : 'undo'}</span>
           </button>
         ) : (
@@ -275,14 +284,14 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
           {/* Speed Blitz 5s Countdown Badge */}
           {speedBlitzTime !== undefined && speedBlitzTime !== null && (
             <div
-              className={`flex items-center gap-1 px-2.5 py-1.5 min-h-[40px] rounded-md text-xs font-mono font-medium transition-colors ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 min-h-[40px] rounded-[5px_3px_6px_4px] text-xs font-mono font-medium transition-colors ${
                 speedBlitzTime <= 2.0
-                  ? 'bg-rose-500/15 text-rose-500 animate-pulse'
-                  : 'bg-[var(--line)]/40 text-[var(--highlight-ink)]'
+                  ? 'highlighter-mark border border-[var(--accent-border)] text-[var(--highlight-ink)] animate-pulse'
+                  : 'bg-[var(--bg-subtle)] text-[var(--highlight-ink)]'
               }`}
               title={language === 'ru' ? 'осталось времени на текущий ход' : 'time left for current turn'}
             >
-              <Zap size={11} className={speedBlitzTime <= 2.0 ? 'fill-rose-500' : ''} />
+              <PencilClock className="w-3.5 h-3.5" />
               <span>{speedBlitzTime.toFixed(1)}s</span>
             </div>
           )}
@@ -295,9 +304,9 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
               <button
                 type="button"
                 onClick={onLeaveRoom}
-                className="flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg border border-[var(--line)] hover:border-rose-400 hover:bg-rose-500/10 hover:text-rose-500 text-[var(--ink)] transition-colors cursor-pointer lowercase font-sans"
+                className="pencil-chip flex items-center gap-1.5 px-3 py-2 min-h-[40px] text-[var(--ink)] cursor-pointer lowercase font-sans"
               >
-                <X size={13} />
+                <PencilClose className="w-3.5 h-3.5" />
                 <span>{t.onlineModal.leaveRoom}</span>
               </button>
             )}
@@ -305,22 +314,22 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
           {/* Resign Button */}
           {historyLength > 0 && (
             isResignConfirmOpen ? (
-              <div className="flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/30 px-3 py-1.5 min-h-[40px] rounded-lg text-xs animate-fade-up">
-                <span className="text-rose-500 lowercase">{language === 'ru' ? 'сдаться?' : 'resign?'}</span>
+              <div className="flex items-center gap-1.5 border border-[var(--highlight-ink)] bg-[var(--accent-wash)] px-3 py-1.5 min-h-[40px] rounded-[6px_4px_7px_5px] text-xs animate-fade-up">
+                <span className="text-[var(--highlight-ink)] font-medium lowercase">{language === 'ru' ? 'сдаться?' : 'resign?'}</span>
                 <button
                   type="button"
                   onClick={() => {
                     setIsResignConfirmOpen(false);
                     onResign();
                   }}
-                  className="text-rose-600 dark:text-rose-400 font-medium hover:underline px-1.5 py-1 min-h-[36px] flex items-center cursor-pointer lowercase"
+                  className="text-[var(--highlight-ink)] font-semibold hairline-link px-1.5 py-1 min-h-[36px] flex items-center cursor-pointer lowercase"
                 >
                   {language === 'ru' ? 'да' : 'yes'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsResignConfirmOpen(false)}
-                  className="text-[var(--ink-mute)] hover:text-[var(--ink-soft)] px-1.5 py-1 min-h-[36px] flex items-center cursor-pointer lowercase"
+                  className="text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] px-1.5 py-1 min-h-[36px] flex items-center cursor-pointer lowercase"
                 >
                   {language === 'ru' ? 'нет' : 'no'}
                 </button>
@@ -329,10 +338,10 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
               <button
                 type="button"
                 onClick={() => setIsResignConfirmOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-colors cursor-pointer lowercase font-sans"
+                className="flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-[6px_4px_7px_5px] hover:bg-[var(--surface-hover)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer lowercase font-sans"
                 title={language === 'ru' ? 'Сдаться в этой партии' : 'Resign game'}
               >
-                <Flag size={13} />
+                <PencilFlag className="w-3.5 h-3.5" />
                 <span>{t.actions.resign}</span>
               </button>
             )
@@ -344,14 +353,14 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
               type="button"
               onClick={onOfferDraw}
               disabled={myDrawOffered}
-              className={`flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg transition-colors lowercase font-sans ${
+              className={`flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-[6px_4px_7px_5px] transition-colors lowercase font-sans ${
                 myDrawOffered
                   ? 'opacity-40 cursor-not-allowed'
-                  : 'hover:bg-[var(--line)] hover:text-[var(--highlight-ink)] cursor-pointer'
+                  : 'hover:bg-[var(--surface-hover)] hover:text-[var(--highlight-ink)] cursor-pointer'
               }`}
               title={myDrawOffered ? t.actions.offered : t.actions.draw}
             >
-              <Handshake size={13} />
+              <PencilHandshake className="w-3.5 h-3.5" />
               <span>{myDrawOffered ? t.actions.offered : t.actions.draw}</span>
             </button>
           )}
@@ -361,10 +370,10 @@ export const GameActionsBar: React.FC<GameActionsBarProps> = ({
         <button
           type="button"
           onClick={onReset}
-          className="flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg hover:bg-[var(--line)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer lowercase font-sans"
+          className="flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-[6px_4px_7px_5px] hover:bg-[var(--surface-hover)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer lowercase font-sans"
           title={gameMode === 'online' ? t.actions.rematch : t.actions.newGame}
         >
-          <RotateCcw size={13} />
+          <PencilReset className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">{language === 'ru' ? 'заново' : 'reset'}</span>
         </button>
       </div>

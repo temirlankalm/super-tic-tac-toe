@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import { connection } from 'next/server';
-import { Geist, Geist_Mono, Newsreader } from 'next/font/google';
+import { Geist, Geist_Mono, Newsreader, Caveat } from 'next/font/google';
 import './globals.css';
 import { LanguageProvider } from '@/i18n/LanguageContext';
 import { Language } from '@/i18n/types';
@@ -23,10 +23,16 @@ const newsreader = Newsreader({
   weight: ['400', '500'],
 });
 
+const caveat = Caveat({
+  variable: '--font-caveat',
+  subsets: ['latin', 'cyrillic'],
+  weight: ['500', '600', '700'],
+});
+
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#efeeee' },
-    { media: '(prefers-color-scheme: dark)', color: '#141719' },
+    { media: '(prefers-color-scheme: light)', color: '#f6f2e9' },
+    { media: '(prefers-color-scheme: dark)', color: '#181a1b' },
   ],
   viewportFit: 'cover',
 };
@@ -99,12 +105,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} ${caveat.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
-        <meta name="theme-color" content="#efeeee" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#141719" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#f6f2e9" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#181a1b" media="(prefers-color-scheme: dark)" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <style>{`html[data-lang-hydrating="1"] body{opacity:0}`}</style>
         <script

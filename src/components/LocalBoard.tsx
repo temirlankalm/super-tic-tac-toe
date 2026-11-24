@@ -5,6 +5,7 @@ import { BoardWinner, CellState, Move } from '@/types/game';
 import { Cell } from './Cell';
 import { HandDrawnO, HandDrawnX } from './hand-drawn/HandDrawnMarks';
 import { HandDrawnLocalGrid } from './hand-drawn/HandDrawnLocalGrid';
+import { PencilLineStrike, PencilSectorCircle } from './hand-drawn/HandDrawnOverlays';
 
 interface LocalBoardProps {
   boardIdx: number;
@@ -46,22 +47,20 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
 
   return (
     <div
-      className={`relative w-full h-full p-1 sm:p-2.5 transition-colors duration-200 flex flex-col justify-center items-center ${
-        isActive && !isResolved
-          ? 'bg-[var(--active-board-bg)] ring-2 ring-[var(--active-board-border)] shadow-xs'
-          : 'bg-transparent'
-      } ${
+      className={`relative w-full h-full p-1 sm:p-2 transition-colors duration-200 flex flex-col justify-center items-center ${
         isGlobalWinningBoard
-          ? 'bg-[var(--active-board-bg)] ring-2 ring-[var(--highlight-ink)]'
-          : ''
+          ? 'bg-[var(--accent-wash-strong)] rounded-[7px_4px_8px_5px]'
+          : isActive && !isResolved
+            ? 'bg-[var(--active-board-bg)] rounded-[7px_4px_8px_5px] shadow-[inset_0_0_0_1.5px_var(--active-board-border)]'
+            : 'bg-transparent'
       }`}
     >
       {/* Container box where both grid lines and cells share the exact same bounds */}
       <div className="relative w-full h-full aspect-square">
         {/* Authentic Hand-Drawn 3x3 Grid Lines for this Sector */}
         <div
-          className={`absolute inset-0 pointer-events-none text-[var(--ink)] transition-opacity duration-200 z-0 ${
-            isActive && !isResolved ? 'opacity-90' : isResolved ? 'opacity-40' : 'opacity-65'
+          className={`absolute inset-0 pointer-events-none text-[var(--highlight-ink)] transition-opacity duration-200 z-0 ${
+            isActive && !isResolved ? 'opacity-95' : isResolved ? 'opacity-35' : 'opacity-72'
           }`}
         >
           <HandDrawnLocalGrid sectorIdx={boardIdx} className="w-full h-full" />
@@ -144,23 +143,39 @@ export const LocalBoard: React.FC<LocalBoardProps> = ({
           })}
         </div>
 
+        {/* Local sector winning line pencil strike-through */}
+        {winningLine && winningLine.length === 3 && (
+          <PencilLineStrike
+            line={winningLine}
+            size={100}
+            className="absolute inset-0 w-full h-full z-15"
+          />
+        )}
+
         {/* Resolved Overlay (when a player won this mini-board or tied) */}
         {isResolved && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--bg)]/85 backdrop-blur-[0.5px] animate-fade-up select-none pointer-events-none p-2 sm:p-3">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--surface)]/78 backdrop-blur-[0.5px] animate-fade-up select-none pointer-events-none p-2 sm:p-2.5 rounded-[4px]">
+            {(winner === 'X' || winner === 'O') && (
+              <PencilSectorCircle
+                variant={boardIdx}
+                isGlobalWinningBoard={isGlobalWinningBoard}
+                className="absolute inset-1 w-[calc(100%-0.5rem)] h-[calc(100%-0.5rem)]"
+              />
+            )}
             {winner === 'X' && (
               <HandDrawnX
                 variant={boardIdx % 3}
-                className="w-full h-full max-w-[85px] max-h-[85px] text-[var(--highlight-ink)]"
+                className="relative z-10 w-[72%] h-[72%] max-w-[78px] max-h-[78px] text-[var(--highlight-ink)]"
               />
             )}
             {winner === 'O' && (
               <HandDrawnO
                 variant={boardIdx % 3}
-                className="w-full h-full max-w-[85px] max-h-[85px] text-[var(--highlight-ink)]"
+                className="relative z-10 w-[72%] h-[72%] max-w-[78px] max-h-[78px] text-[var(--highlight-ink)]"
               />
             )}
             {winner === 'TIE' && (
-              <span className="text-xs uppercase tracking-widest text-[var(--ink-soft)] font-mono">
+              <span className="font-hand text-base sm:text-lg tracking-wide text-[var(--ink-soft)] border border-dashed border-[var(--line-strong)] px-2 py-0.5 rounded-[6px_4px_7px_5px] bg-[var(--bg)]/80">
                 tie
               </span>
             )}

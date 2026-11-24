@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { AlertCircle, RefreshCw, Plus, Bot } from 'lucide-react';
 import { RoomJoinError } from '@/types/game';
 import { useTranslation } from '@/i18n/LanguageContext';
+import { PencilAlert, PencilBot, PencilReset } from './hand-drawn/PencilIcons';
 
 interface OnlineRoomErrorCardProps {
   error: RoomJoinError;
@@ -34,10 +34,10 @@ export const OnlineRoomErrorCard: React.FC<OnlineRoomErrorCardProps> = ({
   return (
     <div
       role="alert"
-      className="w-full max-w-[460px] mx-auto my-3 p-4 rounded-xl border border-[var(--line-strong)] bg-[var(--bg)] shadow-sm animate-fade-up"
+      className="pencil-card w-full max-w-[430px] sm:max-w-[540px] mx-auto my-3 p-4 animate-fade-up"
     >
       <div className="flex items-start gap-2.5">
-        <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+        <PencilAlert className="w-4 h-4 text-[var(--highlight-ink)] shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-sans text-[var(--highlight-ink)] font-medium lowercase mb-3">
             {errorMessage}
@@ -46,25 +46,24 @@ export const OnlineRoomErrorCard: React.FC<OnlineRoomErrorCardProps> = ({
             <button
               type="button"
               onClick={onTryAgain}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--highlight-ink)] text-[var(--bg)] text-xs font-sans font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer min-h-[40px]"
+              className="pencil-btn-primary inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-sans font-medium lowercase cursor-pointer min-h-[40px]"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
+              <PencilReset className="w-3.5 h-3.5" />
               <span>{t.onlineModal.tryAgain}</span>
             </button>
             <button
               type="button"
               onClick={onCreateRoom}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--line-strong)] text-[var(--ink)] text-xs font-sans lowercase hover:border-[var(--highlight-ink)] transition-colors cursor-pointer min-h-[40px]"
+              className="pencil-btn-secondary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans lowercase cursor-pointer min-h-[40px]"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{t.onlineModal.createMyOwnRoom}</span>
+              <span>+ {t.onlineModal.createMyOwnRoom}</span>
             </button>
             <button
               type="button"
               onClick={onPlayVsAi}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--line)] text-[var(--ink-soft)] text-xs font-sans lowercase hover:text-[var(--highlight-ink)] hover:border-[var(--line-strong)] transition-colors cursor-pointer min-h-[40px]"
+              className="pencil-btn-secondary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans lowercase cursor-pointer min-h-[40px]"
             >
-              <Bot className="w-3.5 h-3.5" />
+              <PencilBot className="w-3.5 h-3.5" />
               <span>{t.onlineModal.playVsAi}</span>
             </button>
           </div>

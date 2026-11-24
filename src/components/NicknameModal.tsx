@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, User, Sparkles } from 'lucide-react';
+import { PencilClose, PencilSparkles, PencilUser } from './hand-drawn/PencilIcons';
 import { useTranslation } from '@/i18n/LanguageContext';
 import { generateRandomNickname, validateNickname } from '@/lib/nickname';
 
@@ -121,7 +121,7 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-up"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--scrim)] backdrop-blur-xs animate-fade-up"
       onClick={isFirstVisit ? onSkip : onClose}
     >
       <div
@@ -129,16 +129,16 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="nickname-modal-title"
-        className="relative w-full max-w-[calc(100vw-2rem)] sm:max-w-[380px] max-h-[90dvh] overflow-y-auto p-5 sm:p-6 rounded-2xl bg-[var(--bg)] border border-[var(--line-strong)] shadow-2xl text-[var(--ink)]"
+        className="pencil-sheet relative w-full max-w-[calc(100vw-2rem)] sm:max-w-[390px] max-h-[90dvh] overflow-y-auto p-5 sm:p-6 text-[var(--ink)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-[var(--line)]">
+        <div className="flex items-center justify-between pb-3 border-b border-dashed border-[var(--line-strong)]">
           <div className="flex items-center gap-2">
-            <User size={16} className="text-[var(--highlight-ink)]" />
+            <PencilUser className="w-4 h-4 text-[var(--highlight-ink)]" />
             <h2
               id="nickname-modal-title"
-              className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase"
+              className="font-hand text-2xl font-semibold text-[var(--highlight-ink)] lowercase leading-none"
             >
               {isFirstVisit ? t.nicknameModal.chooseTitle : t.nicknameModal.changeTitle}
             </h2>
@@ -147,10 +147,10 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1 rounded-md text-[var(--ink-mute)] hover:text-[var(--highlight-ink)] hover:bg-[var(--line)]/50 transition-colors cursor-pointer"
+              className="pencil-chip p-1.5 min-h-[36px] min-w-[36px] flex items-center justify-center text-[var(--ink-soft)] cursor-pointer"
               aria-label={t.common.close}
             >
-              <X size={15} />
+              <PencilClose className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -174,7 +174,7 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
               }}
               placeholder={t.nicknameModal.placeholder}
               aria-label={t.nicknameModal.placeholder}
-              className="w-full px-3 py-2 pr-16 text-xs rounded-lg border border-[var(--line-strong)] bg-transparent text-[var(--highlight-ink)] focus:outline-none focus:border-[var(--highlight-ink)] transition-colors font-medium font-sans"
+              className="w-full px-3 py-2 pr-16 text-xs rounded-[7px_4px_8px_5px] border border-[var(--line-strong)] bg-[var(--bg)] text-[var(--highlight-ink)] focus:outline-none focus:border-[var(--highlight-ink)] transition-colors font-medium font-sans"
               autoFocus
             />
 
@@ -185,17 +185,17 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
               <button
                 type="button"
                 onClick={handleRandomize}
-                className="p-1 rounded text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] hover:bg-[var(--line)]/50 transition-colors cursor-pointer"
+                className="p-1 rounded-[4px] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] hover:bg-[var(--accent-wash)] transition-colors cursor-pointer"
                 title={t.nicknameModal.randomizeTooltip}
                 aria-label={t.nicknameModal.randomizeTooltip}
               >
-                <Sparkles size={13} />
+                <PencilSparkles className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
           {error && (
-            <p className="text-[11px] text-rose-500 font-medium lowercase">
+            <p className="text-[11px] text-[var(--highlight-ink)] highlighter-mark px-2 py-1 font-medium lowercase">
               {error}
             </p>
           )}
@@ -204,7 +204,7 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
             {t.nicknameModal.rulesHint}
           </div>
 
-          <div className="pt-2 text-[10px] text-[var(--ink-mute)] font-light lowercase border-t border-[var(--line)]/50 leading-relaxed">
+          <div className="pt-2 text-[10px] text-[var(--ink-mute)] font-light lowercase border-t border-dashed border-[var(--line-strong)] leading-relaxed">
             {t.nicknameModal.eloNote}
           </div>
 
@@ -215,13 +215,13 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
                 <button
                   type="button"
                   onClick={onSkip}
-                  className="px-3 py-1.5 rounded-lg border border-[var(--line)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] lowercase transition-colors cursor-pointer"
+                  className="pencil-btn-secondary px-3.5 py-1.5 lowercase cursor-pointer"
                 >
                   {t.nicknameModal.skip}
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-lg bg-[var(--highlight-ink)] text-[var(--bg)] font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+                  className="pencil-btn-primary px-4 py-1.5 font-medium lowercase cursor-pointer"
                 >
                   {t.nicknameModal.save}
                 </button>
@@ -231,13 +231,13 @@ export const NicknameModal: React.FC<NicknameModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-3 py-1.5 rounded-lg border border-[var(--line)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] lowercase transition-colors cursor-pointer"
+                  className="pencil-btn-secondary px-3.5 py-1.5 lowercase cursor-pointer"
                 >
                   {t.nicknameModal.cancel}
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-lg bg-[var(--highlight-ink)] text-[var(--bg)] font-medium lowercase hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+                  className="pencil-btn-primary px-4 py-1.5 font-medium lowercase cursor-pointer"
                 >
                   {t.nicknameModal.save}
                 </button>

@@ -1,7 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Copy, Check, QrCode, Globe, LogIn } from 'lucide-react';
+import {
+  PencilArrowRight,
+  PencilCheck,
+  PencilClose,
+  PencilCopy,
+  PencilGlobe,
+  PencilQr,
+} from './hand-drawn/PencilIcons';
 import { ConnectionStatus, OnlineRole, Player, RoomJoinError, SideChoice } from '@/types/game';
 import { useTranslation } from '@/i18n/LanguageContext';
 import { analytics } from '@/lib/analytics/client';
@@ -193,7 +200,7 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-up"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--scrim)] backdrop-blur-xs animate-fade-up"
       onClick={onClose}
     >
       <div
@@ -201,16 +208,16 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="online-room-modal-title"
-        className="relative w-full max-w-[calc(100vw-2rem)] sm:max-w-[440px] max-h-[90dvh] overflow-y-auto p-4 sm:p-6 rounded-2xl bg-[var(--bg)] border border-[var(--line-strong)] shadow-2xl text-[var(--ink)]"
+        className="pencil-sheet relative w-full max-w-[calc(100vw-2rem)] sm:max-w-[440px] max-h-[90dvh] overflow-y-auto p-4 sm:p-6 text-[var(--ink)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-[var(--line)]">
+        <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-dashed border-[var(--line-strong)]">
           <div className="flex items-center gap-2">
-            <Globe size={18} className="text-[var(--highlight-ink)]" />
+            <PencilGlobe className="w-4 h-4 text-[var(--highlight-ink)]" />
             <h2
               id="online-room-modal-title"
-              className="text-base sm:text-lg font-normal lowercase tracking-tight"
+              className="font-hand text-2xl font-semibold text-[var(--highlight-ink)] lowercase leading-none"
             >
               {t.onlineModal.title}
             </h2>
@@ -218,25 +225,25 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-md text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+            className="pencil-chip p-2 min-h-[40px] min-w-[40px] flex items-center justify-center text-[var(--ink-soft)] cursor-pointer"
             aria-label={t.common.close}
           >
-            <X size={17} />
+            <PencilClose className="w-4 h-4" />
           </button>
         </div>
 
         {/* Navigation Tabs (Share Room / Join by Code) */}
-        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--line)]/30 border border-[var(--line)] mb-4 text-xs font-sans">
+        <div className="pencil-card flex items-center gap-1 p-1 mb-4 text-xs font-sans">
           <button
             type="button"
             onClick={() => setActiveTab('share')}
-            className={`flex-1 py-1.5 px-3 rounded-md transition-all cursor-pointer lowercase flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-1.5 px-3 rounded-[5px_3px_6px_4px] transition-all cursor-pointer lowercase flex items-center justify-center gap-1.5 ${
               activeTab === 'share'
-                ? 'bg-[var(--line-strong)] text-[var(--highlight-ink)] font-medium shadow-xs'
-                : 'text-[var(--ink-mute)] hover:text-[var(--ink-soft)]'
+                ? 'bg-[var(--accent-wash-strong)] text-[var(--highlight-ink)] font-semibold border border-[var(--accent-border)]'
+                : 'text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] border border-transparent'
             }`}
           >
-            <Globe size={13} />
+            <PencilGlobe className="w-3.5 h-3.5" />
             <span>
               {language === 'ru' ? 'комната' : 'room'} {roomId ? `#${roomId}` : ''}
             </span>
@@ -244,13 +251,13 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('join')}
-            className={`flex-1 py-1.5 px-3 rounded-md transition-all cursor-pointer lowercase flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-1.5 px-3 rounded-[5px_3px_6px_4px] transition-all cursor-pointer lowercase flex items-center justify-center gap-1.5 ${
               activeTab === 'join'
-                ? 'bg-[var(--line-strong)] text-[var(--highlight-ink)] font-medium shadow-xs'
-                : 'text-[var(--ink-mute)] hover:text-[var(--ink-soft)]'
+                ? 'bg-[var(--accent-wash-strong)] text-[var(--highlight-ink)] font-semibold border border-[var(--accent-border)]'
+                : 'text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] border border-transparent'
             }`}
           >
-            <LogIn size={13} />
+            <PencilArrowRight className="w-3.5 h-3.5" />
             <span>{language === 'ru' ? 'войти по коду' : 'join by code'}</span>
           </button>
         </div>
@@ -258,16 +265,16 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
         {activeTab === 'share' ? (
           <>
             {/* Status Indicator */}
-            <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-[var(--line)]/30 border border-[var(--line)] mb-3 text-xs font-sans">
+            <div className="pencil-card flex items-center gap-2.5 px-3 py-2 mb-3 text-xs font-sans bg-[var(--bg)]">
               <div className="relative flex items-center justify-center">
                 {status === 'connected' ? (
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent)] border border-[var(--highlight-ink)]" />
                 ) : status === 'waiting' || status === 'connecting' ? (
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-wash-strong)] border border-[var(--highlight-ink)] animate-pulse" />
                 ) : status === 'error' ? (
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[var(--highlight-ink)]" />
                 ) : (
-                  <span className="w-2.5 h-2.5 rounded-full bg-zinc-400" />
+                  <span className="w-2.5 h-2.5 rounded-full border border-[var(--line-strong)]" />
                 )}
               </div>
               <div className="flex-1 flex items-center justify-between">
@@ -290,7 +297,7 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
                       : t.onlineModal.errorConnectionFailed
                     : language === 'ru' ? 'комната создана' : 'room ready'}
                 </span>
-                <span className="text-[11px] text-[var(--ink-mute)] font-sans lowercase">
+                <span className="text-[11px] text-[var(--ink-soft)] font-sans lowercase">
                   {myPlayer === 'X' ? t.sideSelection.youAreX : t.sideSelection.youAreO}
                 </span>
               </div>
@@ -298,11 +305,11 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
 
             {/* Creator Side Selector (Host only) */}
             {role === 'host' && onSelectCreatorSide && (
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--line)]/20 border border-[var(--line)] mb-3 text-xs animate-fade-up">
+              <div className="pencil-card flex items-center justify-between p-2.5 bg-[var(--bg)] mb-3 text-xs animate-fade-up">
                 <span className="text-[11px] text-[var(--ink-soft)] lowercase font-medium">
                   {t.sideSelection.side}:
                 </span>
-                <div className="flex items-center rounded-md border border-[var(--line-strong)] p-0.5 font-sans lowercase text-xs bg-[var(--bg)]">
+                <div className="pencil-chip flex items-center p-0.5 font-sans lowercase text-xs">
                   {(['X', 'O', 'random'] as const).map((side) => {
                     const isSelected = creatorSidePreference === side;
                     return (
@@ -310,10 +317,10 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
                         key={side}
                         type="button"
                         onClick={() => onSelectCreatorSide(side)}
-                        className={`px-2.5 py-0.5 rounded transition-all cursor-pointer font-medium ${
+                        className={`px-2.5 py-0.5 rounded-[4px] transition-all cursor-pointer font-medium ${
                           isSelected
-                            ? 'bg-[var(--line-strong)] text-[var(--highlight-ink)] shadow-2xs'
-                            : 'text-[var(--ink-mute)] hover:text-[var(--ink-soft)]'
+                            ? 'bg-[var(--accent-wash-strong)] text-[var(--highlight-ink)] border border-[var(--accent-border)]'
+                            : 'text-[var(--ink-mute)] hover:text-[var(--ink-soft)] border border-transparent'
                         }`}
                       >
                         {side === 'random' ? t.sideSelection.random : side}
@@ -326,13 +333,13 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
 
             {/* Joiner Notice (Guest only) */}
             {role === 'guest' && (
-              <div className="p-2 rounded-lg bg-[var(--line)]/20 border border-[var(--line)] mb-3 text-[11px] text-[var(--ink-soft)] lowercase text-center">
+              <div className="pencil-card p-2 bg-[var(--bg)] mb-3 text-[11px] text-[var(--ink-soft)] lowercase text-center">
                 {`${t.sideSelection.creatorPlays} ${opponentPlayer || 'X'}, ${t.sideSelection.joinerPlays} ${myPlayer || 'O'}`}
               </div>
             )}
 
             {/* Players in Room */}
-            <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-[var(--line)]/15 border border-[var(--line)] mb-3 text-xs">
+            <div className="pencil-card grid grid-cols-2 gap-2 p-2.5 bg-[var(--bg)] mb-3 text-xs">
               <div>
                 <span className="text-[10px] text-[var(--ink-mute)] uppercase tracking-wider block font-medium">
                   {t.onlineModal.youLabel} ({myPlayer || (role === 'host' ? 'X' : 'O')})
@@ -360,29 +367,29 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
 
             {/* Big Prominent Room Code Box */}
             {roomId && (
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--line)]/20 border border-[var(--line)] mb-3">
+              <div className="pencil-card flex items-center justify-between p-3 bg-[var(--bg)] mb-3">
                 <div>
                   <span className="text-[10px] text-[var(--ink-mute)] uppercase tracking-wider block font-medium">
                     {language === 'ru' ? 'код комнаты' : 'room code'}
                   </span>
-                  <span className="text-xl font-mono font-medium tracking-widest text-[var(--highlight-ink)] select-all">
+                  <span className="text-xl font-mono font-semibold tracking-widest text-[var(--highlight-ink)] select-all highlighter-mark px-1">
                     {roomId}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={handleCopyCode}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-sans lowercase font-medium border border-[var(--line-strong)] hover:bg-[var(--line)]/50 text-[var(--highlight-ink)] transition-colors cursor-pointer"
+                  className="pencil-btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans lowercase font-medium cursor-pointer"
                   title={language === 'ru' ? 'Скопировать код комнаты' : 'Copy room code'}
                 >
                   {copiedCode ? (
                     <>
-                      <Check size={13} />
+                      <PencilCheck className="w-3.5 h-3.5" />
                       <span>{language === 'ru' ? 'скопирован' : 'copied'}</span>
                     </>
                   ) : (
                     <>
-                      <Copy size={13} />
+                      <PencilCopy className="w-3.5 h-3.5" />
                       <span>{language === 'ru' ? 'скопировать код' : 'copy code'}</span>
                     </>
                   )}
@@ -400,22 +407,22 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
                   type="text"
                   readOnly
                   value={roomUrl}
-                  className="flex-1 px-3 py-2 text-xs font-mono rounded-lg border border-[var(--line)] bg-[var(--bg-subtle)] text-[var(--ink)] focus:outline-none select-all"
+                  className="flex-1 px-3 py-2 text-xs font-mono rounded-[7px_4px_8px_5px] border border-[var(--line-strong)] bg-[var(--bg)] text-[var(--ink)] focus:outline-none select-all"
                 />
                 <button
                   type="button"
                   onClick={handleCopyLink}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-sans lowercase font-medium bg-[var(--highlight-ink)] text-[var(--bg)] hover:opacity-90 transition-all cursor-pointer shrink-0"
+                  className="pencil-btn-primary flex items-center gap-1.5 px-3 py-2 text-xs font-sans lowercase font-medium cursor-pointer shrink-0"
                   title={t.onlineModal.copyLink}
                 >
                   {copiedLink ? (
                     <>
-                      <Check size={14} />
+                      <PencilCheck className="w-3.5 h-3.5" />
                       <span>{t.common.linkCopied}</span>
                     </>
                   ) : (
                     <>
-                      <Copy size={14} />
+                      <PencilCopy className="w-3.5 h-3.5" />
                       <span>{t.onlineModal.copyLink}</span>
                     </>
                   )}
@@ -425,9 +432,9 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
 
             {/* QR Code Section */}
             {qrDataUrl && (
-              <div className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-[var(--line)]/15 border border-[var(--line)] mb-4">
+              <div className="pencil-card flex flex-col items-center justify-center p-2.5 bg-[var(--bg)] mb-4">
                 <div className="flex items-center gap-1.5 text-[11px] text-[var(--ink-mute)] mb-1.5 lowercase">
-                  <QrCode size={12} />
+                  <PencilQr className="w-3.5 h-3.5" />
                   <span>{language === 'ru' ? 'или отсканируй камерой телефона' : 'or scan with mobile camera'}</span>
                 </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -436,7 +443,7 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
                   alt="QR Code"
                   width={130}
                   height={130}
-                  className="rounded-lg"
+                  className="rounded-[6px_4px_7px_5px]"
                 />
               </div>
             )}
@@ -458,10 +465,10 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
                 placeholder={language === 'ru' ? 'например, 7xk2q9' : 'e.g. 7xk2q9'}
                 autoFocus
                 maxLength={32}
-                className="w-full px-3.5 py-2.5 text-base font-mono tracking-widest rounded-xl border border-[var(--line-strong)] bg-[var(--bg-subtle)] text-[var(--highlight-ink)] focus:outline-none focus:ring-1 focus:ring-[var(--highlight-ink)]"
+                className="w-full px-3.5 py-2.5 text-base font-mono tracking-widest rounded-[8px_5px_9px_6px] border border-[var(--line-strong)] bg-[var(--bg)] text-[var(--highlight-ink)] focus:outline-none focus:border-[var(--highlight-ink)]"
               />
               {(joinError || (status === 'error' && peerJoinError)) && (
-                <span className="text-xs text-rose-500 mt-1 block lowercase">
+                <span className="text-xs text-[var(--highlight-ink)] highlighter-mark px-1.5 py-0.5 mt-1 inline-block lowercase">
                   {joinError ||
                     (peerJoinError === 'timeout'
                       ? t.onlineModal.errorTimeout
@@ -481,32 +488,32 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
 
             <button
               type="submit"
-              className="w-full py-2.5 px-4 rounded-xl font-medium text-xs font-sans lowercase bg-[var(--highlight-ink)] text-[var(--bg)] hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-center gap-1.5"
+              className="pencil-btn-primary w-full py-2.5 px-4 font-medium text-xs font-sans lowercase cursor-pointer flex items-center justify-center gap-1.5"
             >
-              <LogIn size={14} />
+              <PencilArrowRight className="w-3.5 h-3.5" />
               <span>{t.onlineModal.joinButton}</span>
             </button>
           </form>
         )}
 
         {/* Actions Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-[var(--line)] text-xs font-sans">
+        <div className="flex items-center justify-between pt-3 border-t border-dashed border-[var(--line-strong)] text-xs font-sans">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onLeaveRoom}
-              className="text-[var(--ink-mute)] hover:text-rose-500 transition-colors cursor-pointer lowercase"
+              className="text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] hairline-link cursor-pointer lowercase"
             >
               {t.onlineModal.leaveRoom}
             </button>
-            <span className="text-[var(--line)]">·</span>
+            <span className="text-[var(--line-strong)]">·</span>
             <button
               type="button"
               onClick={() => {
                 onCreateRoom();
                 setActiveTab('share');
               }}
-              className="text-[var(--ink-mute)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer lowercase"
+              className="text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] hairline-link cursor-pointer lowercase"
             >
               {t.onlineModal.createNewRoom}
             </button>
@@ -515,7 +522,7 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg font-medium lowercase bg-[var(--line)] hover:bg-[var(--line-strong)] text-[var(--highlight-ink)] transition-colors cursor-pointer"
+            className="pencil-btn-secondary px-4 py-1.5 font-medium lowercase cursor-pointer"
           >
             {language === 'ru' ? 'к доске' : 'to board'}
           </button>

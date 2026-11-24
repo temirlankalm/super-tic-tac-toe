@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { ConnectionStatus, GameState, OnlineRole, Player } from '@/types/game';
 import { isBoardFull } from '@/lib/gameLogic';
 import { LocalBoard } from './LocalBoard';
+import { PencilLineStrike } from './hand-drawn/HandDrawnOverlays';
 
 interface SuperBoardProps {
   gameState: GameState;
@@ -89,10 +90,10 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
       role="grid"
       aria-label="Super Tic-Tac-Toe 9x9 Board"
       onKeyDown={handleKeyDown}
-      className="relative w-full max-w-[min(460px,calc(100vw-1.5rem),calc(100dvh-260px))] sm:max-w-[min(480px,calc(100vw-2rem),calc(100dvh-260px))] aspect-square mx-auto select-none p-1 sm:p-2"
+      className="pencil-sheet relative w-full max-w-[min(430px,calc(100vw-1.5rem),calc(100dvh-250px))] sm:max-w-[min(540px,calc(100vw-2rem),calc(100dvh-225px))] aspect-square mx-auto select-none p-2 sm:p-3.5"
     >
       {/* 3x3 Grid of 9 Sectors with gap-0 and continuous main divider lines */}
-      <div className="grid grid-cols-3 grid-rows-3 w-full h-full gap-0">
+      <div className="relative grid grid-cols-3 grid-rows-3 w-full h-full gap-0">
         {boardWinners.map((boardWinner, boardIdx) => {
           const isActive =
             winner === null &&
@@ -143,6 +144,16 @@ export const SuperBoard: React.FC<SuperBoardProps> = ({
             </div>
           );
         })}
+
+        {/* Global 3-sector win strike-through */}
+        {globalWinningLine && globalWinningLine.length === 3 && (
+          <PencilLineStrike
+            line={globalWinningLine}
+            size={300}
+            heavy
+            className="absolute inset-0 w-full h-full z-30"
+          />
+        )}
       </div>
     </div>
   );

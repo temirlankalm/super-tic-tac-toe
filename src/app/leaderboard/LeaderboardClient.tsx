@@ -3,17 +3,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
-  ArrowLeft,
-  Trophy,
-  RefreshCw,
-  Sun,
-  Moon,
-  Globe,
-  Award,
-  Sparkles,
-  HelpCircle,
-  ShieldAlert,
-} from 'lucide-react';
+  PencilAlert,
+  PencilArrowLeft,
+  PencilMoon,
+  PencilReset,
+  PencilSun,
+  PencilTrophy,
+} from '@/components/hand-drawn/PencilIcons';
 import { LeaderboardEntry, LeaderboardResponse } from '@/lib/elo/types';
 import { getOrCreatePlayerId } from '@/hooks/useElo';
 import { generateRandomNickname, sanitizeNickname } from '@/lib/nickname';
@@ -113,36 +109,36 @@ export function LeaderboardClient() {
   const currentPlayer = data?.currentPlayer;
 
   return (
-    <main className="min-h-screen bg-[var(--bg)] text-[var(--ink)] font-sans antialiased p-4 sm:p-6 md:p-12 selection:bg-[var(--selection-bg)]">
-      <div className="max-w-[720px] mx-auto animate-fade-up">
+    <main className="min-h-screen text-[var(--ink)] font-sans antialiased p-4 sm:p-6 md:p-10 selection:bg-[var(--selection-bg)]">
+      <div className="max-w-[740px] mx-auto animate-fade-up">
         {/* Navigation Bar */}
-        <div className="flex items-center justify-between pb-4 mb-6 border-b border-[var(--line)]">
+        <div className="flex items-center justify-between pb-4 mb-6 border-b border-dashed border-[var(--line-strong)]">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors lowercase border-b border-[var(--underline)] pb-0.5 cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors lowercase hairline-link cursor-pointer"
           >
-            <ArrowLeft size={13} />
+            <PencilArrowLeft className="w-3.5 h-3.5" />
             <span>{isRu ? 'вернуться к игре' : 'play Tic³'}</span>
           </Link>
 
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-1.5 text-xs">
             {/* Refresh */}
             <button
               type="button"
               onClick={() => fetchLeaderboard(playerId)}
               disabled={isLoading}
-              className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+              className="pencil-chip p-1.5 text-[var(--ink-soft)] cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
               title={isRu ? 'обновить рейтинг' : 'refresh rankings'}
               aria-label="refresh"
             >
-              <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
+              <PencilReset className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
 
             {/* Language */}
             <button
               type="button"
               onClick={toggleLanguage}
-              className="px-1.5 py-1 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] font-mono text-[11px] uppercase transition-colors cursor-pointer"
+              className="pencil-chip px-2 py-1 text-[var(--ink-soft)] font-mono text-[11px] uppercase cursor-pointer min-h-[32px] flex items-center justify-center"
               title={isRu ? 'Switch to English' : 'Переключить на русский'}
             >
               {isRu ? 'EN' : 'RU'}
@@ -152,26 +148,26 @@ export function LeaderboardClient() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-1.5 rounded-md border border-[var(--line)] hover:border-[var(--line-strong)] text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] transition-colors cursor-pointer"
+              className="pencil-chip p-1.5 text-[var(--ink-soft)] cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
               title={isDark ? (isRu ? 'светлая тема' : 'light theme') : isRu ? 'тёмная тема' : 'dark theme'}
             >
-              {isDark ? <Sun size={13} /> : <Moon size={13} />}
+              {isDark ? <PencilSun className="w-3.5 h-3.5" /> : <PencilMoon className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
 
         {/* Header */}
         <header className="mb-6">
-          <div className="flex items-center gap-2 mb-1.5 text-[var(--ink-mute)]">
-            <Trophy size={16} className="text-amber-500" />
-            <span className="text-[11px] uppercase tracking-widest font-mono">
+          <div className="flex items-center gap-2 mb-1.5 text-[var(--highlight-ink)]">
+            <PencilTrophy className="w-4 h-4" />
+            <span className="text-[11px] uppercase tracking-widest font-mono highlighter-mark px-1.5 py-0.5">
               {isRu ? 'глобальный рейтинг' : 'global rankings'}
             </span>
           </div>
-          <h1 className="font-serif text-3xl md:text-4xl font-medium tracking-tight text-[var(--highlight-ink)] lowercase">
+          <h1 className="font-hand text-4xl md:text-5xl font-semibold tracking-tight text-[var(--highlight-ink)] lowercase leading-tight">
             {isRu ? 'таблица лидеров' : 'leaderboard'}
           </h1>
-          <p className="text-xs sm:text-sm text-[var(--ink-soft)] mt-1.5 font-light lowercase">
+          <p className="text-xs sm:text-sm text-[var(--ink-soft)] mt-1 font-light lowercase">
             {isRu
               ? 'топ игроков Tic³ по системе Elo · K=32/40 · партии против ИИ и друзей'
               : 'top Tic³ players ranked by Elo · K=32/40 · rated vs AI and online friends'}
@@ -180,22 +176,22 @@ export function LeaderboardClient() {
 
         {/* Current Player Status Banner */}
         {currentPlayer && (
-          <div className="mb-6 p-4 rounded-xl border border-[var(--line-strong)] bg-[var(--active-board-bg)] shadow-xs animate-fade-up">
+          <div className="pencil-sheet mb-6 p-4 sm:p-5 bg-[var(--active-board-bg)] animate-fade-up">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full border border-[var(--line-strong)] bg-[var(--bg)] flex items-center justify-center font-serif text-base font-medium text-[var(--highlight-ink)] shrink-0">
+                <div className="w-11 h-11 rounded-full border-2 border-[var(--highlight-ink)] bg-[var(--surface)] flex items-center justify-center font-hand text-xl font-semibold text-[var(--highlight-ink)] shrink-0">
                   {currentPlayer.rank ? `#${currentPlayer.rank}` : '?'}
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-[var(--highlight-ink)]">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-[var(--highlight-ink)]">
                       {currentPlayer.nickname}
                     </span>
-                    <span className="px-1.5 py-0.2 rounded text-[10px] uppercase font-mono font-medium bg-[var(--highlight-ink)] text-[var(--bg)]">
+                    <span className="px-1.5 py-0.2 rounded-[3px] text-[10px] uppercase font-mono font-semibold bg-[var(--highlight-ink)] text-[var(--bg)]">
                       {isRu ? 'вы' : 'you'}
                     </span>
                     {currentPlayer.isProvisional && (
-                      <span className="px-1.5 py-0.2 rounded text-[10px] lowercase font-mono bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                      <span className="px-1.5 py-0.2 rounded-[3px] text-[10px] lowercase font-mono highlighter-mark border border-[var(--accent-border)] text-[var(--highlight-ink)]">
                         {isRu ? 'калибровка' : 'provisional'}
                       </span>
                     )}
@@ -214,11 +210,11 @@ export function LeaderboardClient() {
 
               {/* Rating Big Stat */}
               <div className="sm:text-right shrink-0">
-                <div className="text-2xl font-serif font-medium text-[var(--highlight-ink)]">
+                <div className="font-hand text-3xl font-semibold text-[var(--highlight-ink)] leading-none">
                   {currentPlayer.rating}{' '}
-                  <span className="text-xs font-mono font-normal text-[var(--ink-mute)]">ELO</span>
+                  <span className="text-xs font-mono font-normal text-[var(--ink-soft)]">ELO</span>
                 </div>
-                <div className="text-[11px] text-[var(--ink-mute)] lowercase">
+                <div className="text-[11px] text-[var(--ink-soft)] lowercase mt-1">
                   {currentPlayer.isProvisional
                     ? isRu
                       ? `осталось ${Math.max(0, 5 - currentPlayer.games)} игр до ранга`
@@ -231,8 +227,8 @@ export function LeaderboardClient() {
             </div>
 
             {/* Note on browser storage */}
-            <div className="mt-3 pt-2.5 border-t border-[var(--line)]/50 flex items-center gap-1.5 text-[11px] text-[var(--ink-mute)] font-light lowercase">
-              <ShieldAlert size={12} className="shrink-0 opacity-70" />
+            <div className="mt-3 pt-2.5 border-t border-dashed border-[var(--line-strong)] flex items-center gap-1.5 text-[11px] text-[var(--ink-soft)] font-light lowercase">
+              <PencilAlert className="w-3.5 h-3.5 shrink-0 opacity-80" />
               <span>
                 {isRu
                   ? 'рейтинг привязан к текущему устройству и браузеру. при очистке cookie доступ к профилю сбрасывается.'
@@ -244,14 +240,14 @@ export function LeaderboardClient() {
 
         {/* Tab Navigation (Top 100 vs Provisional) */}
         <div className="flex items-center justify-between mb-3 text-xs">
-          <div className="flex items-center gap-1 p-0.5 rounded-lg border border-[var(--line)] bg-[var(--bg)]">
+          <div className="pencil-chip flex items-center gap-1 p-0.5">
             <button
               type="button"
               onClick={() => setActiveTab('top')}
-              className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer lowercase ${
+              className={`px-3 py-1 rounded-[5px_3px_6px_4px] transition-colors cursor-pointer lowercase ${
                 activeTab === 'top'
-                  ? 'bg-[var(--highlight-ink)] text-[var(--bg)] font-medium shadow-xs'
-                  : 'text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
+                  ? 'bg-[var(--accent-wash-strong)] text-[var(--highlight-ink)] font-semibold border border-[var(--accent-border)]'
+                  : 'text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] border border-transparent'
               }`}
             >
               {isRu ? 'топ-100' : 'top 100'} ({data?.topEntries.length || 0})
@@ -259,10 +255,10 @@ export function LeaderboardClient() {
             <button
               type="button"
               onClick={() => setActiveTab('provisional')}
-              className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer lowercase ${
+              className={`px-3 py-1 rounded-[5px_3px_6px_4px] transition-colors cursor-pointer lowercase ${
                 activeTab === 'provisional'
-                  ? 'bg-[var(--highlight-ink)] text-[var(--bg)] font-medium shadow-xs'
-                  : 'text-[var(--ink-soft)] hover:text-[var(--highlight-ink)]'
+                  ? 'bg-[var(--accent-wash-strong)] text-[var(--highlight-ink)] font-semibold border border-[var(--accent-border)]'
+                  : 'text-[var(--ink-soft)] hover:text-[var(--highlight-ink)] border border-transparent'
               }`}
             >
               {isRu ? 'калибровка (< 5 игр)' : 'provisional (< 5)'} ({data?.provisionalEntries.length || 0})
@@ -275,11 +271,11 @@ export function LeaderboardClient() {
         </div>
 
         {/* Table Container */}
-        <div className="rounded-xl border border-[var(--line)] overflow-hidden bg-[var(--bg)]">
+        <div className="pencil-sheet overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-[var(--line)] text-[var(--ink-soft)] uppercase text-[10px] tracking-wider bg-[var(--line)]/10 font-mono">
+                <tr className="border-b border-dashed border-[var(--line-strong)] text-[var(--ink-soft)] uppercase text-[10px] tracking-wider bg-[var(--bg-subtle)]/60 font-mono">
                   <th className="py-2.5 px-3 w-12 text-center">#</th>
                   <th className="py-2.5 px-3">{isRu ? 'игрок' : 'player'}</th>
                   <th className="py-2.5 px-3 text-right">{isRu ? 'рейтинг' : 'elo'}</th>
@@ -288,7 +284,7 @@ export function LeaderboardClient() {
                   <th className="py-2.5 px-3 text-right">{isRu ? 'винрейт' : 'win%'}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--line)]/40 font-sans">
+              <tbody className="divide-y divide-[var(--line)] font-sans">
                 {activeTab === 'top' ? (
                   data?.topEntries.length === 0 ? (
                     <tr>
@@ -306,22 +302,18 @@ export function LeaderboardClient() {
                           key={entry.id}
                           className={`transition-colors ${
                             isMe
-                              ? 'bg-[var(--line)]/30 font-medium'
-                              : 'hover:bg-[var(--line)]/15'
+                              ? 'bg-[var(--accent-wash)] font-medium'
+                              : 'hover:bg-[var(--surface-hover)]'
                           }`}
                         >
                           <td className="py-2.5 px-3 text-center font-mono text-[var(--highlight-ink)] whitespace-nowrap">
                             {entry.rank === 1 ? (
-                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-[11px]">
+                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--accent)] border border-[var(--highlight-ink)] text-[var(--accent-ink)] font-bold text-[11px]">
                                 1
                               </span>
-                            ) : entry.rank === 2 ? (
-                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-300/40 text-slate-700 dark:text-slate-300 font-bold text-[11px]">
-                                2
-                              </span>
-                            ) : entry.rank === 3 ? (
-                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-700/20 text-amber-800 dark:text-amber-300 font-bold text-[11px]">
-                                3
+                            ) : entry.rank === 2 || entry.rank === 3 ? (
+                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-[var(--line-strong)] bg-[var(--bg)] text-[var(--highlight-ink)] font-semibold text-[11px]">
+                                {entry.rank}
                               </span>
                             ) : (
                               <span className="text-[var(--ink-mute)]">{entry.rank}</span>
@@ -332,7 +324,7 @@ export function LeaderboardClient() {
                               {entry.nickname}
                             </span>
                             {isMe && (
-                              <span className="ml-1.5 px-1.5 py-0.2 rounded text-[9px] uppercase font-mono bg-[var(--highlight-ink)] text-[var(--bg)]">
+                              <span className="ml-1.5 px-1.5 py-0.2 rounded-[3px] text-[9px] uppercase font-mono bg-[var(--highlight-ink)] text-[var(--bg)]">
                                 {isRu ? 'вы' : 'you'}
                               </span>
                             )}
@@ -367,8 +359,8 @@ export function LeaderboardClient() {
                         key={entry.id}
                         className={`transition-colors ${
                           isMe
-                            ? 'bg-[var(--line)]/30 font-medium'
-                            : 'hover:bg-[var(--line)]/15'
+                            ? 'bg-[var(--accent-wash)] font-medium'
+                            : 'hover:bg-[var(--surface-hover)]'
                         }`}
                       >
                         <td className="py-2.5 px-3 text-center font-mono text-[var(--ink-mute)] whitespace-nowrap">
@@ -379,11 +371,11 @@ export function LeaderboardClient() {
                             {entry.nickname}
                           </span>
                           {isMe && (
-                            <span className="ml-1.5 px-1.5 py-0.2 rounded text-[9px] uppercase font-mono bg-[var(--highlight-ink)] text-[var(--bg)]">
+                            <span className="ml-1.5 px-1.5 py-0.2 rounded-[3px] text-[9px] uppercase font-mono bg-[var(--highlight-ink)] text-[var(--bg)]">
                               {isRu ? 'вы' : 'you'}
                             </span>
                           )}
-                          <span className="ml-1.5 text-[10px] text-amber-600 dark:text-amber-400 font-mono">
+                          <span className="ml-1.5 text-[10px] text-[var(--ink-soft)] font-mono">
                             ({entry.games}/5)
                           </span>
                         </td>
@@ -409,8 +401,8 @@ export function LeaderboardClient() {
         </div>
 
         {/* Rules note on Elo */}
-        <div className="mt-8 pt-6 border-t border-[var(--line)] text-xs text-[var(--ink-soft)] lowercase leading-relaxed space-y-2">
-          <p className="font-serif text-sm font-medium text-[var(--highlight-ink)]">
+        <div className="mt-8 pt-6 border-t border-dashed border-[var(--line-strong)] text-xs text-[var(--ink-soft)] lowercase leading-relaxed space-y-2">
+          <p className="font-hand text-xl font-semibold text-[var(--highlight-ink)]">
             {isRu ? 'как начисляется рейтинг Elo' : 'how Elo is calculated'}
           </p>
           <p>
