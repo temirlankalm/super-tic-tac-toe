@@ -86,6 +86,14 @@ export interface ReferrerCategoryStat {
   sources: { name: string; count: number }[];
 }
 
+export interface HourlyArrivalStat {
+  hour: number;
+  label: string; // e.g. "00:00" - "23:00"
+  count: number;
+  uniques: number;
+  percentage: number;
+}
+
 export interface AnalyticsSummary {
   // Visitors & Periods
   visitorsNow: number; // active in last 5 min
@@ -127,6 +135,7 @@ export interface AnalyticsSummary {
   // Timelines & Events
   timeline: TimePoint[]; // hourly for last 24h
   dailyTimeline: TimePoint[]; // daily for last 14-30d
+  hourlyArrivals: HourlyArrivalStat[]; // 24-hour diurnal distribution (when users arrive)
   recentEvents: VisitorEvent[];
   botBreakdown: { name: string; count: number }[];
 }

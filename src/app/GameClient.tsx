@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { analytics } from '@/lib/analytics/client';
 import { MoveEvent, useSuperTicTacToe } from '@/hooks/useSuperTicTacToe';
 import { useTheme } from '@/hooks/useTheme';
@@ -714,15 +715,13 @@ export function GameClient({ initialRoomId }: GameClientProps) {
           temr.dev
         </a>
         <span className="mx-2 opacity-40">·</span>
-        <a
-          href="https://admin.ttt.temr.dev"
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          href="/admin"
           className="hover:text-[var(--highlight-ink)] hairline-link cursor-pointer"
-          title="панель аналитики платформы"
+          title={language === 'ru' ? 'панель аналитики платформы' : 'analytics dashboard'}
         >
           {t.common.analytics}
-        </a>
+        </Link>
       </footer>
 
       {/* Rules Modal */}

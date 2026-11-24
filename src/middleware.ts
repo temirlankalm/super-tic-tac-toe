@@ -32,7 +32,7 @@ export function middleware(req: NextRequest) {
   const isAdmin = isAdminHost(host);
 
   // ---------------------------------------------------------------------------
-  // 1. SUBDOMAIN: admin.ttt.temr.dev (or admin.localhost)
+  // 1. DEDICATED SUBDOMAIN: admin.ttt.temr.dev (or admin.localhost)
   // ---------------------------------------------------------------------------
   if (isAdmin) {
     // A. Robots.txt on admin subdomain -> disallow all crawlers
@@ -58,7 +58,6 @@ export function middleware(req: NextRequest) {
     }
 
     // C. Data API endpoints (/api/admin/stats, /api/admin/export)
-    // Server-side enforcement: block requests without session token before they reach handlers
     if (pathname === '/api/admin/stats' || pathname === '/api/admin/export') {
       if (!hasPotentialSessionToken(req)) {
         return NextResponse.json(
@@ -77,21 +76,14 @@ export function middleware(req: NextRequest) {
       return res;
     }
 
-    // D. Auth API endpoints (/api/admin/login, /api/admin/logout)
-    if (pathname.startsWith('/api/admin/')) {
-      const res = NextResponse.next();
-      res.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
-      return res;
-    }
-
-    // E. Other API routes (e.g. tracking or nickname sanitization) -> allow with security headers
+    // D. Auth & other API routes
     if (pathname.startsWith('/api/')) {
       const res = NextResponse.next();
       res.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
       return res;
     }
 
-    // F. Root path (/) or (/admin) -> rewrite to /admin so the admin page is served at https://admin.ttt.temr.dev/
+    // E. Root path (/) or (/admin) -> rewrite to /admin so the admin dashboard is served at root
     if (pathname === '/' || pathname === '/admin') {
       const url = req.nextUrl.clone();
       url.pathname = '/admin';
@@ -100,7 +92,7 @@ export function middleware(req: NextRequest) {
       return res;
     }
 
-    // G. Any non-admin page on the admin subdomain -> redirect to main game site
+    // F. Non-admin page on the admin subdomain -> redirect to main game site
     const mainSiteUrl = new URL(pathname, 'https://ttt.temr.dev');
     mainSiteUrl.search = req.nextUrl.search;
     return NextResponse.redirect(mainSiteUrl, { status: 307 });
@@ -108,18 +100,35 @@ export function middleware(req: NextRequest) {
 
   // ---------------------------------------------------------------------------
   // 2. MAIN SITE: ttt.temr.dev (or standard localhost)
-  // "The main site ttt.temr.dev must no longer serve any admin route (return 404 there)."
+  // Allow direct access to /admin with full security headers & auth guards
   // ---------------------------------------------------------------------------
-  if (pathname.startsWith('/admin') || pathname === '/admin') {
-    // Return 404 for any admin UI route requested on main domain
-    const notFoundUrl = req.nextUrl.clone();
-    notFoundUrl.pathname = '/_not-found';
-    return NextResponse.rewrite(notFoundUrl, { status: 404 });
+  if (pathname.startsWith('/admin')) {
+    const res = NextResponse.next();
+    res.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+    return res;
   }
 
-  if (pathname.startsWith('/api/admin')) {
-    // Return 404 JSON for any admin API route requested on main domain
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (pathname.startsWith('/api/admin/stats') || pathname === '/api/admin/export') {
+    if (!hasPotentialSessionToken(req)) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        {
+          status: 401,
+          headers: {
+            'X-Robots-Tag': 'noindex, nofollow, noarchive, nosnippet',
+          },
+        }
+      );
+    }
+    const res = NextResponse.next();
+    res.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+    return res;
+  }
+
+  if (pathname.startsWith('/api/admin/')) {
+    const res = NextResponse.next();
+    res.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+    return res;
   }
 
   // Allow all standard gameplay, rooms, daily challenge, rules, etc.

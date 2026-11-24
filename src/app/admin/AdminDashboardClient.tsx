@@ -26,9 +26,25 @@ import {
   Laptop,
   Smartphone,
   Tablet,
+  Grid3X3,
+  Layers,
+  Zap,
+  MapPin,
 } from 'lucide-react';
-import { AnalyticsSummary, VisitorEvent, CountryStat, TimePoint } from '@/lib/analytics/types';
+import { AnalyticsSummary, VisitorEvent, CountryStat, TimePoint, HourlyArrivalStat } from '@/lib/analytics/types';
 import { countryCodeToFlag } from '@/lib/analytics/botDetector';
+
+const SECTOR_NAMES: Record<number, string> = {
+  0: 'верх-лево (0)',
+  1: 'верх-центр (1)',
+  2: 'верх-право (2)',
+  3: 'центр-лево (3)',
+  4: 'центр (4)',
+  5: 'центр-право (5)',
+  6: 'низ-лево (6)',
+  7: 'низ-центр (7)',
+  8: 'низ-право (8)',
+};
 
 interface AdminDashboardClientProps {
   initialAuthenticated?: boolean;
@@ -399,21 +415,63 @@ export function AdminDashboardClient({
             {/* 1. Visitors Now */}
             <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
               <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
-                <span>now</span>
+                <span>сейчас</span>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               </div>
               <div className="text-2xl font-serif font-medium text-[var(--highlight-ink)]">
                 {s.visitorsNow}
               </div>
               <div className="text-[11px] text-[var(--ink-mute)] lowercase mt-1">
-                активных (5 мин)
+                онлайн (последние 5м)
               </div>
             </div>
 
-            {/* 2. Today */}
+            {/* 2. Total Visits */}
             <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
               <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
-                <span>today</span>
+                <span>всего визитеров</span>
+                <Eye size={13} />
+              </div>
+              <div className="text-2xl font-serif font-medium text-[var(--highlight-ink)]">
+                {s.totalVisits}
+              </div>
+              <div className="text-[11px] text-[var(--ink-mute)] lowercase mt-1">
+                за период {range}
+              </div>
+            </div>
+
+            {/* 3. Unique Human Visitors */}
+            <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
+              <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
+                <span>уникальные</span>
+                <Users size={13} />
+              </div>
+              <div className="text-2xl font-serif font-medium text-[var(--highlight-ink)]">
+                {s.uniqueVisitors}
+              </div>
+              <div className="text-[11px] text-[var(--ink-mute)] lowercase mt-1">
+                реальных людей
+              </div>
+            </div>
+
+            {/* 4. Bots & Crawlers */}
+            <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
+              <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
+                <span>боты</span>
+                <Bot size={13} className="text-rose-500" />
+              </div>
+              <div className="text-2xl font-serif font-medium text-rose-600 dark:text-rose-400">
+                {s.totalBots}
+              </div>
+              <div className="text-[11px] text-[var(--ink-mute)] lowercase mt-1">
+                {s.botPercentage}% от всего трафика
+              </div>
+            </div>
+
+            {/* 5. Today */}
+            <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
+              <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
+                <span>сегодня</span>
                 <Clock size={13} />
               </div>
               <div className="text-2xl font-serif font-medium text-[var(--highlight-ink)]">
@@ -424,59 +482,17 @@ export function AdminDashboardClient({
               </div>
             </div>
 
-            {/* 3. 7 Days */}
+            {/* 6. Retention Rate */}
             <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
               <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
-                <span>7 days</span>
-                <TrendingUp size={13} />
-              </div>
-              <div className="text-2xl font-serif font-medium text-[var(--highlight-ink)]">
-                {s.last7d.visits}
-              </div>
-              <div className="text-[11px] text-[var(--ink-mute)] lowercase mt-1">
-                {s.last7d.uniques} уникальных
-              </div>
-            </div>
-
-            {/* 4. 30 Days */}
-            <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
-                <span>30 days</span>
-                <Activity size={13} />
-              </div>
-              <div className="text-2xl font-serif font-medium text-[var(--highlight-ink)]">
-                {s.last30d.visits}
-              </div>
-              <div className="text-[11px] text-[var(--ink-mute)] lowercase mt-1">
-                {s.last30d.uniques} уникальных
-              </div>
-            </div>
-
-            {/* 5. Humans vs Bots */}
-            <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
-                <span>humans</span>
-                <Users size={13} />
-              </div>
-              <div className="text-2xl font-serif font-medium text-[var(--highlight-ink)]">
-                {s.humansVsBots.humanVisits}
-              </div>
-              <div className="text-[11px] text-[var(--ink-mute)] lowercase mt-1">
-                {s.humansVsBots.botVisits} ботов ({s.humansVsBots.botPercentage}%)
-              </div>
-            </div>
-
-            {/* 6. Returning vs New */}
-            <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div className="flex items-center justify-between text-[var(--ink-soft)] text-xs mb-1">
-                <span>returning</span>
+                <span>возвращаемость</span>
                 <CheckCircle2 size={13} />
               </div>
               <div className="text-2xl font-serif font-medium text-[var(--highlight-ink)]">
                 {s.returningVsNew.returningPercentage}%
               </div>
               <div className="text-[11px] text-[var(--ink-mute)] lowercase mt-1">
-                {s.returningVsNew.returning} повторных · {s.returningVsNew.newVisitors} новых
+                {s.returningVsNew.returning} повт. · {s.returningVsNew.newVisitors} новых
               </div>
             </div>
           </section>
@@ -557,9 +573,395 @@ export function AdminDashboardClient({
             </div>
           </section>
 
-          {/* Behavior, Funnel & Game Modes Grid */}
+          {/* 1. Board Sectors Click Scheme & Frequently Used Features */}
           <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            {/* 1. Behavior & Modes */}
+            {/* 1.1 3x3 Board Click Heatmap Scheme */}
+            {(() => {
+              const sectorClicks = s.featureStats?.sectorsClicked || [0, 0, 0, 0, 0, 0, 0, 0, 0];
+              const totalSectorClicks = sectorClicks.reduce((a, b) => a + b, 0) || 1;
+              const maxSectorClicks = Math.max(...sectorClicks, 1);
+              let topSectorIndex = 4;
+              sectorClicks.forEach((val, idx) => {
+                if (val > (sectorClicks[topSectorIndex] || 0)) topSectorIndex = idx;
+              });
+
+              return (
+                <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5">
+                        <Grid3X3 size={16} />
+                        <span>схема кликов по секторам доски</span>
+                      </h3>
+                      <span className="text-xs text-[var(--ink-soft)] font-mono">
+                        {totalSectorClicks} кликов
+                      </span>
+                    </div>
+                    <p className="text-xs text-[var(--ink-soft)] lowercase mb-4">
+                      тепловая карта 9 малых секторов большой доски (0–8)
+                    </p>
+
+                    {/* Visual 3x3 Grid of the SuperBoard */}
+                    <div className="grid grid-cols-3 gap-2.5 aspect-square max-w-[260px] mx-auto p-2.5 bg-[var(--line)]/20 rounded-xl border border-[var(--line)]">
+                      {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((sectorIdx) => {
+                        const clicks = sectorClicks[sectorIdx] || 0;
+                        const pct = Math.round((clicks / totalSectorClicks) * 100);
+                        const isTop = clicks === maxSectorClicks && clicks > 0;
+                        const intensity = Math.min(Math.max(clicks / maxSectorClicks, 0.08), 1);
+
+                        return (
+                          <div
+                            key={sectorIdx}
+                            style={{
+                              backgroundColor: `rgba(78, 84, 90, ${intensity * 0.38 + 0.05})`,
+                            }}
+                            className={`relative flex flex-col items-center justify-center p-2 rounded-lg border transition-all text-center cursor-default ${
+                              isTop
+                                ? 'border-[var(--highlight-ink)] shadow-xs ring-1 ring-[var(--highlight-ink)]/40'
+                                : 'border-[var(--line)]'
+                            }`}
+                            title={`${SECTOR_NAMES[sectorIdx]}: ${clicks} кликов (${pct}%)`}
+                          >
+                            {isTop && (
+                              <span className="absolute -top-1.5 -right-1.5 px-1 py-0.2 rounded-full text-[8px] font-bold bg-[var(--highlight-ink)] text-[var(--bg)] uppercase">
+                                топ
+                              </span>
+                            )}
+                            <span className="text-[10px] text-[var(--ink-soft)] font-mono">
+                              #{sectorIdx}
+                            </span>
+                            <span className="text-sm sm:text-base font-serif font-medium text-[var(--highlight-ink)]">
+                              {clicks}
+                            </span>
+                            <span className="text-[9px] text-[var(--ink-mute)] font-mono">
+                              {pct}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="pt-3 mt-4 border-t border-[var(--line)] text-[11px] text-[var(--ink-soft)] lowercase">
+                    чаще всего игроки ходят в сектор <strong className="text-[var(--highlight-ink)] font-mono">#{topSectorIndex}</strong> ({SECTOR_NAMES[topSectorIndex] || ''}) · {maxSectorClicks} кликов
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 1.2 Frequently Used Features (Difficulty, Time Controls, Modifiers) */}
+            <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
+              <div>
+                <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5 mb-1">
+                  <Zap size={16} />
+                  <span>что чаще всего используют</span>
+                </h3>
+                <p className="text-xs text-[var(--ink-soft)] lowercase mb-3">
+                  выбор уровня сложности, таймера и модификаторов
+                </p>
+
+                <div className="space-y-3.5">
+                  {/* AI Difficulties */}
+                  <div>
+                    <span className="text-[10px] text-[var(--ink-soft)] block uppercase tracking-wider mb-1">
+                      уровень сложности ии
+                    </span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {Object.entries(s.featureStats.difficulties || {}).map(([diff, count]) => (
+                        <div key={diff} className="flex items-center justify-between px-2.5 py-1 rounded-md border border-[var(--line)]/60 text-xs bg-[var(--line)]/10">
+                          <span className="text-[var(--highlight-ink)] lowercase font-mono">{diff}</span>
+                          <span className="text-[var(--ink-soft)] font-mono font-medium">{String(count)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Time controls */}
+                  <div>
+                    <span className="text-[10px] text-[var(--ink-soft)] block uppercase tracking-wider mb-1">
+                      контроль времени (таймер)
+                    </span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {Object.entries(s.featureStats.timeControls || {}).map(([tc, count]) => (
+                        <div key={tc} className="flex items-center justify-between px-2 py-1 rounded-md border border-[var(--line)]/60 text-xs bg-[var(--line)]/10">
+                          <span className="text-[var(--highlight-ink)] lowercase font-mono">{tc}</span>
+                          <span className="text-[var(--ink-soft)] font-mono font-medium">{String(count)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Modifiers */}
+                  <div>
+                    <span className="text-[10px] text-[var(--ink-soft)] block uppercase tracking-wider mb-1">
+                      модификаторы партий
+                    </span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {Object.entries(s.featureStats.modifiers || {}).map(([mod, count]) => {
+                        const label = mod === 'fogOfWar' ? 'туман' : mod === 'fadingInk' ? 'чернила' : mod === 'speedBlitz' ? 'блиц' : mod;
+                        return (
+                          <div key={mod} className="flex items-center justify-between px-2 py-1 rounded-md border border-[var(--line)]/60 text-xs bg-[var(--line)]/10">
+                            <span className="text-[var(--highlight-ink)] lowercase">{label}</span>
+                            <span className="text-[var(--ink-soft)] font-mono font-medium">{String(count)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 mt-3 border-t border-[var(--line)] text-[10px] text-[var(--ink-mute)] lowercase">
+                учитывается реальное использование настроек игроками
+              </div>
+            </div>
+
+            {/* 1.3 Most Clicked UI Buttons */}
+            <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
+              <div>
+                <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5 mb-1">
+                  <MousePointerClick size={16} />
+                  <span>популярные клики UI</span>
+                </h3>
+                <p className="text-xs text-[var(--ink-soft)] lowercase mb-3">
+                  нажатия на кнопки интерфейса и диалоги
+                </p>
+
+                <div className="space-y-2">
+                  {s.buttonClicks.length === 0 ? (
+                    <p className="text-xs text-[var(--ink-soft)] lowercase">нет зафиксированных кликов</p>
+                  ) : (
+                    s.buttonClicks.slice(0, 7).map((btn) => (
+                      <div key={btn.target} className="flex items-center justify-between text-xs py-1 border-b border-[var(--line)]/50 last:border-none">
+                        <span className="text-[var(--highlight-ink)] font-mono text-[11px] truncate max-w-[170px]" title={btn.target}>
+                          {btn.target}
+                        </span>
+                        <div className="flex items-center gap-2 font-mono text-[11px]">
+                          <span className="text-[var(--ink-soft)]">{btn.count}</span>
+                          <span className="text-[10px] text-[var(--ink-mute)] w-7 text-right">{btn.percentage}%</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-3 mt-2 text-[10px] text-[var(--ink-mute)] lowercase">
+                тема, смена языка, правила, шеринг, никнейм и вызовы
+              </div>
+            </div>
+          </section>
+
+          {/* 2. Geography & Diurnal Arrival Times (С какой страны и в какое время пришли) */}
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* 2.1 Countries Table & Bars */}
+            <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)]">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5">
+                  <Globe size={16} />
+                  <span>с какой страны пришли (география)</span>
+                </h3>
+                <span className="text-xs text-[var(--ink-soft)] font-mono">
+                  {s.countries.length} стран
+                </span>
+              </div>
+
+              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                {s.countries.length === 0 ? (
+                  <p className="text-xs text-[var(--ink-soft)] lowercase">нет данных о странах</p>
+                ) : (
+                  s.countries.slice(0, 8).map((c) => (
+                    <div key={c.code} className="text-xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{c.flag}</span>
+                          <span className="text-[var(--highlight-ink)] font-medium lowercase">
+                            {c.name}
+                          </span>
+                          {c.cities.length > 0 && (
+                            <span className="text-[10px] text-[var(--ink-mute)] hidden sm:inline">
+                              ({c.cities.map((ci) => ci.city).join(', ')})
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 font-mono text-[11px]">
+                          <span className="text-[var(--highlight-ink)]">{c.count} виз.</span>
+                          <span className="text-[var(--ink-mute)] w-8 text-right">{c.percentage}%</span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 w-full bg-[var(--line)] rounded-full overflow-hidden">
+                        <div
+                          style={{ width: `${Math.max(c.percentage, 2)}%` }}
+                          className="h-full bg-[var(--highlight-ink)] rounded-full"
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* 2.2 Diurnal Arrival Distribution (В какое время пришли) */}
+            <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5">
+                    <Clock size={16} />
+                    <span>в какое время пришли (суточный цикл)</span>
+                  </h3>
+                  <span className="text-xs text-[var(--ink-soft)] font-mono">
+                    24 часа (00:00 - 23:00)
+                  </span>
+                </div>
+                <p className="text-xs text-[var(--ink-soft)] lowercase mb-4">
+                  распределение времени прихода посетителей в течение суток
+                </p>
+
+                {/* 24-hour bar distribution */}
+                {(() => {
+                  const arrivals = s.hourlyArrivals || [];
+                  const maxH = Math.max(...arrivals.map((a) => a.count), 1);
+                  let peakHour = 19;
+                  arrivals.forEach((a) => {
+                    if (a.count > (arrivals[peakHour]?.count || 0)) peakHour = a.hour;
+                  });
+
+                  return (
+                    <div>
+                      <div className="h-36 w-full flex items-end gap-1 pt-2 border-b border-[var(--line)] pb-2">
+                        {arrivals.map((a) => {
+                          const hPct = Math.round((a.count / maxH) * 100);
+                          const isPeak = a.hour === peakHour;
+
+                          return (
+                            <div
+                              key={a.hour}
+                              className="flex-1 flex flex-col items-center justify-end h-full group relative"
+                            >
+                              {/* Tooltip */}
+                              <div className="absolute bottom-full mb-1.5 hidden group-hover:flex flex-col items-center z-20 pointer-events-none">
+                                <div className="px-2 py-1 rounded bg-[var(--highlight-ink)] text-[var(--bg)] text-[10px] whitespace-nowrap shadow-md">
+                                  <p className="font-medium">{a.label}</p>
+                                  <p>{a.count} визитов ({a.percentage}%)</p>
+                                  <p>{a.uniques} уникальных</p>
+                                </div>
+                              </div>
+
+                              <div
+                                style={{ height: `${Math.max(hPct, 4)}%` }}
+                                className={`w-full max-w-[8px] rounded-t-xs transition-all ${
+                                  isPeak
+                                    ? 'bg-[var(--highlight-ink)] ring-1 ring-[var(--highlight-ink)]/50'
+                                    : 'bg-[var(--ink-soft)]/50 group-hover:bg-[var(--highlight-ink)]'
+                                }`}
+                              />
+
+                              <span className="text-[8px] text-[var(--ink-mute)] mt-1 tracking-tighter">
+                                {a.hour % 4 === 0 ? String(a.hour).padStart(2, '0') : ''}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="pt-3 mt-3 text-xs text-[var(--ink-soft)] lowercase flex items-center justify-between">
+                        <span>
+                          наибольший наплыв: <strong className="text-[var(--highlight-ink)] font-mono">{String(peakHour).padStart(2, '0')}:00 – {String((peakHour + 2) % 24).padStart(2, '0')}:00</strong>
+                        </span>
+                        <span className="font-mono text-[11px] text-[var(--ink-mute)]">
+                          {arrivals[peakHour]?.count || 0} визитов в пик
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="pt-3 mt-3 border-t border-[var(--line)] text-[10px] text-[var(--ink-mute)] lowercase">
+                показывает оптимальное время онлайна для организации турниров и игр
+              </div>
+            </div>
+          </section>
+
+          {/* 3. Detailed Arrival Log: Country & Exact Arrival Time */}
+          <section className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <MapPin size={16} className="text-[var(--highlight-ink)]" />
+                <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase">
+                  журнал визитов · страна и точное время прибытия
+                </h3>
+              </div>
+              <span className="text-xs text-[var(--ink-soft)] font-mono">
+                последние прибывшие визитеры
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-[var(--line)] text-[var(--ink-soft)] uppercase text-[10px] tracking-wider">
+                    <th className="py-2 px-2">точное время</th>
+                    <th className="py-2 px-2">страна и город</th>
+                    <th className="py-2 px-2">тип визитера</th>
+                    <th className="py-2 px-2">устройство / браузер</th>
+                    <th className="py-2 px-2">источник (referrer)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--line)]/50">
+                  {s.recentEvents
+                    .filter((e) => e.type === 'pageview' || e.category === 'navigation' || !e.isBot)
+                    .slice(0, 10)
+                    .map((ev) => {
+                      const d = new Date(ev.timestamp);
+                      const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                      const dateStr = d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+
+                      return (
+                        <tr key={ev.id} className="hover:bg-[var(--line)]/20 transition-colors">
+                          <td className="py-2.5 px-2 font-mono text-[var(--highlight-ink)] whitespace-nowrap">
+                            <span className="text-[var(--ink-soft)] mr-1.5">{dateStr}</span>
+                            <span>{timeStr}</span>
+                          </td>
+                          <td className="py-2.5 px-2 whitespace-nowrap">
+                            <span className="mr-1.5 text-base">{ev.country ? countryCodeToFlag(ev.country) : '🌐'}</span>
+                            <span className="text-[var(--highlight-ink)] font-medium">{ev.countryName || ev.country || 'Unknown'}</span>
+                            {ev.city && (
+                              <span className="text-[var(--ink-mute)] ml-1 text-[11px]">({ev.city})</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-2">
+                            {ev.isBot ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                                бот: {ev.botName || 'Bot'}
+                              </span>
+                            ) : ev.isReturning ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                вернулся
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                новый
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-2 text-[var(--ink-soft)] whitespace-nowrap">
+                            {ev.device} · {ev.browser} {ev.os ? `(${ev.os})` : ''}
+                          </td>
+                          <td className="py-2.5 px-2 font-mono text-[11px] text-[var(--ink-mute)] truncate max-w-[200px]">
+                            {ev.referrer || 'direct'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* 4. Behavior & Conversion Funnel */}
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* 4.1 Behavior & Modes */}
             <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -620,7 +1022,7 @@ export function AdminDashboardClient({
               </div>
             </div>
 
-            {/* 2. Conversion Funnel */}
+            {/* 4.2 Conversion Funnel */}
             <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
               <div>
                 <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5 mb-1">
@@ -671,145 +1073,56 @@ export function AdminDashboardClient({
                 </strong>
               </div>
             </div>
-
-            {/* 3. Most Clicked Buttons */}
-            <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] flex flex-col justify-between">
-              <div>
-                <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5 mb-1">
-                  <MousePointerClick size={16} />
-                  <span>популярные клики</span>
-                </h3>
-                <p className="text-xs text-[var(--ink-soft)] lowercase mb-3">
-                  интерактивные кнопки и элементы интерфейса
-                </p>
-
-                <div className="space-y-2">
-                  {s.buttonClicks.length === 0 ? (
-                    <p className="text-xs text-[var(--ink-soft)] lowercase">нет зафиксированных кликов</p>
-                  ) : (
-                    s.buttonClicks.slice(0, 6).map((btn) => (
-                      <div key={btn.target} className="flex items-center justify-between text-xs py-1 border-b border-[var(--line)]/50 last:border-none">
-                        <span className="text-[var(--highlight-ink)] font-mono text-[11px] truncate max-w-[180px]">
-                          {btn.target}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[var(--ink-soft)] font-mono text-[11px]">
-                            {btn.count}
-                          </span>
-                          <span className="text-[10px] text-[var(--ink-mute)] w-7 text-right">
-                            {btn.percentage}%
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div className="pt-3 mt-2 text-[10px] text-[var(--ink-mute)] lowercase">
-                учитываются нажатия на тему, язык, правила, вызовы и шеринг
-              </div>
-            </div>
           </section>
 
-          {/* Geography & Traffic Sources Grid */}
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Countries Table & Bars */}
-            <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)]">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5">
-                  <Globe size={16} />
-                  <span>география визитеров</span>
-                </h3>
-                <span className="text-xs text-[var(--ink-soft)] font-mono">
-                  {s.countries.length} стран
-                </span>
-              </div>
-
-              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-                {s.countries.length === 0 ? (
-                  <p className="text-xs text-[var(--ink-soft)] lowercase">нет данных о странах</p>
-                ) : (
-                  s.countries.slice(0, 8).map((c) => (
-                    <div key={c.code} className="text-xs">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-base">{c.flag}</span>
-                          <span className="text-[var(--highlight-ink)] font-medium lowercase">
-                            {c.name}
-                          </span>
-                          {c.cities.length > 0 && (
-                            <span className="text-[10px] text-[var(--ink-mute)] hidden sm:inline">
-                              ({c.cities.map((ci) => ci.city).join(', ')})
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 font-mono text-[11px]">
-                          <span className="text-[var(--highlight-ink)]">{c.count} виз.</span>
-                          <span className="text-[var(--ink-mute)] w-8 text-right">{c.percentage}%</span>
-                        </div>
-                      </div>
-                      <div className="h-1.5 w-full bg-[var(--line)] rounded-full overflow-hidden">
-                        <div
-                          style={{ width: `${Math.max(c.percentage, 2)}%` }}
-                          className="h-full bg-[var(--highlight-ink)] rounded-full"
-                        />
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+          {/* 5. Traffic Sources (Referrers) */}
+          <section className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)] mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5">
+                <Compass size={16} />
+                <span>источники трафика (referrers)</span>
+              </h3>
+              <span className="text-xs text-[var(--ink-soft)] font-mono">
+                reddit, search, direct, social
+              </span>
             </div>
 
-            {/* Traffic Sources & Categorized Referrers */}
-            <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--bg)]">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-serif text-base font-medium text-[var(--highlight-ink)] lowercase flex items-center gap-1.5">
-                  <Compass size={16} />
-                  <span>источники трафика (referrers)</span>
-                </h3>
-                <span className="text-xs text-[var(--ink-soft)] font-mono">
-                  reddit, search, direct, social
-                </span>
-              </div>
+            {/* Categories Breakdown */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
+              {s.referrersCategorized.map((cat) => (
+                <div key={cat.category} className="p-2 rounded-lg border border-[var(--line)] text-center">
+                  <span className="text-[10px] text-[var(--ink-soft)] block uppercase tracking-wider">
+                    {cat.category}
+                  </span>
+                  <span className="text-sm font-serif font-medium text-[var(--highlight-ink)]">
+                    {cat.count}
+                  </span>
+                  <span className="text-[9px] text-[var(--ink-mute)] block">
+                    {cat.percentage}%
+                  </span>
+                </div>
+              ))}
+            </div>
 
-              {/* Categories Breakdown */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
-                {s.referrersCategorized.map((cat) => (
-                  <div key={cat.category} className="p-2 rounded-lg border border-[var(--line)] text-center">
-                    <span className="text-[10px] text-[var(--ink-soft)] block uppercase tracking-wider">
-                      {cat.category}
+            {/* Detailed Referrer Domains */}
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              {s.topReferrers.length === 0 ? (
+                <p className="text-xs text-[var(--ink-soft)] lowercase">все визиты были прямыми (direct)</p>
+              ) : (
+                s.topReferrers.map((ref) => (
+                  <div
+                    key={ref.referrer}
+                    className="flex items-center justify-between text-xs py-1 border-b border-[var(--line)]/40 last:border-none"
+                  >
+                    <span className="text-[var(--highlight-ink)] font-mono text-[11px] truncate max-w-[240px]">
+                      {ref.referrer}
                     </span>
-                    <span className="text-sm font-serif font-medium text-[var(--highlight-ink)]">
-                      {cat.count}
-                    </span>
-                    <span className="text-[9px] text-[var(--ink-mute)] block">
-                      {cat.percentage}%
+                    <span className="text-[var(--ink-soft)] font-mono text-[11px]">
+                      {ref.count} виз.
                     </span>
                   </div>
-                ))}
-              </div>
-
-              {/* Detailed Referrer Domains */}
-              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                {s.topReferrers.length === 0 ? (
-                  <p className="text-xs text-[var(--ink-soft)] lowercase">все визиты были прямыми (direct)</p>
-                ) : (
-                  s.topReferrers.map((ref) => (
-                    <div
-                      key={ref.referrer}
-                      className="flex items-center justify-between text-xs py-1 border-b border-[var(--line)]/40 last:border-none"
-                    >
-                      <span className="text-[var(--highlight-ink)] font-mono text-[11px] truncate max-w-[240px]">
-                        {ref.referrer}
-                      </span>
-                      <span className="text-[var(--ink-soft)] font-mono text-[11px]">
-                        {ref.count} виз.
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
+                ))
+              )}
             </div>
           </section>
 

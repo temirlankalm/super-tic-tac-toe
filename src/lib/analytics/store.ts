@@ -7,6 +7,7 @@ import {
   EventType,
   FunnelStats,
   GameBehaviorStats,
+  HourlyArrivalStat,
   PeriodStats,
   ReferrerCategoryStat,
   TimePoint,
@@ -87,9 +88,16 @@ function generateInitialSeedEvents(): VisitorEvent[] {
 
     const sessionsCount = isBot ? 1 : 1 + (i % 3);
 
+    const realisticHours = [
+      18, 19, 20, 21, 22, 17, 19, 20, 14, 15, 16, 12, 13, 21, 22, 11, 10, 9, 23, 0, 1, 8, 19, 20, 15
+    ];
+
     for (let s = 0; s < sessionsCount; s++) {
       const daysAgo = (i % 28) * 0.95;
-      const baseTime = now - Math.floor(daysAgo * dayMs) - ((i * 47) % (12 * hourMs));
+      const targetHour = realisticHours[(i + s) % realisticHours.length];
+      const baseDate = new Date(now - Math.floor(daysAgo * dayMs));
+      baseDate.setHours(targetHour, (i * 13 + s * 7) % 60, (i * 19 + s * 11) % 60, 0);
+      const baseTime = baseDate.getTime();
       const sid = `s_${vid}_${s}`;
 
       // 1. Pageview
@@ -116,12 +124,13 @@ function generateInitialSeedEvents(): VisitorEvent[] {
       });
 
       if (!isBot) {
-        // 2. Buttons click (Theme, Lang, Rules)
-        if (evId % 2 === 0) {
-          const btn = buttonNames[evId % buttonNames.length];
+        // 2. Buttons click (Theme, Lang, Rules, Nickname, Share, Challenge)
+        const btnCount = 1 + ((i + s) % 3);
+        for (let b = 0; b < btnCount; b++) {
+          const btn = buttonNames[(i * 3 + s + b) % buttonNames.length];
           events.push({
             id: `ev_${evId++}`,
-            timestamp: baseTime + 1500,
+            timestamp: baseTime + 1200 + b * 600,
             visitorId: vid,
             sessionId: sid,
             type: 'click',
@@ -140,9 +149,58 @@ function generateInitialSeedEvents(): VisitorEvent[] {
           });
         }
 
-        // 3. Game Start
-        const mode = evId % 10 < 5 ? 'ai' : evId % 10 < 7 ? 'pvp' : evId % 10 < 9 ? 'online' : 'daily';
-        const diff = ['qnet', 'hard', 'medium', 'easy'][evId % 4];
+        // 3. Time Control & Modifiers selection
+        const tcs = ['off', 'off', 'off', '3m', '5m', '2m', '1m'];
+        const chosenTc = tcs[(i + s) % tcs.length];
+        events.push({
+          id: `ev_${evId++}`,
+          timestamp: baseTime + 2200,
+          visitorId: vid,
+          sessionId: sid,
+          type: 'click',
+          target: 'time_control_select',
+          category: 'time_control',
+          metadata: { timeControl: chosenTc },
+          isBot: false,
+          country: country.code,
+          countryName: country.name,
+          city,
+          device,
+          browser,
+          os,
+          language: 'en-US',
+          isReturning,
+          path: '/',
+        });
+
+        if ((i + s) % 2 === 0) {
+          const mods = ['fogOfWar', 'fadingInk', 'speedBlitz'];
+          const chosenMod = mods[(i + s) % mods.length];
+          events.push({
+            id: `ev_${evId++}`,
+            timestamp: baseTime + 2400,
+            visitorId: vid,
+            sessionId: sid,
+            type: 'click',
+            target: 'modifier_toggle',
+            category: 'modifier',
+            metadata: { modifier: chosenMod, enabled: true },
+            isBot: false,
+            country: country.code,
+            countryName: country.name,
+            city,
+            device,
+            browser,
+            os,
+            language: 'en-US',
+            isReturning,
+            path: '/',
+          });
+        }
+
+        // 4. Game Start
+        const mode = (i + s) % 10 < 5 ? 'ai' : (i + s) % 10 < 7 ? 'pvp' : (i + s) % 10 < 9 ? 'online' : 'daily';
+        const diff = ['qnet', 'hard', 'medium', 'easy'][(i + s) % 4];
 
         events.push({
           id: `ev_${evId++}`,
@@ -165,9 +223,12 @@ function generateInitialSeedEvents(): VisitorEvent[] {
           path: '/',
         });
 
-        // 4. Cell Clicks
-        const clicks = 3 + (evId % 5);
+        // 5. Cell Clicks (distributed across ALL 9 sectors: 0..8)
+        const clicks = 5 + ((i + s) % 5);
+        // Sector distribution with prime length (13) and weights (center 4 highest, corners 0,2,6,8 high, edges 1,3,5,7 moderate)
+        const sectorWeights = [4, 0, 4, 2, 4, 6, 8, 1, 4, 3, 5, 7, 4];
         for (let c = 0; c < clicks; c++) {
+          const sector = sectorWeights[(c * 3 + i * 2 + s) % sectorWeights.length];
           events.push({
             id: `ev_${evId++}`,
             timestamp: baseTime + 4000 + c * 3500,
@@ -176,7 +237,7 @@ function generateInitialSeedEvents(): VisitorEvent[] {
             type: 'game',
             target: 'board_cell_click',
             category: 'cell_click',
-            metadata: { sector: (c * 2) % 9, cell: (c * 3) % 9 },
+            metadata: { sector, cell: (c * 2 + i) % 9 },
             isBot: false,
             country: country.code,
             countryName: country.name,
@@ -660,7 +721,7 @@ class AnalyticsStore {
         const m = String(e.metadata.mode);
         featureStats.gameModes[m] = (featureStats.gameModes[m] || 0) + 1;
       }
-      if (e.category === 'difficulty' && e.metadata?.difficulty) {
+      if ((e.category === 'difficulty' || e.target === 'game_start') && e.metadata?.difficulty) {
         const diff = String(e.metadata.difficulty);
         featureStats.difficulties[diff] = (featureStats.difficulties[diff] || 0) + 1;
       }
@@ -750,7 +811,31 @@ class AnalyticsStore {
       bots: data.bots,
     }));
 
-    // 12. Recent events (latest 60, human & bot, newest first)
+    // 12. Hourly Arrival Distribution (00:00 - 23:00)
+    const hourlyArrivalBuckets: { count: number; uniques: Set<string> }[] = Array.from(
+      { length: 24 },
+      () => ({ count: 0, uniques: new Set<string>() })
+    );
+
+    for (const e of humanEvents) {
+      const h = new Date(e.timestamp).getHours();
+      if (h >= 0 && h < 24) {
+        hourlyArrivalBuckets[h].count += 1;
+        hourlyArrivalBuckets[h].uniques.add(e.visitorId);
+      }
+    }
+
+    const totalHourlyArrivals = hourlyArrivalBuckets.reduce((s, b) => s + b.count, 0) || 1;
+
+    const hourlyArrivals: HourlyArrivalStat[] = hourlyArrivalBuckets.map((b, h) => ({
+      hour: h,
+      label: `${String(h).padStart(2, '0')}:00`,
+      count: b.count,
+      uniques: b.uniques.size,
+      percentage: Math.round((b.count / totalHourlyArrivals) * 100),
+    }));
+
+    // 13. Recent events (latest 60, human & bot, newest first)
     const recentEvents = [...filtered].reverse().slice(0, 60);
 
     return {
@@ -775,6 +860,7 @@ class AnalyticsStore {
       featureStats,
       timeline,
       dailyTimeline,
+      hourlyArrivals,
       recentEvents,
       botBreakdown,
     };
